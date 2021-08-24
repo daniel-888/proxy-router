@@ -2,8 +2,8 @@ package msgbus
 
 import (
 	"fmt"
-
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	"os"
+	"time"
 )
 
 type operation int
@@ -25,9 +25,12 @@ const (
 )
 
 const (
-	UpdateEvent EventType = iota
+	NoEvent EventType = iota
+	UpdateEvent
 	DeleteEvent
 	GetEvent
+	GetIndexEvent
+	SubscribedEvent
 )
 
 const (
@@ -54,7 +57,8 @@ const (
 )
 
 const (
-	SrcOpenState ConnectionState = iota
+	NoState ConnectionState = iota
+	SrcOpenState
 	AuthState
 	VerifyState
 	RoutingState
@@ -69,6 +73,7 @@ const (
 	ClosedState
 )
 
+// Need to figure out the IDString for this, for now it is just a string
 type IDString string
 type ConfigID IDString
 type DestID IDString
@@ -79,10 +84,10 @@ type MinerID IDString
 type ConnectionID IDString
 
 type Event struct {
-	eventType EventType
-	msg       MsgType
+	EventType EventType
+	Msg       MsgType
 	ID        IDString
-	data      interface{}
+	Data      interface{}
 }
 
 type EventChan chan Event
@@ -104,18 +109,18 @@ type Dest struct {
 
 type ConfigInfo struct {
 	ID          ConfigID
-	DefaultDest Dest
+	DefaultDest DestID
 	Seller      SellerID
 }
 
 type Seller struct {
 	ID                     SellerID
-	DefaultDest            Dest
+	DefaultDest            DestID
 	TotalAvailableHashRate int
 	UnusedHashRate         int
-	NewContracts           []ContractID
-	ReadyContracts         []ContractID
-	ActiveContracts        []ContractID
+	NewContracts           map[ContractID]bool
+	ReadyContracts         map[ContractID]bool
+	ActiveContracts        map[ContractID]bool
 }
 
 type Contract struct {
@@ -148,7 +153,7 @@ type Connection struct {
 	Dest      DestID
 	State     ConnectionState
 	TotalHash int
-	StartDate int
+	StartDate time.Time
 }
 
 type registry struct {
@@ -173,11 +178,6 @@ type cmd struct {
 	retch   chan int
 }
 
-func BoilerPlateFunc() (string, error) {
-	msg := "Logging Package"
-	return lumerinlib.BoilerPlateLibFunc(msg), nil // always returns no error
-}
-
 // New creates a new PubSub and starts a goroutine for handling operations.
 // The capacity of the channels created by Sub and SubOnce will be as specified.
 //
@@ -187,6 +187,25 @@ func New(capacity int) *PubSub {
 	ps := &PubSub{make(chan *cmd), capacity}
 	go ps.start()
 	return ps
+}
+
+func (ps *PubSub) NewEventChanPtr() *EventChan {
+	ech := ps.NewEventChan()
+	return &ech
+}
+
+func (ps *PubSub) NewEventChan() EventChan {
+	return make(EventChan)
+}
+
+func (ps *PubSub) NewEventPtr() *Event {
+	e := ps.NewEvent()
+	return &e
+}
+
+func (ps *PubSub) NewEvent() Event {
+	e := Event{EventType: NoEvent}
+	return e
 }
 
 // Create new topic structure
@@ -474,6 +493,19 @@ func (reg *registry) sub(c *cmd) {
 	}
 
 	reg.data[c.msg][c.ID].sub.eventchan[c.eventch] = 1
+
+	go func(e EventChan) {
+
+		event := Event{
+			EventType: SubscribedEvent,
+			Msg:       c.msg,
+			ID:        c.ID,
+			Data:      nil,
+		}
+
+		e <- event
+
+	}(c.eventch)
 }
 
 //
@@ -513,10 +545,10 @@ func (reg *registry) set(c *cmd) {
 		go func(e EventChan) {
 
 			event := Event{
-				eventType: UpdateEvent,
-				msg:       c.msg,
+				EventType: UpdateEvent,
+				Msg:       c.msg,
 				ID:        c.ID,
-				data:      c.data,
+				Data:      c.data,
 			}
 
 			e <- event
@@ -555,10 +587,10 @@ func (reg *registry) get(c *cmd) {
 		}
 
 		event := Event{
-			eventType: GetEvent,
-			msg:       c.msg,
+			EventType: GetIndexEvent,
+			Msg:       c.msg,
 			ID:        "",
-			data:      ids,
+			Data:      ids,
 		}
 
 		c.eventch <- event
@@ -571,10 +603,10 @@ func (reg *registry) get(c *cmd) {
 	} else {
 
 		event := Event{
-			eventType: GetEvent,
-			msg:       c.msg,
+			EventType: GetEvent,
+			Msg:       c.msg,
 			ID:        c.ID,
-			data:      rd.data,
+			Data:      rd.data,
 		}
 
 		c.eventch <- event
@@ -598,4 +630,19 @@ func (reg *registry) unpub(c *cmd) {
 	if reg.noMsg(c) {
 		return
 	}
+}
+
+func GetRandomIDString() (i IDString) {
+
+	f, err := os.Open("/dev/urandom")
+	if err != nil {
+		fmt.Printf("Error readong /dev/urandom: %s\n", err)
+		panic(err)
+	}
+	b := make([]byte, 16)
+	f.Read(b)
+	f.Close()
+	str := fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+	i = IDString(str)
+	return i
 }
