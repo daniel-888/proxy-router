@@ -3,15 +3,17 @@ package connectionmanager
 import (
 	"encoding/json"
 	"fmt"
+
+	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
 type stratumMethods string
-type stratumState int
+type stratumStates string
 
 const (
-	StratumNew stratumState = iota
-	StratumSubscribed
-	StratumAuthorized
+	StratumNew        stratumStates = "StratumNew"
+	StratumSubscribed stratumStates = "StratumSubscribed"
+	StratumAuthorized stratumStates = "StratumAuthorized"
 )
 
 const (
@@ -35,29 +37,36 @@ type responce struct {
 	Error  string `json:"error"`
 }
 
+//------------------------------------------------------
+//
+//------------------------------------------------------
 func getRequestMsg(msg []byte) (*request, error) {
 
-	fmt.Printf("Request: %s", msg)
+	fmt.Printf("Stratum Request: %s\n", msg)
 
 	r := request{}
 	err := json.Unmarshal(msg, &r)
 	if err != nil {
-		fmt.Printf("Unmarshal request error:%s\n", err)
-		fmt.Printf("Unmarshal request MSG:%s\n", msg)
+		fmt.Printf(lumerinlib.FileLine()+"Error Unmarshaling Request Err:%s\n", err)
+		return nil, err
 	}
 
 	return &r, err
 }
 
+//------------------------------------------------------
+//
+//------------------------------------------------------
 func getResponceMsg(msg []byte) (*responce, error) {
 
-	fmt.Printf("Responce: %s", msg)
+	fmt.Printf("Stratum Responce: %s\n", msg)
 
 	r := responce{}
 	err := json.Unmarshal(msg, &r)
 	if err != nil {
-		fmt.Printf("Unmarshal responce error:%s\n", err)
-		fmt.Printf("Unmarshal responce MSG:%s\n", msg)
+		fmt.Printf(lumerinlib.FileLine()+"Error Unmarshaling Responce Err:%s\n", err)
+		return nil, err
 	}
+
 	return &r, err
 }
