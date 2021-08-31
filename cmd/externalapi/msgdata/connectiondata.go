@@ -1,12 +1,18 @@
 package msgdata
 
-import "errors"
+import (
+	"errors"
+	"strconv"
+	"time"
 
-// Struct of Connection parameters in JSON 
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+)
+
+// Struct of Connection parameters in JSON
 type ConnectionJSON struct {
 	ID        	string `json:"ID"`
 	Miner     	string `json:"Miner"`
-	Connection  string `json:"Connection"`
+	Dest  		string `json:"Dest"`
 	State     	string `json:"State"`
 	TotalHash 	string `json:"Total Hash"`
 	StartDate 	string `json:"Start Date"`
@@ -38,8 +44,22 @@ func (r *ConnectionRepo) GetConnection(id string) (ConnectionJSON, error) {
 }
 
 //Add a new Connection Struct to to Repo
-func (r *ConnectionRepo) AddConnection(dest ConnectionJSON) {
-	r.ConnectionJSONs = append(r.ConnectionJSONs, dest)
+func (r *ConnectionRepo) AddConnection(conn ConnectionJSON) {
+	r.ConnectionJSONs = append(r.ConnectionJSONs, conn)
+}
+
+//Converts Connection struct from msgbus to JSON struct and adds it to Repo
+func (r *ConnectionRepo) AddConnectionFromMsgBus(conn msgbus.Connection) {
+	var connJSON ConnectionJSON
+
+	connJSON.ID = string(conn.ID)
+	connJSON.Miner = string(conn.Miner)
+	connJSON.Dest = string(conn.Dest)
+	connJSON.State = 	string(conn.State)
+	connJSON.TotalHash = strconv.Itoa(conn.TotalHash)
+	connJSON.StartDate = conn.StartDate.String()
+	
+	r.ConnectionJSONs = append(r.ConnectionJSONs, connJSON)
 }
 
 //Update Connection Struct with specific ID and leave empty parameters unchanged
@@ -47,7 +67,7 @@ func (r *ConnectionRepo) UpdateConnection(id string, newConnection ConnectionJSO
 	for i,c := range r.ConnectionJSONs {
 		if c.ID == id {
 			if newConnection.Miner != "" {r.ConnectionJSONs[i].Miner = newConnection.Miner}
-			if newConnection.Connection != "" {r.ConnectionJSONs[i].Connection = newConnection.Connection}
+			if newConnection.Dest != "" {r.ConnectionJSONs[i].Dest = newConnection.Dest}
 			if newConnection.State != "" {r.ConnectionJSONs[i].State = newConnection.State}
 			if newConnection.TotalHash != "" {r.ConnectionJSONs[i].TotalHash = newConnection.TotalHash}
 			if newConnection.StartDate != "" {r.ConnectionJSONs[i].StartDate = newConnection.StartDate}
@@ -68,4 +88,15 @@ func (r *ConnectionRepo) DeleteConnection(id string) error {
 		}
 	}
 	return errors.New("ID not found")
+}
+
+func ConvertConnectionJSONtoConnectionMSG(conn ConnectionJSON, msg msgbus.Connection) msgbus.Connection {	
+	msg.ID = msgbus.ConnectionID(conn.ID)
+	msg.Miner = msgbus.MinerID(conn.Miner)
+	msg.Dest = msgbus.DestID(conn.Dest)
+	msg.State = msgbus.ConnectionState(conn.State)
+	msg.TotalHash,_ = strconv.Atoi(conn.TotalHash)
+	msg.StartDate,_ = time.Parse(conn.StartDate, "000000")
+
+	return msg	
 }

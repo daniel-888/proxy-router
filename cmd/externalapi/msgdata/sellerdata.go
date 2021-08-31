@@ -1,19 +1,24 @@
 package msgdata
 
-import "errors"
+import (
+	"errors"
+	"strconv"
+
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+)
 
 type IDString string
 type ContractID IDString
 
 //Struct of Seller parameters in JSON 
 type SellerJSON struct {
-	ID                     string `json:"ID"`
-	DefaultSeller          string `json:"Default Seller"`
-	TotalAvailableHashRate string `json:"Total Available Hashrate"`
-	UnusedHashRate         string `json:"Unused Hash Rate"`
-	NewContracts           []ContractID
-	ReadyContracts         []ContractID
-	ActiveContracts        []ContractID
+	ID                     	string 	`json:"ID"`
+	DefaultDest          	string 	`json:"DestID"`
+	TotalAvailableHashRate 	string 	`json:"Total Available Hashrate"`
+	UnusedHashRate         	string 	`json:"Unused Hash Rate"`
+	NewContracts           	[]ContractID
+	ReadyContracts         	[]ContractID
+	ActiveContracts        	[]ContractID
 }
 
 //Struct that stores slice of all JSON Seller structs in Repo
@@ -42,15 +47,27 @@ func (r *SellerRepo) GetSeller(id string) (SellerJSON, error) {
 }
 
 //Add a new Seller Struct to to Repo
-func (r *SellerRepo) AddSeller(dest SellerJSON) {
-	r.SellerJSONs = append(r.SellerJSONs, dest)
+func (r *SellerRepo) AddSeller(seller SellerJSON) {
+	r.SellerJSONs = append(r.SellerJSONs, seller)
+}
+
+//Converts Seller struct from msgbus to JSON struct and adds it to Repo
+func (r *SellerRepo) AddSellerFromMsgBus(seller msgbus.Seller) {
+	var sellerJSON SellerJSON
+
+	sellerJSON.ID = string(seller.ID)
+	sellerJSON.DefaultDest = string(seller.DefaultDest)
+	sellerJSON.TotalAvailableHashRate = strconv.Itoa(seller.TotalAvailableHashRate)
+	sellerJSON.UnusedHashRate = strconv.Itoa(seller.UnusedHashRate)
+	
+	r.SellerJSONs = append(r.SellerJSONs, sellerJSON)
 }
 
 //Update Seller Struct with specific ID and leave empty parameters unchanged
 func (r *SellerRepo) UpdateSeller(id string, newSeller SellerJSON) error {
 	for i,d := range r.SellerJSONs {
 		if d.ID == id {
-			if newSeller.DefaultSeller != "" {r.SellerJSONs[i].DefaultSeller = newSeller.DefaultSeller}
+			if newSeller.DefaultDest != "" {r.SellerJSONs[i].DefaultDest = newSeller.DefaultDest}
 			if newSeller.TotalAvailableHashRate != "" {r.SellerJSONs[i].TotalAvailableHashRate = newSeller.TotalAvailableHashRate}
 			if newSeller.UnusedHashRate != "" {r.SellerJSONs[i].UnusedHashRate = newSeller.UnusedHashRate}
 
@@ -70,4 +87,13 @@ func (r *SellerRepo) DeleteSeller(id string) error {
 		}
 	}
 	return errors.New("ID not found")
+}
+
+func ConvertSellerJSONtoSellerMSG(seller SellerJSON, msg msgbus.Seller) msgbus.Seller {
+	msg.ID = msgbus.SellerID(seller.ID)
+	msg.DefaultDest = msgbus.DestID(seller.DefaultDest)
+	msg.TotalAvailableHashRate,_ = strconv.Atoi(seller.TotalAvailableHashRate)
+	msg.UnusedHashRate,_ = strconv.Atoi(seller.UnusedHashRate)
+
+	return msg	
 }

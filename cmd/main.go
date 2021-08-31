@@ -1,10 +1,11 @@
 package main
 
 import (
-	"gitlab.com/TitanInd/lumerin/cmd/externalapi"
+	//"gitlab.com/TitanInd/lumerin/cmd/externalapi"
 )
 
+
 func main () {
-	externalapi.RunAPI()
+	//externalapi.RunAPI()
 }
 

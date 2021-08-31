@@ -8,16 +8,39 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 )
 
-func RunAPI () {
-	//Create JSON Repos for msgdata structs 
-	config := msgdata.NewConfigInfo()
-	connection := msgdata.NewConnection()
-	contract := msgdata.NewContract()
-	dest := msgdata.NewDest()
-	miner := msgdata.NewMiner()
-	seller := msgdata.NewSeller()
+var config *msgdata.ConfigInfoRepo
+var connection *msgdata.ConnectionRepo
+var contract *msgdata.ContractRepo
+var dest *msgdata.DestRepo
+var miner *msgdata.MinerRepo
+var seller *msgdata.SellerRepo
+// var isInitialized bool = false
+
+func InitializeJSONRepos() (*msgdata.ConfigInfoRepo, 
+							*msgdata.ConnectionRepo, 
+							*msgdata.ContractRepo, 
+							*msgdata.DestRepo, 
+							*msgdata.MinerRepo, 
+							*msgdata.SellerRepo) {
+	config = msgdata.NewConfigInfo()
+	connection = msgdata.NewConnection()
+	contract = msgdata.NewContract()
+	dest = msgdata.NewDest()
+	miner = msgdata.NewMiner()
+	seller = msgdata.NewSeller()
+	//isInitialized = true
+	return config, connection, contract, dest, miner, seller
+}
+
+func RunAPI() {
+	//Exit out of function if JSON Repos are not initialized
+	// if !isInitialized {
+	// 	fmt.Println("JSON Repos not initialized, exit API run function")
+	// 	return
+	// }
 
 	// Use default middleware
+
 	r := gin.Default()
 
 	configRoutes := r.Group("/config")
@@ -47,7 +70,7 @@ func RunAPI () {
 		contractRoutes.DELETE("/:id", handlers.ContractDELETE(contract))
 	}
 
-	destRoutes := r.Group("/dest") 
+	destRoutes := r.Group("/dest")
 	{
 		destRoutes.GET("/", handlers.DestsGET(dest))
 		destRoutes.GET("/:id", handlers.DestGET(dest))
@@ -67,7 +90,7 @@ func RunAPI () {
 
 	sellerRoutes := r.Group("/seller")
 	{
-		sellerRoutes.GET("/", handlers.SellerGET(seller))
+		sellerRoutes.GET("/", handlers.SellersGET(seller))
 		sellerRoutes.GET("/:id", handlers.SellerGET(seller))
 		sellerRoutes.POST("/", handlers.SellerPOST(seller))
 		sellerRoutes.PUT("/:id", handlers.SellerPUT(seller))
@@ -77,4 +100,5 @@ func RunAPI () {
 	if err := r.Run(); err != nil {
 		log.Fatal(err.Error())
 	}
+	
 }
