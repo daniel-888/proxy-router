@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
 type operation string
@@ -146,15 +148,24 @@ type Contract struct {
 	EndDate          time.Time
 }
 
+//
+// Created & Updated by Connection Manager
+//
 type Miner struct {
 	ID                      MinerID
+	Name                    string
+	IP                      string
+	MAC                     string
 	State                   MinerState
 	Seller                  SellerID
-	Dest                    DestID
+	Dest                    DestID // Updated by Connection Scheduler
 	InitialMeasuredHashRate int
 	CurrentHashRate         int
 }
 
+//
+// Created & Updated by Connection Manager
+//
 type Connection struct {
 	ID        ConnectionID
 	Miner     MinerID
@@ -396,14 +407,10 @@ func (ps *PubSub) Get(msg MsgType, id IDString, ech EventChan) (err error) {
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) GetWait(msg MsgType, id IDString, ech EventChan) (e Event, err error) {
+func (ps *PubSub) GetWait(msg MsgType, id IDString) (e Event, err error) {
 
 	if msg == NoMsg {
 		return e, getCommandError(MsgBusErrNoMsg)
-	}
-
-	if ech == nil {
-		return e, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	c := cmd{
@@ -412,7 +419,7 @@ func (ps *PubSub) GetWait(msg MsgType, id IDString, ech EventChan) (e Event, err
 		msg:     msg,
 		ID:      id,
 		data:    nil,
-		eventch: ech,
+		eventch: nil,
 	}
 
 	return ps.dispatch(&c)
@@ -715,10 +722,23 @@ func (ps *PubSub) dispatch(c *cmd) (event Event, e error) {
 //--------------------------------------------------------------------------------
 func (ps *PubSub) start() {
 	reg := registry{
-		// data:   make(map[MsgType]map[IDString]interface{}),
 		data:   make(map[MsgType]map[IDString]registryData),
 		notify: make(map[MsgType]map[chan Event]interface{}),
 	}
+
+	reg.data[ConfigMsg] = make(map[IDString]registryData)
+	reg.data[DestMsg] = make(map[IDString]registryData)
+	reg.data[SellerMsg] = make(map[IDString]registryData)
+	reg.data[ContractMsg] = make(map[IDString]registryData)
+	reg.data[MinerMsg] = make(map[IDString]registryData)
+	reg.data[ConnectionMsg] = make(map[IDString]registryData)
+
+	reg.notify[ConfigMsg] = make(map[chan Event]interface{})
+	reg.notify[DestMsg] = make(map[chan Event]interface{})
+	reg.notify[SellerMsg] = make(map[chan Event]interface{})
+	reg.notify[ContractMsg] = make(map[chan Event]interface{})
+	reg.notify[MinerMsg] = make(map[chan Event]interface{})
+	reg.notify[ConnectionMsg] = make(map[chan Event]interface{})
 
 loop:
 	for cmdptr := range ps.cmdChan {
@@ -887,12 +907,16 @@ func (reg *registry) set(c *cmd) {
 
 	if c.ID == "" {
 		event.Err = getCommandError(MsgBusErrNoID)
+		fmt.Printf(lumerinlib.FileLine()+"Error:%s\n", event.Err)
 	} else if _, ok := reg.data[c.msg]; !ok {
 		event.Err = getCommandError(MsgBusErrBadMsg)
+		fmt.Printf(lumerinlib.FileLine()+"Error:%s\n", event.Err)
 	} else if _, ok := reg.notify[c.msg]; !ok {
 		event.Err = getCommandError(MsgBusErrBadMsg)
+		fmt.Printf(lumerinlib.FileLine()+"Error:%s\n", event.Err)
 	} else if _, ok := reg.data[c.msg][c.ID]; !ok {
 		event.Err = getCommandError(MsgBusErrBadID)
+		fmt.Printf(lumerinlib.FileLine()+"Error:%s\n", event.Err)
 	} else {
 
 		//
@@ -1103,7 +1127,7 @@ func GetRandomIDString() (i IDString) {
 
 	f, err := os.Open("/dev/urandom")
 	if err != nil {
-		fmt.Printf("Error readong /dev/urandom: %s\n", err)
+		fmt.Printf("Error reading /dev/urandom: %s\n", err)
 		panic(err)
 	}
 	b := make([]byte, 16)

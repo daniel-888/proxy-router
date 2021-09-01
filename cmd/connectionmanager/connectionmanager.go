@@ -7,6 +7,13 @@ import (
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/lumerinlib"
+)
+
+const (
+	defaultMinerHost  string = "localhost"
+	defaultMinerPort  string = "3334"
+	defaultMinerProto string = "tcp"
 )
 
 type connectionStates string
@@ -53,22 +60,185 @@ type ConnectionManager struct {
 
 type msgBuffer []byte
 
+//
+// Add these to consolodate network functions
+//
+type socketconn struct {
+	name        string
+	netConn     net.Conn
+	bufReader   *bufio.Reader
+	bufWriter   *bufio.Writer
+	bufScanner  *bufio.Scanner
+	ch          chan msgBuffer
+	msgRequest  *request
+	msgResponce *responce
+	done        chan bool
+}
+
 type connection struct {
-	ps                  *msgbus.PubSub
-	state               connectionStates
-	srcSocketConn       net.Conn
-	dstSocketConn       net.Conn
-	srcSocketChan       chan msgBuffer
-	dstSocketChan       chan msgBuffer
-	connectionID        msgbus.ConnectionID
-	eventConnectionChan msgbus.EventChan
-	minerID             msgbus.MinerID
-	eventMinerChan      msgbus.EventChan
-	connectionEvent     msgbus.Event
-	minerEvent          msgbus.Event
-	srcRequest          *request
-	dstResponce         *responce
-	srcStratumState     stratumState
+	ps              *msgbus.PubSub
+	connectionState connectionStates
+	srcConn         socketconn
+	dstConn         socketconn
+	connectionID    msgbus.ConnectionID
+	minerID         msgbus.MinerID
+	eventMinerChan  msgbus.EventChan
+	minerEvent      msgbus.Event
+	stratumState    stratumStates
+	done            chan bool
+}
+
+//---------------------------------------------
+//
+//---------------------------------------------
+func (s *socketconn) setupSocket() (err error) {
+
+	if s.netConn == nil {
+		fmt.Printf(lumerinlib.FileLine() + "SocketConn is nil\n")
+		panic("socketconn is nil\n")
+	}
+
+	if s.bufScanner == nil {
+		s.bufScanner = bufio.NewScanner(s.netConn)
+	}
+
+	if s.bufReader == nil {
+		s.bufReader = bufio.NewReader(s.netConn)
+	}
+
+	if s.bufWriter == nil {
+		s.bufWriter = bufio.NewWriter(s.netConn)
+	}
+
+	s.ch = make(chan msgBuffer)
+
+	s.msgRequest = nil
+	s.msgResponce = nil
+
+	return nil
+}
+
+//---------------------------------------------
+//
+//---------------------------------------------
+func (s *socketconn) close() {
+
+	close(s.done)
+
+	if s.netConn != nil {
+		s.netConn.Close()
+	}
+	s.bufReader = nil
+	s.bufWriter = nil
+	s.bufScanner = nil
+	//	s.ch          chan msgBuffer
+	s.msgRequest = nil
+	s.msgResponce = nil
+
+}
+
+//---------------------------------------------
+//
+//---------------------------------------------
+func (s *socketconn) isClosed() bool {
+	select {
+	case <-s.done:
+		return true
+	default:
+	}
+	return false
+}
+
+//---------------------------------------------
+//
+//---------------------------------------------
+func (s *socketconn) isSocketClosed() bool {
+	if s.netConn == nil {
+		return true
+	}
+	return false
+}
+
+//---------------------------------------------
+//
+//---------------------------------------------
+func (s *socketconn) isRequestReady() bool {
+	return s.msgRequest != nil
+}
+
+//---------------------------------------------
+//
+//---------------------------------------------
+func (s *socketconn) isResponceReady() bool {
+	return s.msgResponce != nil
+}
+
+//---------------------------------------------
+//
+//---------------------------------------------
+func (s *socketconn) clearRequest() {
+	s.msgRequest = nil
+}
+
+//---------------------------------------------
+//
+//---------------------------------------------
+func (s *socketconn) clearResponce() {
+	s.msgResponce = nil
+}
+
+//---------------------------------------------
+//
+//---------------------------------------------
+func (s *socketconn) runSocketReader() {
+
+	if s.bufReader == nil {
+		s.setupSocket()
+	}
+
+	go func(s *socketconn) {
+
+		defer func() {
+			fmt.Printf("Closing %s Socket\n", s.name)
+			s.netConn.Close()
+		}()
+
+	loop:
+		for {
+			fmt.Printf("%s Socket Scan()...\n", s.name)
+
+			if !s.bufScanner.Scan() {
+				err := s.bufScanner.Err()
+
+				if err == nil {
+					fmt.Printf(lumerinlib.FileLine()+"%s Socket Closed TCP connection\n", s.name)
+				} else {
+					fmt.Printf(lumerinlib.FileLine()+"Error recieved on %s TCP connection: %s\n", s.name, err)
+				}
+
+				break loop
+			}
+
+			buf := s.bufScanner.Bytes()
+
+			if len(buf) > 0 {
+				fmt.Printf("Read %s: %s\n", s.name, buf)
+				s.ch <- buf
+			} else {
+				fmt.Printf(lumerinlib.FileLine()+"Warning: Read %s Zero Len, skipping\n", s.name)
+			}
+		}
+	}(s)
+
+}
+
+//------------------------------------------
+//
+//------------------------------------------
+func (s *socketconn) send() error {
+
+	return nil
+
 }
 
 //------------------------------------------
@@ -84,77 +254,44 @@ func New(ps *msgbus.PubSub) (cm *ConnectionManager, err error) {
 //------------------------------------------
 //
 //------------------------------------------
-func newConnection(conn net.Conn, ps *msgbus.PubSub) *connection {
-	c := connection{}
+func newConnection(conn net.Conn, ps *msgbus.PubSub) (c *connection, err error) {
+	c = &connection{}
+
 	c.ps = ps
-	c.state = stateNew
-	c.srcSocketConn = conn
-	c.dstSocketConn = nil
-	c.srcSocketChan = nil
-	c.dstSocketChan = nil
+	c.connectionState = stateNew
+	//	c.srcSocketConn = conn
+	//	c.dstSocketConn = nil
+	//	c.srcSocketChan = nil
+	//	c.dstSocketChan = nil
 	c.eventMinerChan = nil
-	c.eventConnectionChan = nil
 	c.minerID = ""
 	c.connectionID = ""
-	//	c.srcMsgBuf = nil
-	//	c.dstMsgBuf = nil
-	c.connectionEvent = ps.NewEvent()
 	c.minerEvent = ps.NewEvent()
-	c.srcStratumState = StratumNew
+	c.stratumState = StratumNew
 
-	return &c
-}
+	c.srcConn = socketconn{name: "SRC"}
+	c.dstConn = socketconn{name: "DST"}
 
-//---------------------------------------------
-//
-//---------------------------------------------
-func (c *connection) runSrcSocketReader() {
+	if conn == nil {
+		fmt.Printf(lumerinlib.FileLine() + "conn is nil\n")
+		return nil, fmt.Errorf("conn (net.Conn) is nil")
+	}
 
-	//go func(socket net.Conn, ch chan<- msgBuffer) {
-	go func(c *connection) {
+	c.srcConn.netConn = conn
 
-		defer func() {
-			close(c.srcSocketChan)
-			if !c.isSrcSocketClosed() {
-				c.srcSocketConn.Close()
-			}
-		}()
+	err = c.srcConn.setupSocket()
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLine() + "setupSocket() returned error\n")
+	}
 
-		scanner := bufio.NewScanner(c.srcSocketConn)
-
-	loop:
-		for {
-			if !scanner.Scan() {
-				err := scanner.Err()
-				if err == nil {
-					fmt.Printf("SRC Socket Closed TCP connection\n")
-
-				} else {
-
-					fmt.Printf("Error recieved on src TCP connection: %s\n", err)
-				}
-
-				c.srcSocketConn = nil
-				break loop
-			}
-
-			c.srcSocketChan <- scanner.Bytes()
-		}
-	}(c)
-
+	return c, err
 }
 
 //------------------------------------------
 //
 //------------------------------------------
 func (c *connection) isSrcSocketClosed() bool {
-	if c.srcSocketConn == nil {
-
-		err := c.updateConnectionState(stateSrcClosed)
-		if err != nil {
-			fmt.Printf("updateConnectionState returned error: %s\n", err)
-			c.state = stateError
-		}
+	if c.srcConn.isSocketClosed() {
 		return true
 	}
 	return false
@@ -164,13 +301,7 @@ func (c *connection) isSrcSocketClosed() bool {
 //
 //------------------------------------------
 func (c *connection) isDstSocketClosed() bool {
-	if c.dstSocketConn == nil {
-
-		err := c.updateConnectionState(stateDstClosed)
-		if err != nil {
-			fmt.Printf("updateConnectionState returned error: %s\n", err)
-			c.state = stateError
-		}
+	if c.dstConn.isSocketClosed() {
 		return true
 	}
 	return false
@@ -179,50 +310,29 @@ func (c *connection) isDstSocketClosed() bool {
 //------------------------------------------
 //
 //------------------------------------------
-//func (c *connection) isSrcMsgBufFull() bool {
-//	return len(c.srcMsgBuf) > 0
-//}
-
-//------------------------------------------
-//
-//------------------------------------------
-//func (c *connection) isDstMsgBufFull() bool {
-//	return len(c.srcMsgBuf) > 0
-//}
-
-//------------------------------------------
-//
-//------------------------------------------
 func (c *connection) isSrcRequestReady() bool {
-	return c.srcRequest != nil
+	return c.srcConn.isRequestReady()
 }
 
 //------------------------------------------
 //
 //------------------------------------------
 func (c *connection) isDstResponceReady() bool {
-	return c.dstResponce != nil
+	return c.dstConn.isResponceReady()
 }
 
 //------------------------------------------
 //
 //------------------------------------------
 func (c *connection) clearSrcRequest() {
-	c.srcRequest = nil
+	c.srcConn.clearRequest()
 }
 
 //------------------------------------------
 //
 //------------------------------------------
 func (c *connection) clearDstResponce() {
-	c.dstResponce = nil
-}
-
-//------------------------------------------
-//
-//------------------------------------------
-func (c *connection) isConnectionEventFull() bool {
-	return c.connectionEvent.EventType != msgbus.NoEvent
+	c.dstConn.clearResponce()
 }
 
 //------------------------------------------
@@ -236,21 +346,14 @@ func (c *connection) isMinerEventFull() bool {
 //
 //------------------------------------------
 func (c *connection) isSrcSocketChanReady() bool {
-	return len(c.srcSocketChan) > 0
+	return len(c.srcConn.ch) > 0
 }
 
 //------------------------------------------
 //
 //------------------------------------------
 func (c *connection) isDstSocketChanReady() bool {
-	return len(c.dstSocketChan) > 0
-}
-
-//------------------------------------------
-//
-//------------------------------------------
-func (c *connection) isEventConnectionChanReady() bool {
-	return len(c.eventConnectionChan) > 0
+	return len(c.dstConn.ch) > 0
 }
 
 //------------------------------------------
@@ -263,30 +366,15 @@ func (c *connection) isEventMinerChanReady() bool {
 //------------------------------------------
 //
 //------------------------------------------
-func (c *connection) clearConnectionEvent() {
-	c.connectionEvent.EventType = msgbus.NoEvent
-}
-
-//------------------------------------------
-//
-//------------------------------------------
 func (c *connection) clearMinerEvent() {
 	c.minerEvent.EventType = msgbus.NoEvent
 }
 
 //------------------------------------------
-// Need to add timeout in here
+//
 //------------------------------------------
-func (c *connection) waitConnectionEvent() error {
-
-	if !c.isConnectionEventFull() {
-
-		select {
-		case c.connectionEvent = <-c.eventConnectionChan:
-		}
-	}
-
-	return nil
+func (c *connection) isMsgEventReady() bool {
+	return c.isSrcRequestReady() || c.isDstResponceReady() || c.isMinerEventFull()
 }
 
 //------------------------------------------
@@ -294,42 +382,42 @@ func (c *connection) waitConnectionEvent() error {
 //------------------------------------------
 func (c *connection) waitMsgEvent() error {
 
-	if c.isSrcRequestReady() ||
-		c.isDstResponceReady() ||
-		c.isConnectionEventFull() ||
-		c.isMinerEventFull() {
+	if !c.isMsgEventReady() {
 
-		return nil
-	}
+		fmt.Printf("waitMsgEvent()...\n")
 
-	var srcMsgBuf msgBuffer = nil
-	var dstMsgBuf msgBuffer = nil
+		var srcMsgBuf msgBuffer = nil
+		var dstMsgBuf msgBuffer = nil
 
-	// Wait on an event, then Read the event from
-	// src/dst Socket Chan, Connection Event, Miner Event
-	select {
-	case srcMsgBuf = <-c.srcSocketChan:
-	case dstMsgBuf = <-c.dstSocketChan:
-	case c.connectionEvent = <-c.eventConnectionChan:
-	case c.minerEvent = <-c.eventMinerChan:
-	}
+		// Wait on an event, then Read the event from
+		// src/dst Socket Chan, Connection Event, Miner Event
+		select {
+		case srcMsgBuf = <-c.srcConn.ch:
+			if len(srcMsgBuf) > 0 {
+				request, err := getRequestMsg(srcMsgBuf)
+				if err != nil {
+					panic("Bad Src Json message")
+				}
+				c.srcConn.msgRequest = request
+			} else {
+				fmt.Printf(lumerinlib.FileLine() + "Zero lenth SRC Message\n")
+			}
 
-	if srcMsgBuf != nil {
-		request, err := getRequestMsg(srcMsgBuf)
-		if err != nil {
-			panic("Bad Src Json message")
+		case dstMsgBuf = <-c.dstConn.ch:
+			if len(dstMsgBuf) > 0 {
+				responce, err := getResponceMsg(dstMsgBuf)
+				if err != nil {
+					panic("Bad Dst Json message")
+				}
+				c.dstConn.msgResponce = responce
+			} else {
+				fmt.Printf(lumerinlib.FileLine() + "Zero lenth DST Message\n")
+			}
+
+		case c.minerEvent = <-c.eventMinerChan:
 		}
-		c.srcRequest = request
-	}
 
-	if dstMsgBuf != nil {
-		responce, err := getResponceMsg(dstMsgBuf)
-		if err != nil {
-			panic("Bad Dst Json message")
-		}
-		c.dstResponce = responce
 	}
-
 	return nil
 }
 
@@ -338,40 +426,36 @@ func (c *connection) waitMsgEvent() error {
 //------------------------------------------
 func (c *connection) updateConnectionState(s connectionStates) error {
 
-	if c.state == s {
-		fmt.Printf("update_connectionState() Current state is the desired state\n")
+	if c.connectionState == s {
+		fmt.Printf("update_connectionState() Current state is the desired state %v\n", s)
 		return nil
 	}
 
-	ech := make(msgbus.EventChan)
-	err := c.ps.Get(msgbus.ConnectionMsg, msgbus.IDString(c.connectionID), ech)
+	event, err := c.ps.GetWait(msgbus.ConnectionMsg, msgbus.IDString(c.connectionID))
 	if err != nil {
-		fmt.Printf("Error returned for pubsub Get %s\n", err)
+		fmt.Printf(lumerinlib.FileLine()+"Error returned for pubsub Get %s\n", err)
 		return err
 	}
 
 	// Need a function that will do this but time out
-	getEvent := <-ech
+	// getEvent := <-ech
 
-	connection := getEvent.Data.(msgbus.Connection)
+	connection := event.Data.(msgbus.Connection)
 
-	if connection.State != connectionStateMap[c.state] {
-		//debug.PrintStack()
+	if connection.State != connectionStateMap[c.connectionState] {
 		fmt.Printf("connction.State: %v\n", connection.State)
-		fmt.Printf("c.state: %v\n", c.state)
-		//fmt.Printf("Error: %s", lumerinlib.Errtrace())
-		// panic("states are out of sync")
+		fmt.Printf("c.connectionState: %v\n", c.connectionState)
 	}
 
 	connection.State = connectionStateMap[s]
-	err = c.ps.Set(msgbus.ConnectionMsg, msgbus.IDString(c.connectionID), connection)
+	_, err = c.ps.SetWait(msgbus.ConnectionMsg, msgbus.IDString(c.connectionID), connection)
 	if err != nil {
-		fmt.Printf("Error returned for pubsub Set %s", err)
+		fmt.Printf(lumerinlib.FileLine()+"Error returned for pubsub Set %s\n", err)
 		return err
 	}
 
-	fmt.Printf("STATE changed to:%v for ID: %s", c.state, c.connectionID)
-	c.state = s
+	fmt.Printf(lumerinlib.FileLine()+" STATE changed to:%v for ID: %s\n", c.connectionState, c.connectionID)
+	c.connectionState = s
 
 	return nil
 }
@@ -388,18 +472,18 @@ func (c *connection) updateConnectionState(s connectionStates) error {
 //------------------------------------------
 func (c *connection) handleStateNew() {
 
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
+
 	if c.connectionID == "" {
 
 		fmt.Printf("Create new SRC connection\n")
 
-		c.srcSocketChan = make(chan msgBuffer)
 		c.connectionID = msgbus.ConnectionID(msgbus.GetRandomIDString())
-		c.state = stateNew
-		c.eventConnectionChan = c.ps.NewEventChan()
+		c.connectionState = stateNew
 
 		// This is called when there is a new src connection
 		// Start the src socket reader
-		c.runSrcSocketReader()
+		c.srcConn.runSocketReader()
 
 		var connStruct msgbus.Connection = msgbus.Connection{
 			ID:        c.connectionID,
@@ -411,7 +495,7 @@ func (c *connection) handleStateNew() {
 		}
 
 		// Create entry into connection table
-		err1 := c.ps.Pub(
+		_, err1 := c.ps.PubWait(
 			msgbus.ConnectionMsg,
 			msgbus.IDString(c.connectionID),
 			connStruct)
@@ -420,44 +504,15 @@ func (c *connection) handleStateNew() {
 			panic(err1)
 		}
 
-		// Subscribe to events for the connection table
-		err2 := c.ps.Sub(
-			msgbus.ConnectionMsg,
-			msgbus.IDString(c.connectionID),
-			c.eventConnectionChan)
-		if err2 != nil {
-			fmt.Printf("Error pubsub.Sub return error: %s\n", err2)
-			panic(err2)
-		}
-
 	}
 
-	for c.state == stateNew {
-
-		// Wait on connectionEvent (skipping src msg events)
-		err := c.waitConnectionEvent()
-		if err != nil {
-			c.state = stateError
-			return
-		}
-
-		if c.connectionEvent.EventType == msgbus.SubscribedEvent {
-			c.clearConnectionEvent()
-
-			err := c.updateConnectionState(stateOpen)
-			if err != nil {
-				fmt.Printf("updateConnectionState returned error:" + err.Error())
-				c.state = stateError
-				return
-			}
-
-		} else {
-			fmt.Printf("non-Subscribed Connection Event found in StateNew\n")
-			c.state = stateError
-			return
-		}
-
+	err := c.updateConnectionState(stateOpen)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLine() + "updateConnectionState returned error:" + err.Error() + "\n")
+		c.connectionState = stateError
+		return
 	}
+
 }
 
 //------------------------------------------
@@ -468,50 +523,57 @@ func (c *connection) handleStateNew() {
 //------------------------------------------
 func (c *connection) handleStateOpen() {
 
-	for c.state == stateOpen {
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
 
-		switch {
+	for c.connectionState == stateOpen {
 
-		case c.isSrcSocketClosed():
-			return
+		if c.isMsgEventReady() {
+			switch {
 
-		case c.isConnectionEventFull():
-			fmt.Printf("Connection Event found in StateOpen\n")
-			c.state = stateError
-			return
+			case c.isSrcSocketClosed():
+				err := c.updateConnectionState(stateSrcClosed)
+				if err != nil {
+					fmt.Printf(lumerinlib.FileLine() + "updateConnectionState returned error:" + err.Error() + "\n")
+					c.connectionState = stateError
+				}
+				return
 
-		case c.isSrcRequestReady():
-			if c.srcRequest.Method == string(MINING_SUBSCRIBE) {
-				c.srcStratumState = StratumSubscribed
+			case c.isSrcRequestReady():
+
+				if c.srcConn.msgRequest.Method == string(MINING_SUBSCRIBE) {
+					c.stratumState = StratumSubscribed
+				}
+
+				fmt.Printf(lumerinlib.FileLine()+"Read SRC Request: %v\n", c.srcConn.msgRequest)
+
+				c.clearSrcRequest()
+
+				err := c.updateConnectionState(stateAuth)
+				if err != nil {
+					fmt.Printf(lumerinlib.FileLine() + "updateConnectionState returned error:" + err.Error() + "\n")
+					c.connectionState = stateError
+				}
+				return
+
+			case c.isMinerEventFull():
+				fmt.Printf(lumerinlib.FileLine() + "Miner Event found in StateOpen\n")
+				c.connectionState = stateError
+				return
+
+			case c.isDstResponceReady():
+				fmt.Printf(lumerinlib.FileLine() + "Dst Msg Buffer found in StateOpen\n")
+				c.connectionState = stateError
+				return
+
+			default:
+				panic("Default reached in StateOpen\n")
 			}
-
-			c.clearSrcRequest()
-
-			err := c.updateConnectionState(stateAuth)
-			if err != nil {
-				fmt.Printf("updateConnectionState returned error:" + err.Error() + "\n")
-				c.state = stateError
-			}
-			return
-
-		case c.isMinerEventFull():
-			fmt.Printf("Miner Event found in StateOpen\n")
-			c.state = stateError
-			return
-
-		case c.isDstResponceReady():
-			fmt.Printf("Dst Msg Buffer found in StateOpen\n")
-			c.state = stateError
-			return
-
-		default:
-			fmt.Printf("Default reached in StateOpen\n")
 		}
 
 		err := c.waitMsgEvent()
 		if err != nil {
-			fmt.Printf("waitMsgEvent() returned error")
-			c.state = stateError
+			fmt.Printf(lumerinlib.FileLine() + "waitMsgEvent() returned error")
+			c.connectionState = stateError
 			return
 		}
 	}
@@ -525,48 +587,52 @@ func (c *connection) handleStateOpen() {
 //------------------------------------------
 func (c *connection) handleStateAuth() {
 
-	for c.state == stateAuth {
-		switch {
-		case c.isSrcSocketClosed():
-			return
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
 
-		case c.isSrcRequestReady():
+	for c.connectionState == stateAuth {
+		if c.isMsgEventReady() {
+			switch {
+			case c.isSrcSocketClosed():
+				err := c.updateConnectionState(stateSrcClosed)
+				if err != nil {
+					fmt.Printf(lumerinlib.FileLine() + "updateConnectionState returned error:" + err.Error() + "\n")
+					c.connectionState = stateError
+				}
+				return
 
-			if c.srcRequest.Method == string(MINING_AUTHORIZE) {
-				c.srcStratumState = StratumSubscribed
+			case c.isSrcRequestReady():
+
+				if c.srcConn.msgRequest.Method == string(MINING_AUTHORIZE) {
+					c.stratumState = StratumSubscribed
+				}
+				c.clearSrcRequest()
+
+				err := c.updateConnectionState(stateHashVerify)
+				if err != nil {
+					fmt.Printf(lumerinlib.FileLine() + "updateConnectionState returned error:" + err.Error())
+					c.connectionState = stateError
+				}
+				return
+
+			case c.isMinerEventFull():
+				fmt.Printf(lumerinlib.FileLine() + "Miner Event found in StateAuth\n")
+				c.connectionState = stateError
+				return
+
+			case c.isDstResponceReady():
+				fmt.Printf(lumerinlib.FileLine() + "Dst Msg Buffer found in StateAuth\n")
+				c.connectionState = stateError
+				return
+
+			default:
+				panic("Default reached in handleStateAuth\n")
 			}
-			c.clearSrcRequest()
-
-			err := c.updateConnectionState(stateHashVerify)
-			if err != nil {
-				fmt.Printf("updateConnectionState returned error:" + err.Error())
-				c.state = stateError
-			}
-			return
-
-		case c.isConnectionEventFull():
-			fmt.Printf("Connection Event found in StateAuth\n")
-			c.state = stateError
-			return
-
-		case c.isMinerEventFull():
-			fmt.Printf("Miner Event found in StateAuth\n")
-			c.state = stateError
-			return
-
-		case c.isDstResponceReady():
-			fmt.Printf("Dst Msg Buffer found in StateAuth\n")
-			c.state = stateError
-			return
-
-		default:
-			fmt.Printf("Default reached in handleStateAuth\n")
 		}
 
 		err := c.waitMsgEvent()
 		if err != nil {
-			fmt.Printf("waitMsgEvent() returned error")
-			c.state = stateError
+			fmt.Printf(lumerinlib.FileLine() + "waitMsgEvent() returned error")
+			c.connectionState = stateError
 			return
 		}
 	}
@@ -579,41 +645,47 @@ func (c *connection) handleStateAuth() {
 //------------------------------------------
 func (c *connection) handleStateHashVerify() {
 
-	for c.state == stateAuth {
-		switch {
-		case c.isSrcSocketClosed():
-			return
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
 
-		case c.isSrcRequestReady():
-			fmt.Printf("SrcRequestReady in handleStateHashVerify()")
-			c.state = stateError
-			return
+	// Skip Verify for Now, go right to Routing
+	err := c.updateConnectionState(stateRouting)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLine() + "updateConnectionState returned error:" + err.Error())
+		c.connectionState = stateError
+	}
 
-		case c.isConnectionEventFull():
-			fmt.Printf("ConnectionEvent in handleStateHashVerify()")
-			c.state = stateError
-			return
+	for c.connectionState == stateAuth {
+		if c.isMsgEventReady() {
+			switch {
+			case c.isSrcSocketClosed():
+				return
 
-		case c.isMinerEventFull():
-			fmt.Printf("MinerEvent in handleStateHashVerify()")
-			c.state = stateError
-			return
+			case c.isSrcRequestReady():
+				fmt.Printf(lumerinlib.FileLine() + "SrcRequestReady in handleStateHashVerify()")
+				c.connectionState = stateError
+				return
 
-		case c.isDstResponceReady():
-			fmt.Printf("DstResponceReady in handleStateHashVerify()")
-			c.state = stateError
-			return
+			case c.isMinerEventFull():
+				fmt.Printf(lumerinlib.FileLine() + "MinerEvent in handleStateHashVerify()")
+				c.connectionState = stateError
+				return
 
-		default:
-			fmt.Printf("Default reached in handleStateAuth")
+			case c.isDstResponceReady():
+				fmt.Printf(lumerinlib.FileLine() + "DstResponceReady in handleStateHashVerify()")
+				c.connectionState = stateError
+				return
+
+			default:
+				fmt.Printf("Default reached in handleStateAuth")
+			}
 		}
 
 		err := c.updateConnectionState(stateRouting)
 		if err != nil {
-			fmt.Printf("updateConnectionState returned error:" + err.Error())
-			c.state = stateError
+			fmt.Printf(lumerinlib.FileLine() + " updateConnectionState returned error:" + err.Error())
+			c.connectionState = stateError
+			return
 		}
-		return
 	}
 }
 
@@ -625,41 +697,47 @@ func (c *connection) handleStateHashVerify() {
 //------------------------------------------
 func (c *connection) handleStateRouting() {
 
-	for c.state == stateRouting {
-		switch {
-		case c.isSrcSocketClosed():
-			return
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
 
-		case c.isSrcRequestReady():
-			fmt.Printf("SrcRequestReady in handleStateRouting()")
-			c.state = stateError
-			return
+	// Skip Routing for Now
+	err := c.updateConnectionState(stateShutdown)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLine() + "updateConnectionState returned error:" + err.Error())
+		c.connectionState = stateError
+	}
 
-		case c.isConnectionEventFull():
-			fmt.Printf("isConnectionEventFull in handleStateRouting()")
-			c.state = stateError
-			return
+	for c.connectionState == stateRouting {
+		if c.isMsgEventReady() {
+			switch {
+			case c.isSrcSocketClosed():
+				return
 
-		case c.isMinerEventFull():
-			fmt.Printf("isminerEventFull in handleStateRouting()")
-			c.state = stateError
-			return
+			case c.isSrcRequestReady():
+				fmt.Printf(lumerinlib.FileLine() + "SrcRequestReady in handleStateRouting()")
+				c.connectionState = stateError
+				return
 
-		case c.isDstResponceReady():
-			fmt.Printf("dstResponceReady in handleStateRouting()")
-			c.state = stateError
-			return
+			case c.isMinerEventFull():
+				fmt.Printf(lumerinlib.FileLine() + "isminerEventFull in handleStateRouting()")
+				c.connectionState = stateError
+				return
 
-		default:
-			fmt.Printf("default reached in handleStateRouting()")
+			case c.isDstResponceReady():
+				fmt.Printf(lumerinlib.FileLine() + "dstResponceReady in handleStateRouting()")
+				c.connectionState = stateError
+				return
+
+			default:
+				fmt.Printf("default reached in handleStateRouting()")
+			}
 		}
 
 		err := c.updateConnectionState(stateConnecting)
 		if err != nil {
-			fmt.Printf("updateConnectionState returned error:" + err.Error())
-			c.state = stateError
+			fmt.Printf(lumerinlib.FileLine() + "updateConnectionState returned error:" + err.Error())
+			c.connectionState = stateError
+			return
 		}
-		return
 	}
 }
 
@@ -669,41 +747,40 @@ func (c *connection) handleStateRouting() {
 //------------------------------------------
 func (c *connection) handleStateConnecting() {
 
-	for c.state == stateConnecting {
-		switch {
-		case c.isSrcSocketClosed():
-			return
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
 
-		case c.isSrcRequestReady():
-			fmt.Printf("SrcRequestReady in handleStateConnecting()")
-			c.state = stateError
-			return
+	for c.connectionState == stateConnecting {
+		if c.isMsgEventReady() {
+			switch {
+			case c.isSrcSocketClosed():
+				return
 
-		case c.isConnectionEventFull():
-			fmt.Printf("isConnectionEventFull in handleStateConnecting()")
-			c.state = stateError
-			return
+			case c.isSrcRequestReady():
+				fmt.Printf(lumerinlib.FileLine() + "SrcRequestReady in handleStateConnecting()")
+				c.connectionState = stateError
+				return
 
-		case c.isMinerEventFull():
-			fmt.Printf("isminerEventFull in handleStateConnecting()")
-			c.state = stateError
-			return
+			case c.isMinerEventFull():
+				fmt.Printf(lumerinlib.FileLine() + "isminerEventFull in handleStateConnecting()")
+				c.connectionState = stateError
+				return
 
-		case c.isDstResponceReady():
-			fmt.Printf("dstResponceReady in handleStateConnecting()")
-			c.state = stateError
-			return
+			case c.isDstResponceReady():
+				fmt.Printf(lumerinlib.FileLine() + "dstResponceReady in handleStateConnecting()")
+				c.connectionState = stateError
+				return
 
-		default:
-			fmt.Printf("default reached in handleStateConnecting()")
+			default:
+				fmt.Printf("default reached in handleStateConnecting()")
+			}
 		}
 
 		err := c.updateConnectionState(stateConnected)
 		if err != nil {
-			fmt.Printf("updateConnectionState returned error:" + err.Error())
-			c.state = stateError
+			fmt.Printf(lumerinlib.FileLine() + "updateConnectionState returned error:" + err.Error())
+			c.connectionState = stateError
+			return
 		}
-		return
 
 	}
 
@@ -714,16 +791,17 @@ func (c *connection) handleStateConnecting() {
 //------------------------------------------
 func (c *connection) handleStateConnected() {
 
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
+
 	switch {
 	case c.isSrcSocketClosed():
 		return
 
 	case c.isDstSocketClosed():
-		c.state = stateDstClosed
+		c.connectionState = stateDstClosed
 		return
 
 	case c.isSrcRequestReady():
-	case c.isConnectionEventFull():
 	case c.isMinerEventFull():
 	case c.isDstResponceReady():
 	default:
@@ -737,12 +815,13 @@ func (c *connection) handleStateConnected() {
 //------------------------------------------
 func (c *connection) handleStateRouteChange() {
 
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
+
 	switch {
 	case c.isSrcSocketClosed():
 		return
 
 	case c.isSrcRequestReady():
-	case c.isConnectionEventFull():
 	case c.isMinerEventFull():
 	case c.isDstResponceReady():
 	default:
@@ -757,23 +836,25 @@ func (c *connection) handleStateRouteChange() {
 //------------------------------------------
 func (c *connection) handleStateMsgError() {
 
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
+
 	switch {
 	case c.isSrcSocketClosed():
 		return
 
 	case c.isDstSocketClosed():
-		c.state = stateDstClosed
+		c.connectionState = stateDstClosed
 		return
 
 	case c.isSrcRequestReady():
-	case c.isConnectionEventFull():
+		//	case c.isConnectionEventFull():
 	case c.isMinerEventFull():
 	case c.isDstResponceReady():
 	default:
 		panic("Default reached in handleStateAuth")
 	}
 
-	c.state = stateShutdown
+	c.connectionState = stateShutdown
 }
 
 //------------------------------------------
@@ -781,23 +862,25 @@ func (c *connection) handleStateMsgError() {
 //------------------------------------------
 func (c *connection) handleStateConnectError() {
 
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
+
 	switch {
 	case c.isSrcSocketClosed():
 		return
 
 	case c.isDstSocketClosed():
-		c.state = stateDstClosed
+		c.connectionState = stateDstClosed
 		return
 
 	case c.isSrcRequestReady():
-	case c.isConnectionEventFull():
+		//	case c.isConnectionEventFull():
 	case c.isMinerEventFull():
 	case c.isDstResponceReady():
 	default:
 		panic("Default reached in handleStateAuth")
 	}
 
-	c.state = stateShutdown
+	c.connectionState = stateShutdown
 }
 
 //------------------------------------------
@@ -807,8 +890,10 @@ func (c *connection) handleStateConnectError() {
 //------------------------------------------
 func (c *connection) handleStateSrcClosed() {
 
-	if c.isSrcSocketClosed() {
-		return
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
+
+	if !c.isSrcSocketClosed() {
+		panic(lumerinlib.FileLine() + "Src is not closed\n")
 	}
 
 	err := c.updateConnectionState(stateShutdown)
@@ -822,6 +907,8 @@ func (c *connection) handleStateSrcClosed() {
 //
 //------------------------------------------
 func (c *connection) handleStateDstClosed() {
+
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
 
 	if c.isSrcSocketClosed() {
 		return
@@ -841,7 +928,9 @@ func (c *connection) handleStateDstClosed() {
 //------------------------------------------
 func (c *connection) handleStateError() {
 
-	fmt.Printf("Error State Reached, shutting down...")
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
+
+	fmt.Printf("Error State Reached, shutting down...\n")
 
 	err := c.updateConnectionState(stateShutdown)
 	if err != nil {
@@ -859,24 +948,11 @@ func (c *connection) handleStateError() {
 //------------------------------------------
 func (c *connection) handleStateShutdown() {
 
+	fmt.Printf("Enter " + lumerinlib.Funcname() + "\n")
+
 	var err error
-	connectionEventClosed := false
+	//	connectionEventClosed := false
 	minerEventClosed := false
-
-	err = c.updateConnectionState(stateClosed)
-	if err != nil {
-		panic("updateConnectionState returned error:" + err.Error())
-	}
-
-	if c.eventConnectionChan != nil {
-		err = c.ps.RemoveAndCloseEventChan(c.eventConnectionChan)
-		if err != nil {
-			fmt.Printf("Error pubsub.remove event return error: %s\n", err)
-			panic(err)
-		}
-	} else {
-		connectionEventClosed = true
-	}
 
 	if c.eventMinerChan != nil {
 		err = c.ps.RemoveAndCloseEventChan(c.eventMinerChan)
@@ -888,43 +964,23 @@ func (c *connection) handleStateShutdown() {
 		minerEventClosed = true
 	}
 
-	for !(connectionEventClosed && minerEventClosed) {
-
-		err := c.waitMsgEvent()
-		if err != nil {
-			panic("In Shutdown and waitMsgEvent() returned error")
+	if !minerEventClosed && c.isMinerEventFull() {
+		if c.minerEvent.EventType == msgbus.RemovedEvent {
+			minerEventClosed = true
 		}
-
-		if !connectionEventClosed && c.isConnectionEventFull() {
-			if c.connectionEvent.EventType == msgbus.RemovedEvent {
-				connectionEventClosed = true
-			}
-			c.clearConnectionEvent()
-		}
-
-		if !minerEventClosed && c.isMinerEventFull() {
-			if c.minerEvent.EventType == msgbus.RemovedEvent {
-				minerEventClosed = true
-			}
-			c.clearMinerEvent()
-		}
-
+		c.clearMinerEvent()
 	}
 
-	if c.srcSocketConn != nil {
-		c.srcSocketConn.Close()
-	}
-
-	if c.dstSocketConn != nil {
-		c.dstSocketConn.Close()
-	}
-
-	if c.eventConnectionChan != nil {
-		close(c.eventConnectionChan)
-	}
+	c.srcConn.close()
+	c.dstConn.close()
 
 	if c.eventMinerChan != nil {
 		close(c.eventMinerChan)
+	}
+
+	err = c.updateConnectionState(stateClosed)
+	if err != nil {
+		panic("updateConnectionState returned error:" + err.Error())
 	}
 
 }
@@ -941,7 +997,7 @@ func (c *connection) dispatchLoop() {
 
 	for {
 
-		switch c.state {
+		switch c.connectionState {
 		case stateNew:
 			c.handleStateNew()
 
@@ -993,56 +1049,11 @@ func (c *connection) dispatchLoop() {
 		}
 
 		// Skip the select process if any of these states are in effect
-		if c.state == stateClosed || c.state == stateSrcClosed || c.state == stateShutdown {
+		if c.connectionState == stateClosed || c.connectionState == stateSrcClosed || c.connectionState == stateShutdown {
 			continue
 		}
 
-		if false && c.isSrcRequestReady() ||
-			c.isDstResponceReady() ||
-			c.isConnectionEventFull() ||
-			c.isMinerEventFull() {
-
-			fmt.Printf("Found Event or new Message\n\tsrcRequest %v\n\tDstResp %v\n\tConnEvent %v\n\tMinerEvent %v\n",
-				c.isSrcRequestReady(),
-				c.isDstResponceReady(),
-				c.isConnectionEventFull(),
-				c.isMinerEventFull())
-
-			if c.isSrcRequestReady() {
-				fmt.Printf("Request: %s State: %v\n", c.srcRequest.Method, c.state)
-			}
-			continue
-		}
-
-		if false {
-			var srcMsgBuf msgBuffer = nil
-			var dstMsgBuf msgBuffer = nil
-
-			// Wait on an event, then Read the event from
-			// src/dst Socket Chan, Connection Event, Miner Event
-			select {
-			case srcMsgBuf = <-c.srcSocketChan:
-			case dstMsgBuf = <-c.dstSocketChan:
-			case c.connectionEvent = <-c.eventConnectionChan:
-			case c.minerEvent = <-c.eventMinerChan:
-			}
-
-			if srcMsgBuf != nil {
-				request, err := getRequestMsg(srcMsgBuf)
-				if err != nil {
-					panic("Bad Src Json message")
-				}
-				c.srcRequest = request
-			}
-
-			if dstMsgBuf != nil {
-				responce, err := getResponceMsg(dstMsgBuf)
-				if err != nil {
-					panic("Bad Dst Json message")
-				}
-				c.dstResponce = responce
-			}
-		}
+		c.waitMsgEvent()
 
 	}
 
@@ -1086,7 +1097,10 @@ func (cm *ConnectionManager) listenForIncomingConnections(l net.Listener) {
 			break
 		}
 
-		c := newConnection(conn, cm.ps)
+		c, err := newConnection(conn, cm.ps)
+		if err != nil {
+			panic(fmt.Sprintf(lumerinlib.FileLine()+" newConnection() failed with %s\n", err))
+		}
 		go c.dispatchLoop()
 	}
 

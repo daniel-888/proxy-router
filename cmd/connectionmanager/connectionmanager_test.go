@@ -9,7 +9,7 @@ import (
 
 func TestBoilerPlateFunc(t *testing.T) {
 
-	waitchan := make(chan int)
+	//waitchan := make(chan int)
 
 	ps := msgbus.New(1)
 
@@ -25,6 +25,6 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 
 	fmt.Println("Break point")
-	<-waitchan
+	//<-waitchan
 
 }
