@@ -8,39 +8,30 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 )
 
-var config *msgdata.ConfigInfoRepo
-var connection *msgdata.ConnectionRepo
-var contract *msgdata.ContractRepo
-var dest *msgdata.DestRepo
-var miner *msgdata.MinerRepo
-var seller *msgdata.SellerRepo
-// var isInitialized bool = false
-
 func InitializeJSONRepos() (*msgdata.ConfigInfoRepo, 
 							*msgdata.ConnectionRepo, 
 							*msgdata.ContractRepo, 
 							*msgdata.DestRepo, 
 							*msgdata.MinerRepo, 
 							*msgdata.SellerRepo) {
-	config = msgdata.NewConfigInfo()
-	connection = msgdata.NewConnection()
-	contract = msgdata.NewContract()
-	dest = msgdata.NewDest()
-	miner = msgdata.NewMiner()
-	seller = msgdata.NewSeller()
-	//isInitialized = true
+
+	config := msgdata.NewConfigInfo()
+	connection := msgdata.NewConnection()
+	contract := msgdata.NewContract()
+	dest := msgdata.NewDest()
+	miner := msgdata.NewMiner()
+	seller := msgdata.NewSeller()
+
 	return config, connection, contract, dest, miner, seller
 }
 
-func RunAPI() {
-	//Exit out of function if JSON Repos are not initialized
-	// if !isInitialized {
-	// 	fmt.Println("JSON Repos not initialized, exit API run function")
-	// 	return
-	// }
-
-	// Use default middleware
-
+func RunAPI(config *msgdata.ConfigInfoRepo,
+			connection *msgdata.ConnectionRepo,
+			contract *msgdata.ContractRepo,
+			dest *msgdata.DestRepo,
+			miner *msgdata.MinerRepo,
+			seller *msgdata.SellerRepo) {
+	
 	r := gin.Default()
 
 	configRoutes := r.Group("/config")
