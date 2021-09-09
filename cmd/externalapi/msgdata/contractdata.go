@@ -2,7 +2,7 @@ package msgdata
 
 import (
 	"errors"
-	"strconv"
+	//"strconv"
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
@@ -10,18 +10,18 @@ import (
 
 // Struct of Contract parameters in JSON 
 type ContractJSON struct {
-	ID              	string 	`json:"ID"`
-	State           	string 	`json:"State"`
-	Buyer				string 	`json:"Buyer"`
-	Dest				string	`json:"Dest"`
-	CommitedHashRate	string 	`json:"Commited Hash Rate"`
-	TargetHashRate   	string 	`json:"Target Hash Rate"`
-	CurrentHashRate  	string 	`json:"Current Hash Rate"`
-	Tolerance        	string 	`json:"Tolerance"`
-	Penalty          	string 	`json:"Penalty"`
-	Priority         	string 	`json:"Priority"`
-	StartDate        	string 	`json:"Start Date"`
-	EndDate          	string 	`json:"End Date"`
+	ID              	string 	`json:"id"`
+	State           	string 	`json:"state"`
+	Buyer				string 	`json:"buyer"`
+	Dest				string	`json:"dest"`
+	CommitedHashRate	int 	`json:"commitedHashRate"`
+	TargetHashRate   	int 	`json:"targetHashRate"`
+	CurrentHashRate  	int 	`json:"currentHashRate"`
+	Tolerance        	int 	`json:"tolerance"`
+	Penalty          	int 	`json:"penalty"`
+	Priority         	int 	`json:"priority"`
+	StartDate        	string 	`json:"startDate"`
+	EndDate          	string 	`json:"endDate"`
 }
 
 //Struct that stores slice of all JSON Contract structs in Repo
@@ -62,12 +62,12 @@ func (r *ContractRepo) AddContractFromMsgBus(contract msgbus.Contract) {
 	contractJSON.State = string(contract.State)
 	contractJSON.Buyer = string(contract.Buyer)
 	contractJSON.Dest = string(contract.Dest)
-	contractJSON.CommitedHashRate = strconv.Itoa(contract.CommitedHashRate)
-	contractJSON.TargetHashRate = strconv.Itoa(contract.TargetHashRate)
-	contractJSON.CurrentHashRate = strconv.Itoa(contract.CurrentHashRate)
-	contractJSON.Tolerance = strconv.Itoa(contract.Tolerance)
-	contractJSON.Penalty = strconv.Itoa(contract.Penalty)
-	contractJSON.Priority = strconv.Itoa(contract.Priority)
+	contractJSON.CommitedHashRate = contract.CommitedHashRate //strconv.Itoa(contract.CommitedHashRate)
+	contractJSON.TargetHashRate = contract.TargetHashRate
+	contractJSON.CurrentHashRate = contract.CurrentHashRate
+	contractJSON.Tolerance = contract.Tolerance
+	contractJSON.Penalty = contract.Penalty
+	contractJSON.Priority = contract.Priority
 	contractJSON.StartDate = contract.StartDate.String()
 	contractJSON.EndDate = contract.EndDate.String()
 	
@@ -81,10 +81,10 @@ func (r *ContractRepo) UpdateContract(id string, newContract ContractJSON) error
 			if newContract.State != "" {r.ContractJSONs[i].State = newContract.State}
 			if newContract.Buyer != "" {r.ContractJSONs[i].Buyer = newContract.Buyer}
 			if newContract.Dest != "" {r.ContractJSONs[i].Dest = newContract.Dest}
-			if newContract.CommitedHashRate != "" {r.ContractJSONs[i].CommitedHashRate = newContract.CommitedHashRate}
-			if newContract.CurrentHashRate != "" {r.ContractJSONs[i].CurrentHashRate = newContract.CurrentHashRate}
-			if newContract.Tolerance != "" {r.ContractJSONs[i].Tolerance = newContract.Tolerance}
-			if newContract.Priority != "" {r.ContractJSONs[i].Priority = newContract.Priority}
+			if newContract.CommitedHashRate != 0 {r.ContractJSONs[i].CommitedHashRate = newContract.CommitedHashRate}
+			if newContract.CurrentHashRate != 0 {r.ContractJSONs[i].CurrentHashRate = newContract.CurrentHashRate}
+			if newContract.Tolerance != 0 {r.ContractJSONs[i].Tolerance = newContract.Tolerance}
+			if newContract.Priority != 0 {r.ContractJSONs[i].Priority = newContract.Priority}
 			if newContract.StartDate != "" {r.ContractJSONs[i].StartDate = newContract.StartDate}
 			if newContract.EndDate != "" {r.ContractJSONs[i].EndDate = newContract.EndDate}
 
@@ -111,12 +111,12 @@ func ConvertContractJSONtoContractMSG(contract ContractJSON, msg msgbus.Contract
 	msg.State = msgbus.ContractState(contract.State)
 	msg.Buyer = msgbus.BuyerID(contract.Buyer)
 	msg.Dest = msgbus.DestID(contract.Dest)
-	msg.CommitedHashRate,_ = strconv.Atoi(contract.CommitedHashRate)
-	msg.TargetHashRate,_ = strconv.Atoi(contract.TargetHashRate)
-	msg.CurrentHashRate,_ = strconv.Atoi(contract.CurrentHashRate)
-	msg.Tolerance,_ = strconv.Atoi(contract.Tolerance)
-	msg.Penalty,_ = strconv.Atoi(contract.Penalty)
-	msg.Priority,_ = strconv.Atoi(contract.Priority)
+	msg.CommitedHashRate = contract.CommitedHashRate //strconv.Atoi(contract.CommitedHashRate)
+	msg.TargetHashRate = contract.TargetHashRate
+	msg.CurrentHashRate = contract.CurrentHashRate
+	msg.Tolerance = contract.Tolerance
+	msg.Penalty = contract.Penalty
+	msg.Priority = contract.Priority
 	msg.StartDate,_ = time.Parse(contract.StartDate, "000000")
 	msg.EndDate,_ = time.Parse(contract.EndDate, "000000")
 

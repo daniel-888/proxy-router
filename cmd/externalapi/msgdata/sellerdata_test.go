@@ -9,8 +9,8 @@ func TestAddSeller(t *testing.T) {
 	seller := SellerJSON{
 		ID:                     "Test",
 		DefaultDest:            "Test",
-		TotalAvailableHashRate: "Test",
-		UnusedHashRate:         "Test",
+		TotalAvailableHashRate: 100,
+		UnusedHashRate:         100,
 	}
 	
 	sellerRepo := NewSeller()
@@ -26,8 +26,8 @@ func TestGetAllSellers(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		seller[i].ID = "Test" + fmt.Sprint(i)
 		seller[i].DefaultDest = "Test"
-		seller[i].TotalAvailableHashRate = "Test"
-		seller[i].UnusedHashRate = "Test"
+		seller[i].TotalAvailableHashRate = 100
+		seller[i].UnusedHashRate = 100
 	}
 	
 	sellerRepo := NewSeller()
@@ -46,8 +46,8 @@ func TestGetSeller(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		seller[i].ID = "Test" + fmt.Sprint(i)
 		seller[i].DefaultDest = "Test"
-		seller[i].TotalAvailableHashRate = "Test"
-		seller[i].UnusedHashRate = "Test"
+		seller[i].TotalAvailableHashRate = 100
+		seller[i].UnusedHashRate = 100
 	}
 	
 	sellerRepo := NewSeller()
@@ -70,8 +70,8 @@ func TestUpdateSeller(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		seller[i].ID = "Test" + fmt.Sprint(i)
 		seller[i].DefaultDest = "Test"
-		seller[i].TotalAvailableHashRate = "Test"
-		seller[i].UnusedHashRate = "Test"
+		seller[i].TotalAvailableHashRate = 100
+		seller[i].UnusedHashRate = 100
 	}
 	
 	sellerRepo := NewSeller()
@@ -82,8 +82,8 @@ func TestUpdateSeller(t *testing.T) {
 	sellerUpdates := SellerJSON{
 		ID:                     "",
 		DefaultDest:            "",
-		TotalAvailableHashRate: "Updated",
-		UnusedHashRate:         "",
+		TotalAvailableHashRate: 10001,
+		UnusedHashRate:         0,
 	}
 	
 	var results [10]SellerJSON
@@ -94,7 +94,7 @@ func TestUpdateSeller(t *testing.T) {
 		if errors[i] != nil {
 			t.Errorf("UpdateSeller function returned error for this ID: " + results[i].ID)
 		}
-		if results[i].TotalAvailableHashRate != "Updated" {
+		if results[i].TotalAvailableHashRate != 10001 {
 			t.Errorf("UpdateSeller function did not update Seller Struct")
 		}
 		if results[i].ID != seller[i].ID {
@@ -108,8 +108,8 @@ func TestDeleteSeller(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		seller[i].ID = "Test" + fmt.Sprint(i)
 		seller[i].DefaultDest = "Test"
-		seller[i].TotalAvailableHashRate = "Test"
-		seller[i].UnusedHashRate = "Test"
+		seller[i].TotalAvailableHashRate = 100
+		seller[i].UnusedHashRate = 100
 	}
 	
 	sellerRepo := NewSeller()

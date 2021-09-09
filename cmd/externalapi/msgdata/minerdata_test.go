@@ -11,8 +11,8 @@ func TestAddMiner(t *testing.T) {
 		State: 					"Test",
 		Seller:   				"Test",
 		Dest:					"Test",	
-		InitialMeasuredHashRate: "Test",
-		CurrentHashRate:         "Test",
+		InitialMeasuredHashRate: 100,
+		CurrentHashRate:         100,
 	}
 	
 	minerRepo := NewMiner()
@@ -30,8 +30,8 @@ func TestGetAllMiners(t *testing.T) {
 		miner[i].State = "Test"
 		miner[i].Seller = "Test"
 		miner[i].Dest = "Test"
-		miner[i].InitialMeasuredHashRate = "Test"
-		miner[i].CurrentHashRate = "Test"
+		miner[i].InitialMeasuredHashRate = 100
+		miner[i].CurrentHashRate = 100
 	}
 	
 	minerRepo := NewMiner()
@@ -52,8 +52,8 @@ func TestGetMiner(t *testing.T) {
 		miner[i].State = "Test"
 		miner[i].Seller = "Test"
 		miner[i].Dest = "Test"
-		miner[i].InitialMeasuredHashRate = "Test"
-		miner[i].CurrentHashRate = "Test"
+		miner[i].InitialMeasuredHashRate = 100
+		miner[i].CurrentHashRate = 100
 	}
 	
 	minerRepo := NewMiner()
@@ -78,8 +78,8 @@ func TestUpdateMiner(t *testing.T) {
 		miner[i].State = "Test"
 		miner[i].Seller = "Test"
 		miner[i].Dest = "Test"
-		miner[i].InitialMeasuredHashRate = "Test"
-		miner[i].CurrentHashRate = "Test"
+		miner[i].InitialMeasuredHashRate = 100
+		miner[i].CurrentHashRate = 100
 	}
 	
 	minerRepo := NewMiner()
@@ -92,8 +92,8 @@ func TestUpdateMiner(t *testing.T) {
 		State: 					"Updated",
 		Seller:   				"",
 		Dest:					"",	
-		InitialMeasuredHashRate: "",
-		CurrentHashRate:         "",
+		InitialMeasuredHashRate: 0,
+		CurrentHashRate:         0,
 	}
 	
 	var results [10]MinerJSON
@@ -120,8 +120,8 @@ func TestDeleteMiner(t *testing.T) {
 		miner[i].State = "Test"
 		miner[i].Seller = "Test"
 		miner[i].Dest = "Test"
-		miner[i].InitialMeasuredHashRate = "Test"
-		miner[i].CurrentHashRate = "Test"
+		miner[i].InitialMeasuredHashRate = 100
+		miner[i].CurrentHashRate = 100
 	}
 	
 	minerRepo := NewMiner()

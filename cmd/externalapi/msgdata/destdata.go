@@ -2,16 +2,15 @@ package msgdata
 
 import (
 	"errors"
-	"strconv"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 // Struct of Dest parameters in JSON
 type DestJSON struct {
-	ID   string `json:"ID"`
-	IP   string `json:"IP"`
-	Port string	`json:"Port"`
+	ID   string `json:"id"`
+	IP   string `json:"ip"`
+	Port int	`json:"port"`
 }
 
 //Struct that stores slice of all JSON Dest structs in Repo
@@ -52,7 +51,7 @@ func (r *DestRepo) AddDestFromMsgBus(dest msgbus.Dest) {
 	
 	destJSON.ID = string(dest.ID)
 	destJSON.IP = string(dest.IP)
-	destJSON.Port = strconv.Itoa(dest.Port)
+	destJSON.Port = dest.Port
 	
 	r.DestJSONs = append(r.DestJSONs, destJSON)
 }
@@ -62,7 +61,7 @@ func (r *DestRepo) UpdateDest(id string, newDest DestJSON) error {
 	for i,d := range r.DestJSONs {
 		if d.ID == id {
 			if newDest.IP != "" {r.DestJSONs[i].IP = newDest.IP}
-			if newDest.Port != "" {r.DestJSONs[i].Port = newDest.Port}
+			if newDest.Port != 0 {r.DestJSONs[i].Port = newDest.Port}
 
 			return nil
 		}
@@ -86,7 +85,7 @@ func ConvertDestJSONtoDestMSG(dest DestJSON, msg msgbus.Dest) msgbus.Dest {
 	
 	msg.ID = msgbus.DestID(dest.ID)
 	msg.IP = dest.IP
-	msg.Port,_ = strconv.Atoi(dest.Port)
+	msg.Port = dest.Port
 
 	return msg	
 }

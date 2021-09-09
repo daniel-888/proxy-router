@@ -29,13 +29,15 @@ func SellerGET(seller *msgdata.SellerRepo) gin.HandlerFunc {
 
 func SellerPOST(seller *msgdata.SellerRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var requestBody msgdata.SellerJSON
+		var requestBody []msgdata.SellerJSON
 		if err := c.ShouldBindJSON(&requestBody); err != nil {
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		}
+		for i := range(requestBody) {
+			seller.AddSeller(requestBody[i])
+		}
 		
-		seller.AddSeller(requestBody)
 		c.Status(http.StatusOK)
 	}
 }

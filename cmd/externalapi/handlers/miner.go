@@ -29,13 +29,15 @@ func MinerGET(miner *msgdata.MinerRepo) gin.HandlerFunc {
 
 func MinerPOST(miner *msgdata.MinerRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var requestBody msgdata.MinerJSON
+		var requestBody []msgdata.MinerJSON
 		if err := c.ShouldBindJSON(&requestBody); err != nil {
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		}
+		for i := range(requestBody) {
+			miner.AddMiner(requestBody[i])
+		}
 		
-		miner.AddMiner(requestBody)
 		c.Status(http.StatusOK)
 	}
 }

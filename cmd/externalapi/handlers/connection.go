@@ -29,13 +29,15 @@ func ConnectionGET(conn *msgdata.ConnectionRepo) gin.HandlerFunc {
 
 func ConnectionPOST(conn *msgdata.ConnectionRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var requestBody msgdata.ConnectionJSON
+		var requestBody []msgdata.ConnectionJSON
 		if err := c.ShouldBindJSON(&requestBody); err != nil {
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		}
-		
-		conn.AddConnection(requestBody)
+		for i := range(requestBody) {
+			conn.AddConnection(requestBody[i])
+		}
+
 		c.Status(http.StatusOK)
 	}
 }

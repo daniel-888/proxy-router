@@ -11,12 +11,12 @@ func TestAddContract(t *testing.T) {
 		State: 					"Test",
 		Buyer: 					"Test",
 		Dest:					"Test",
-		CommitedHashRate: 		"Test",		
-		TargetHashRate:   		"Test",
-		CurrentHashRate:		"Test",
-		Tolerance:				"Test",
-		Penalty:				"Test",
-		Priority:				"Test",
+		CommitedHashRate: 		100,		
+		TargetHashRate:   		100,
+		CurrentHashRate:		100,
+		Tolerance:				100,
+		Penalty:				100,
+		Priority:				100,
 		StartDate:				"Test",
 		EndDate:				"Test",
 	}
@@ -36,11 +36,11 @@ func TestGetAllContracts(t *testing.T) {
 		contract[i].State = "Test"
 		contract[i].Buyer = "Test"
 		contract[i].Dest = "Test"
-		contract[i].CommitedHashRate = "Test"
-		contract[i].TargetHashRate = "Test"
-		contract[i].Tolerance = "Test"
-		contract[i].Penalty = "Test"
-		contract[i].Priority = "Test"
+		contract[i].CommitedHashRate = 100
+		contract[i].TargetHashRate = 100
+		contract[i].Tolerance = 100
+		contract[i].Penalty = 100
+		contract[i].Priority = 100
 		contract[i].StartDate = "Test"
 		contract[i].EndDate = "Test"
 	}
@@ -63,11 +63,11 @@ func TestGetContract(t *testing.T) {
 		contract[i].State = "Test"
 		contract[i].Buyer = "Test"
 		contract[i].Dest = "Test"
-		contract[i].CommitedHashRate = "Test"
-		contract[i].TargetHashRate = "Test"
-		contract[i].Tolerance = "Test"
-		contract[i].Penalty = "Test"
-		contract[i].Priority = "Test"
+		contract[i].CommitedHashRate = 100
+		contract[i].TargetHashRate = 100
+		contract[i].Tolerance = 100
+		contract[i].Penalty = 100
+		contract[i].Priority = 100
 		contract[i].StartDate = "Test"
 		contract[i].EndDate = "Test"
 	}
@@ -94,11 +94,11 @@ func TestUpdateContract(t *testing.T) {
 		contract[i].State = "Test"
 		contract[i].Buyer = "Test"
 		contract[i].Dest = "Test"
-		contract[i].CommitedHashRate = "Test"
-		contract[i].TargetHashRate = "Test"
-		contract[i].Tolerance = "Test"
-		contract[i].Penalty = "Test"
-		contract[i].Priority = "Test"
+		contract[i].CommitedHashRate = 100
+		contract[i].TargetHashRate = 100
+		contract[i].Tolerance = 100
+		contract[i].Penalty = 100
+		contract[i].Priority = 100
 		contract[i].StartDate = "Test"
 		contract[i].EndDate = "Test"
 	}
@@ -113,12 +113,12 @@ func TestUpdateContract(t *testing.T) {
 		State: 					"Updated",
 		Buyer: 					"",
 		Dest:					"",
-		CommitedHashRate: 		"",		
-		TargetHashRate:   		"",
-		CurrentHashRate:		"",
-		Tolerance:				"",
-		Penalty:				"",
-		Priority:				"",
+		CommitedHashRate: 		0,		
+		TargetHashRate:   		0,
+		CurrentHashRate:		0,
+		Tolerance:				0,
+		Penalty:				0,
+		Priority:				0,
 		StartDate:				"",
 		EndDate:				"",
 	}
@@ -147,11 +147,11 @@ func TestDeleteContract(t *testing.T) {
 		contract[i].State = "Test"
 		contract[i].Buyer = "Test"
 		contract[i].Dest = "Test"
-		contract[i].CommitedHashRate = "Test"
-		contract[i].TargetHashRate = "Test"
-		contract[i].Tolerance = "Test"
-		contract[i].Penalty = "Test"
-		contract[i].Priority = "Test"
+		contract[i].CommitedHashRate = 100
+		contract[i].TargetHashRate = 100
+		contract[i].Tolerance = 100
+		contract[i].Penalty = 100
+		contract[i].Priority = 100
 		contract[i].StartDate = "Test"
 		contract[i].EndDate = "Test"
 	}

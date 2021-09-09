@@ -29,13 +29,15 @@ func ContractGET(contract *msgdata.ContractRepo) gin.HandlerFunc {
 
 func ContractPOST(contract *msgdata.ContractRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var requestBody msgdata.ContractJSON
+		var requestBody []msgdata.ContractJSON
 		if err := c.ShouldBindJSON(&requestBody); err != nil {
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		}
+		for i := range(requestBody) {
+			contract.AddContract(requestBody[i])
+		}
 		
-		contract.AddContract(requestBody)
 		c.Status(http.StatusOK)
 	}
 }

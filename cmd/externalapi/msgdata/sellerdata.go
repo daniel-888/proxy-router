@@ -2,7 +2,6 @@ package msgdata
 
 import (
 	"errors"
-	"strconv"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
@@ -12,10 +11,10 @@ type ContractID IDString
 
 //Struct of Seller parameters in JSON 
 type SellerJSON struct {
-	ID                     	string 	`json:"ID"`
-	DefaultDest          	string 	`json:"DestID"`
-	TotalAvailableHashRate 	string 	`json:"Total Available Hashrate"`
-	UnusedHashRate         	string 	`json:"Unused Hash Rate"`
+	ID                     	string 	`json:"id"`
+	DefaultDest          	string 	`json:"destID"`
+	TotalAvailableHashRate 	int 	`json:"totalAvailableHashrate"`
+	UnusedHashRate         	int 	`json:"unusedHashRate"`
 	NewContracts           	[]ContractID
 	ReadyContracts         	[]ContractID
 	ActiveContracts        	[]ContractID
@@ -57,8 +56,8 @@ func (r *SellerRepo) AddSellerFromMsgBus(seller msgbus.Seller) {
 
 	sellerJSON.ID = string(seller.ID)
 	sellerJSON.DefaultDest = string(seller.DefaultDest)
-	sellerJSON.TotalAvailableHashRate = strconv.Itoa(seller.TotalAvailableHashRate)
-	sellerJSON.UnusedHashRate = strconv.Itoa(seller.UnusedHashRate)
+	sellerJSON.TotalAvailableHashRate = seller.TotalAvailableHashRate
+	sellerJSON.UnusedHashRate = seller.UnusedHashRate
 	
 	r.SellerJSONs = append(r.SellerJSONs, sellerJSON)
 }
@@ -68,8 +67,8 @@ func (r *SellerRepo) UpdateSeller(id string, newSeller SellerJSON) error {
 	for i,d := range r.SellerJSONs {
 		if d.ID == id {
 			if newSeller.DefaultDest != "" {r.SellerJSONs[i].DefaultDest = newSeller.DefaultDest}
-			if newSeller.TotalAvailableHashRate != "" {r.SellerJSONs[i].TotalAvailableHashRate = newSeller.TotalAvailableHashRate}
-			if newSeller.UnusedHashRate != "" {r.SellerJSONs[i].UnusedHashRate = newSeller.UnusedHashRate}
+			if newSeller.TotalAvailableHashRate != 0 {r.SellerJSONs[i].TotalAvailableHashRate = newSeller.TotalAvailableHashRate}
+			if newSeller.UnusedHashRate != 0 {r.SellerJSONs[i].UnusedHashRate = newSeller.UnusedHashRate}
 
 			return nil
 		}
@@ -92,8 +91,8 @@ func (r *SellerRepo) DeleteSeller(id string) error {
 func ConvertSellerJSONtoSellerMSG(seller SellerJSON, msg msgbus.Seller) msgbus.Seller {
 	msg.ID = msgbus.SellerID(seller.ID)
 	msg.DefaultDest = msgbus.DestID(seller.DefaultDest)
-	msg.TotalAvailableHashRate,_ = strconv.Atoi(seller.TotalAvailableHashRate)
-	msg.UnusedHashRate,_ = strconv.Atoi(seller.UnusedHashRate)
+	msg.TotalAvailableHashRate = seller.TotalAvailableHashRate
+	msg.UnusedHashRate = seller.UnusedHashRate
 
 	return msg	
 }

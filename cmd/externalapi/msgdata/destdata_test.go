@@ -7,9 +7,9 @@ import (
 
 func TestAddDest(t *testing.T) {
 	dest := DestJSON{
-		ID:   "DestID01",
-		IP:   "127.0.0.1",
-		Port: "80",
+		ID:   "Test",
+		IP:   "Test",
+		Port: 100,
 	}
 	
 	destRepo := NewDest()
@@ -25,7 +25,7 @@ func TestGetAllDests(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		dest[i].ID = "Test" + fmt.Sprint(i)
 		dest[i].IP = "Test"
-		dest[i].Port = "Test"
+		dest[i].Port = 100
 	}
 	
 	destRepo := NewDest()
@@ -44,7 +44,7 @@ func TestGetDest(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		dest[i].ID = "Test" + fmt.Sprint(i)
 		dest[i].IP = "Test"
-		dest[i].Port = "Test"
+		dest[i].Port = 100
 	}
 	
 	destRepo := NewDest()
@@ -67,7 +67,7 @@ func TestUpdateDest(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		dest[i].ID = "Test" + fmt.Sprint(i)
 		dest[i].IP = "Test"
-		dest[i].Port = "Test"
+		dest[i].Port = 100
 	}
 	
 	destRepo := NewDest()
@@ -78,7 +78,7 @@ func TestUpdateDest(t *testing.T) {
 	destUpdates := DestJSON{
 		ID:   "",
 		IP:   "Updated",
-		Port: "",
+		Port: 100,
 	}
 	
 	var results [10]DestJSON
@@ -103,7 +103,7 @@ func TestDeleteDest(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		dest[i].ID = "Test" + fmt.Sprint(i)
 		dest[i].IP = "Test"
-		dest[i].Port = "Test"
+		dest[i].Port = 100
 	}
 	
 	destRepo := NewDest()

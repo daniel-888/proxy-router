@@ -2,19 +2,18 @@ package msgdata
 
 import (
 	"errors"
-	"strconv"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 //Struct of Miner parameters in JSON 
 type MinerJSON struct {
-	ID                      string	`json:"ID"`
-	State                   string 	`json:"State"`
-	Seller                  string 	`json:"Seller"`
-	Dest                   string 	`json:"Dest"`
-	InitialMeasuredHashRate string 	`json:"Initial Measured Hash Rate"`
-	CurrentHashRate         string 	`json:"Current Hash Rate"`
+	ID                      string	`json:"id"`
+	State                   string 	`json:"state"`
+	Seller                  string 	`json:"seller"`
+	Dest                   	string 	`json:"dest"`
+	InitialMeasuredHashRate int 	`json:"initialMeasuredHashRate"`
+	CurrentHashRate         int 	`json:"currentHashRate"`
 }
 
 //Struct that stores slice of all JSON Miner structs in Repo
@@ -55,8 +54,8 @@ func (r *MinerRepo) AddMinerFromMsgBus(miner msgbus.Miner) {
 	minerJSON.State = string(miner.State)
 	minerJSON.Seller = string(miner.Seller)
 	minerJSON.Dest = string(miner.Dest)
-	minerJSON.InitialMeasuredHashRate = strconv.Itoa(miner.InitialMeasuredHashRate)
-	minerJSON.CurrentHashRate = strconv.Itoa(miner.CurrentHashRate)
+	minerJSON.InitialMeasuredHashRate = miner.InitialMeasuredHashRate
+	minerJSON.CurrentHashRate = miner.CurrentHashRate
 	
 	r.MinerJSONs = append(r.MinerJSONs, minerJSON)
 }
@@ -68,8 +67,8 @@ func (r *MinerRepo) UpdateMiner(id string, newMiner MinerJSON) error {
 			if newMiner.State != "" {r.MinerJSONs[i].State = newMiner.State}
 			if newMiner.Seller != "" {r.MinerJSONs[i].Seller = newMiner.Seller}
 			if newMiner.Dest != "" {r.MinerJSONs[i].Dest = newMiner.Dest}
-			if newMiner.InitialMeasuredHashRate != "" {r.MinerJSONs[i].InitialMeasuredHashRate = newMiner.InitialMeasuredHashRate}
-			if newMiner.CurrentHashRate != "" {r.MinerJSONs[i].CurrentHashRate = newMiner.CurrentHashRate}
+			if newMiner.InitialMeasuredHashRate != 0 {r.MinerJSONs[i].InitialMeasuredHashRate = newMiner.InitialMeasuredHashRate}
+			if newMiner.CurrentHashRate != 0 {r.MinerJSONs[i].CurrentHashRate = newMiner.CurrentHashRate}
 
 			return nil
 		}
@@ -94,8 +93,8 @@ func ConvertMinerJSONtoMinerMSG(miner MinerJSON, msg msgbus.Miner) msgbus.Miner 
 	msg.State = msgbus.MinerState(miner.State)
 	msg.Seller = msgbus.SellerID(miner.Seller)
 	msg.Dest = msgbus.DestID(miner.Dest)
-	msg.InitialMeasuredHashRate,_ = strconv.Atoi(miner.InitialMeasuredHashRate)
-	msg.CurrentHashRate,_ = strconv.Atoi(miner.CurrentHashRate)
+	msg.InitialMeasuredHashRate = miner.InitialMeasuredHashRate
+	msg.CurrentHashRate = miner.CurrentHashRate
 
 	return msg	
 }

@@ -29,13 +29,15 @@ func DestGET(dest *msgdata.DestRepo) gin.HandlerFunc {
 
 func DestPOST(dest *msgdata.DestRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var requestBody msgdata.DestJSON
+		var requestBody []msgdata.DestJSON
 		if err := c.ShouldBindJSON(&requestBody); err != nil {
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		}
-		
-		dest.AddDest(requestBody)
+		for i := range(requestBody) {
+			dest.AddDest(requestBody[i])
+		}
+	
 		c.Status(http.StatusOK)
 	}
 }

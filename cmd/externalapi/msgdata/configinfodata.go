@@ -8,9 +8,9 @@ import (
 
 // Struct of ConfigInfo parameters in JSON
 type ConfigInfoJSON struct {
-	ID          		string `json:"ID"`
-	DefaultDest 		string `json:"DestID"`
-	Seller     		 	string `json:"Seller"`
+	ID          		string `json:"id"`
+	DefaultDest 		string `json:"destID"`
+	Seller     		 	string `json:"seller"`
 }
 
 //Struct that stores slice of all JSON ConfigInfo structs in Repo

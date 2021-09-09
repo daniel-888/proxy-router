@@ -11,7 +11,7 @@ func TestAddConnection(t *testing.T) {
 		Miner:    				"Test",
 		Dest:      				"Test",
 		State:     				"Test",
-		TotalHash: 				"Test",
+		TotalHash: 				100, //"Test",
 		StartDate: 				"Test",
 	}
 	
@@ -30,7 +30,7 @@ func TestGetAllConnections(t *testing.T) {
 		connection[i].Miner = "Test"
 		connection[i].Dest = "Test"
 		connection[i].State = "Test"
-		connection[i].TotalHash = "Test"
+		connection[i].TotalHash = 100 //"Test"
 		connection[i].StartDate = "Test"
 	}
 	
@@ -52,7 +52,7 @@ func TestGetConnection(t *testing.T) {
 		connection[i].Miner = "Test"
 		connection[i].Dest = "Test"
 		connection[i].State = "Test"
-		connection[i].TotalHash = "Test"
+		connection[i].TotalHash = 100 //"Test"
 		connection[i].StartDate = "Test"
 	}
 	
@@ -78,7 +78,7 @@ func TestUpdateConnection(t *testing.T) {
 		connection[i].Miner = "Test"
 		connection[i].Dest = "Test"
 		connection[i].State = "Test"
-		connection[i].TotalHash = "Test"
+		connection[i].TotalHash = 100 //"Test"
 		connection[i].StartDate = "Test"
 	}
 	
@@ -92,7 +92,7 @@ func TestUpdateConnection(t *testing.T) {
 		Miner:    				"Updated",
 		Dest:      				"",
 		State:     				"",
-		TotalHash: 				"",
+		TotalHash: 				0, //"",
 		StartDate: 				"",
 	}
 	
@@ -120,7 +120,7 @@ func TestDeleteConnection(t *testing.T) {
 		connection[i].Miner = "Test"
 		connection[i].Dest = "Test"
 		connection[i].State = "Test"
-		connection[i].TotalHash = "Test"
+		connection[i].TotalHash = 0 //"Test"
 		connection[i].StartDate = "Test"
 	}
 	

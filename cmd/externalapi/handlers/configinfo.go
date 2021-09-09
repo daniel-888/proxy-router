@@ -28,13 +28,15 @@ func ConfigGET(config *msgdata.ConfigInfoRepo) gin.HandlerFunc {
 
 func ConfigPOST(config *msgdata.ConfigInfoRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var requestBody msgdata.ConfigInfoJSON
+		var requestBody []msgdata.ConfigInfoJSON
 		if err := c.ShouldBindJSON(&requestBody); err != nil {
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		}
+		for i := range(requestBody) {
+			config.AddConfigInfo(requestBody[i])
+		}
 		
-		config.AddConfigInfo(requestBody)
 		c.Status(http.StatusOK)
 	}
 }

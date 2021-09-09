@@ -132,7 +132,7 @@ func TestMockPOSTAddedToMsgBus(t *testing.T) {
 	destJSON := msgdata.DestJSON {
 		ID:   "DestID01",
 		IP:   "127.0.0.1",
-		Port: "80",
+		Port: 80,
 	}
 	configJSON := msgdata.ConfigInfoJSON{
 		ID:          "ConfigID01",
@@ -144,7 +144,7 @@ func TestMockPOSTAddedToMsgBus(t *testing.T) {
 		Miner:    				"MinerID01",
 		Dest:      				"DestID01",
 		State:     				"0",
-		TotalHash: 				"10000",
+		TotalHash: 				10000,
 		StartDate: 				"80000",
 	}
 	contractJSON := msgdata.ContractJSON{
@@ -152,12 +152,12 @@ func TestMockPOSTAddedToMsgBus(t *testing.T) {
 		State: 					"0",
 		Buyer: 					"Buyer ID01",
 		Dest:					"DestID01",
-		CommitedHashRate: 		"9000",		
-		TargetHashRate:   		"10000",
-		CurrentHashRate:		"8000",
-		Tolerance:				"10",
-		Penalty:				"100",
-		Priority:				"1",
+		CommitedHashRate: 		9000,		
+		TargetHashRate:   		10000,
+		CurrentHashRate:		8000,
+		Tolerance:				10,
+		Penalty:				100,
+		Priority:				1,
 		StartDate:				"80000",
 		EndDate:				"90000",
 	}
@@ -167,14 +167,14 @@ func TestMockPOSTAddedToMsgBus(t *testing.T) {
 		State: 					"0",
 		Seller:   				"SellerID01",
 		Dest:					"DestID01",	
-		InitialMeasuredHashRate: "10000",
-		CurrentHashRate:         "9000",
+		InitialMeasuredHashRate: 10000,
+		CurrentHashRate:         9000,
 	}
 	sellerJSON := msgdata.SellerJSON{
 		ID:                     "SellerID01",
 		DefaultDest:            "DestID01",
-		TotalAvailableHashRate: "0",
-		UnusedHashRate:         "0",
+		TotalAvailableHashRate: 1000,
+		UnusedHashRate:         100,
 		//NewContracts:           make(map[contract.ID]bool),
 		//ReadyContracts:         make(map[ContractID]bool),
 		//ActiveContracts:        make(map[ContractID]bool),

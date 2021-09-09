@@ -2,7 +2,6 @@ package msgdata
 
 import (
 	"errors"
-	"strconv"
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
@@ -10,12 +9,12 @@ import (
 
 // Struct of Connection parameters in JSON
 type ConnectionJSON struct {
-	ID        	string `json:"ID"`
-	Miner     	string `json:"Miner"`
-	Dest  		string `json:"Dest"`
-	State     	string `json:"State"`
-	TotalHash 	string `json:"Total Hash"`
-	StartDate 	string `json:"Start Date"`
+	ID        	string 	`json:"id"`
+	Miner     	string 	`json:"miner"`
+	Dest  		string 	`json:"dest"`
+	State     	string 	`json:"state"`
+	TotalHash 	int 	`json:"totalHash"`
+	StartDate 	string 	`json:"startDate"`
 }
 
 //Struct that stores slice of all JSON Connection structs in Repo
@@ -56,7 +55,7 @@ func (r *ConnectionRepo) AddConnectionFromMsgBus(conn msgbus.Connection) {
 	connJSON.Miner = string(conn.Miner)
 	connJSON.Dest = string(conn.Dest)
 	connJSON.State = 	string(conn.State)
-	connJSON.TotalHash = strconv.Itoa(conn.TotalHash)
+	connJSON.TotalHash = conn.TotalHash 
 	connJSON.StartDate = conn.StartDate.String()
 	
 	r.ConnectionJSONs = append(r.ConnectionJSONs, connJSON)
@@ -69,7 +68,7 @@ func (r *ConnectionRepo) UpdateConnection(id string, newConnection ConnectionJSO
 			if newConnection.Miner != "" {r.ConnectionJSONs[i].Miner = newConnection.Miner}
 			if newConnection.Dest != "" {r.ConnectionJSONs[i].Dest = newConnection.Dest}
 			if newConnection.State != "" {r.ConnectionJSONs[i].State = newConnection.State}
-			if newConnection.TotalHash != "" {r.ConnectionJSONs[i].TotalHash = newConnection.TotalHash}
+			if newConnection.TotalHash != 0 {r.ConnectionJSONs[i].TotalHash = newConnection.TotalHash}
 			if newConnection.StartDate != "" {r.ConnectionJSONs[i].StartDate = newConnection.StartDate}
 
 			return nil
@@ -95,7 +94,7 @@ func ConvertConnectionJSONtoConnectionMSG(conn ConnectionJSON, msg msgbus.Connec
 	msg.Miner = msgbus.MinerID(conn.Miner)
 	msg.Dest = msgbus.DestID(conn.Dest)
 	msg.State = msgbus.ConnectionState(conn.State)
-	msg.TotalHash,_ = strconv.Atoi(conn.TotalHash)
+	msg.TotalHash = conn.TotalHash
 	msg.StartDate,_ = time.Parse(conn.StartDate, "000000")
 
 	return msg	
