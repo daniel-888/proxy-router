@@ -1,5 +1,13 @@
 package connectionmanager
 
+//
+// ToDo
+// Move GetRandomIDString to be getRandomIDString containing it in this module
+//
+//
+//
+//
+
 import (
 	"encoding/json"
 	"fmt"
@@ -40,31 +48,40 @@ const (
 	MINING_SUBSCRIBE      stratumMethods = "mining.subscribe"
 )
 
-// type jsonarray []interface{}
-type jsonarray interface{}
-
 type stratumMsg struct {
 	ID     interface{} `json:"id,omitempty"`
 	Method interface{} `json:"method,omitempty"`
 	Error  interface{} `json:"error,omitempty"`
+	// Params []string    `json:"params,omitempty"`
 	Params interface{} `json:"params,omitempty"`
 	Result interface{} `json:"result,omitempty"`
 	Reject interface{} `json:"reject-reason,omitempty"`
-	//	Params interface{} `json:"params,omitempty"`
-	//	Result interface{} `json:"result,omitempty"`
 }
 
 type request struct {
-	ID     int         `json:"id"`
-	Method string      `json:"method"`
-	Params interface{} `json:"params"`
+	ID     int      `json:"id"`
+	Method string   `json:"method"`
+	Params []string `json:"params"`
+	// Params interface{} `json:"params"`
 }
 
 // notice ID is always null
 type notice struct {
 	ID     *string     `json:"id"`
-	Method string      `json:"method"`
 	Params interface{} `json:"params"`
+	Method string      `json:"method"`
+}
+
+type noticeMiningSetDifficulty struct {
+	ID     *string `json:"id"`
+	Method string  `json:"method"`
+	Params []int   `json:"params"`
+}
+
+type noticeMiningNotify struct {
+	ID     *string       `json:"id"`
+	Method string        `json:"method"`
+	Params []interface{} `json:"params"`
 }
 
 type responce struct {
@@ -72,6 +89,38 @@ type responce struct {
 	Error  *string     `json:"error"`
 	Result interface{} `json:"result"`
 	Reject interface{} `json:"reject-reason,omitempty"`
+}
+
+//------------------------------------------------------
+//
+//------------------------------------------------------
+func (r *request) getAuthName() (name string, err error) {
+
+	if r.Method != string(MINING_AUTHORIZE) {
+		return "", fmt.Errorf("wrong method")
+	}
+
+	fmt.Printf(" type:%T", r.Params)
+
+	name = r.Params[0]
+	// name = r.Params.([]string)[0]
+
+	return name, err
+}
+
+//------------------------------------------------------
+//
+//------------------------------------------------------
+func (r *responce) getAuthResult() (ret bool, err error) {
+
+	_, ok := r.Result.(bool)
+	if !ok {
+		err = fmt.Errorf(lumerinlib.FileLine()+" result is wrong type:%T", r.Result)
+	} else {
+		ret = r.Result.(bool)
+	}
+
+	return ret, err
 }
 
 //------------------------------------------------------
@@ -125,17 +174,13 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 
 			case "reject-reason":
 				msg.Reject = value
-			//	switch vtype := value.(type) {
-			//	case string:
-			//		msg.Reject = value.(string)
-			//	case nil:
-			//		msg.Reject = nil
-			//	default:
-			//		panic(fmt.Sprintf("Value Type: %t", vtype))
-			//	}
 
 			case "params":
 				msg.Params = value
+				//msg.Params = make([]interface{}, 0)
+				//for _, v := range value.([]interface{}) {
+				//	msg.Params = append(msg.Params, v)
+				//}
 
 			case "result":
 				msg.Result = value
@@ -172,11 +217,16 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 
 		} else {
 			// Must be a Request
-			ret = &request{
+			r := &request{
 				ID:     msg.ID.(int),
 				Method: msg.Method.(string),
-				Params: msg.Params,
+				Params: make([]string, 0),
 			}
+			for _, v := range msg.Params.([]interface{}) {
+				r.Params = append(r.Params, v.(string))
+			}
+
+			ret = r
 
 		}
 
@@ -245,9 +295,143 @@ func createRequestMsg(r *request) (msg []byte, err error) {
 func createNoticeMsg(n *notice) (msg []byte, err error) {
 
 	err = nil
-	fmt.Printf("Create Stratum Request: %v\n", n)
+	fmt.Printf("Create Stratum Notice: %v\n", n)
 
-	msg, err = json.Marshal(n)
+	switch n.Method {
+	case string(MINING_SET_DIFFICULTY):
+		msg, err = createNoticeSetDifficultyMsg(n)
+	case string(MINING_NOTIFY):
+		msg, err = createNoticeMiningNotify(n)
+	default:
+		msg, err = json.Marshal(n)
+	}
+
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Request Err:%s\n", err)
+		return nil, err
+	}
+
+	return msg, err
+}
+
+//------------------------------------------------------
+//
+//------------------------------------------------------
+func createNoticeSetDifficultyMsg(n *notice) (msg []byte, err error) {
+
+	fmt.Printf(lumerinlib.Funcname()+": %v\n", n)
+
+	err = nil
+
+	var nsd noticeMiningSetDifficulty
+	nsd.ID = n.ID
+	nsd.Method = n.Method
+	nsd.Params = make([]int, 0)
+
+	for _, v := range n.Params.([]interface{}) {
+		i := int(v.(float64))
+		if err != nil {
+			panic("")
+		}
+		nsd.Params = append(nsd.Params, i)
+	}
+
+	msg, err = json.Marshal(nsd)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Request Err:%s\n", err)
+		return nil, err
+	}
+
+	return msg, err
+}
+
+//------------------------------------------------------
+//
+// {
+//   "params": [
+// #0(string)   "613a0f04000001bc",
+// #1(string)   "36847fbbe629819b9c0e23ddb4a80e68339e1b420002630c0000000000000000",
+// #2(string)   "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff360394ad0a0004f14e3a61046ff4f4050c",
+// #3(string)   "0a636b706f6f6c122f6d696e6564206279204c756d6572696e2fffffffff031cda8225000000001976a91422ddd9233f44ac2e9f183ec755adf134c12cdbf188ac0000000000000000266a24aa21a9ed852376e1fca95e42b3b1c080c3dc14b0db71c1b683511b0037b091c6f28acab96a413000000000001976a91422ddd9233f44ac2e9f183ec755adf134c12cdbf188ac00000000",
+// #4([]string) [
+// (string)      "773418c442067fdd5c3caf10653537041db14d13249cab724d9d892d8427a66a",
+// (string)      "4126854f7bd3dc91bf666f53c35930685ee245239242ced1254f43e7b51b97e2",
+// (string)      "d89213f7501f4f6123c5d24403801b7d978957e9ecbee82869fefb295025caff",
+// (string)      "b4817f2f1e86914186c5acf715db97f753b84b9cc2cbd3a977e021df09ccf46d",
+// (string)      "51c91bbfb65e328063dbfe020913a5e92c2973796f7cd84c74806e33eaf48116",
+// (string)      "6e006d18ed55017612adf0e334b94d52e16b06f11adb14058a91caee161a304f",
+// (string)      "633c5a641b57c0fc0fc9ed669d04686634f17ff34b6d509cc9a50c58e7cd9771",
+// (string)      "e90773f4f44dc4a6a13e60956cad1612549e5c23a8f4ba42e760eb8661177464",
+// (string)      "de5fc02be1faa3dbbb59e9799ea1fae886ab25e6b154413d2e2d35204fedbaf2",
+// (string)      "79b109bdf26dd068446afa66c62f7d5ba30b179fcf032bb299f5a2591e0e3fce",
+// (string)      "fe16f0630558f6564ec212ed700b1d5469b0a9d1cd39f4b7ce344d3d01d650b7",
+// (string)      "03802c6be8643a09f8f74254ebf6f3704cfc622ab55f94687299fc32ca4a31da"
+//              ],
+// #5(string)   "20000000",
+// #6(string)   "170f48e4",
+// #7(string)   "613a4ee8",
+// #8(bool)     true
+//   ],
+//   "id": null,
+//   "method": "mining.notify"
+// }
+//
+//
+//------------------------------------------------------
+func createNoticeMiningNotify(n *notice) (msg []byte, err error) {
+
+	fmt.Printf(lumerinlib.Funcname()+": %v\n", n)
+
+	err = nil
+
+	var nsd noticeMiningNotify
+	nsd.ID = n.ID
+	nsd.Method = n.Method
+
+	if len(n.Params.([]interface{})) != 9 {
+		panic("")
+	}
+
+	nsd.Params = make([]interface{}, 9)
+
+	// nsd.Params = append(nsd.Params, a)
+	for i, v := range n.Params.([]interface{}) {
+		switch i {
+		case 0:
+			fallthrough
+		case 1:
+			fallthrough
+		case 2:
+			fallthrough
+		case 3:
+			nsd.Params[i] = v.(string)
+
+		case 4:
+			arr := make([]string, 0)
+			if len(v.([]interface{})) > 0 {
+				for _, w := range v.([]interface{}) {
+					arr = append(arr, w.(string))
+				}
+			}
+			nsd.Params[i] = arr
+
+		case 5:
+			fallthrough
+		case 6:
+			fallthrough
+		case 7:
+			nsd.Params[i] = v.(string)
+
+		case 8:
+			if v == "true" {
+				nsd.Params[i] = true
+			} else if v == "false" {
+				nsd.Params[i] = false
+			}
+		}
+	}
+
+	msg, err = json.Marshal(nsd)
 	if err != nil {
 		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Request Err:%s\n", err)
 		return nil, err

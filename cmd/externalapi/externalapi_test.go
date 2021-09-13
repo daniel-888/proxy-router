@@ -211,27 +211,27 @@ func TestMockPOSTAddedToMsgBus(t *testing.T) {
 			if e.EventType == msgbus.GetEvent {
 				switch e.Msg {
 				case msgbus.ConfigMsg:
-					if e.Data != nil {
+					if e.Data == nil {
 						t.Errorf("Failed to add Config to message bus")
 					} 
 				case msgbus.DestMsg:
-					if e.Data != nil {
+					if e.Data == nil {
 						t.Errorf("Failed to add Dest to message bus")
 					} 
 				case msgbus.SellerMsg:
-					if e.Data != nil {
+					if e.Data == nil {
 						t.Errorf("Failed to add Seller to message bus")
 					} 
 				case msgbus.ContractMsg:
-					if e.Data != nil {
+					if e.Data == nil {
 						t.Errorf("Failed to add Contract to message bus")
 					} 
 				case msgbus.MinerMsg:
-					if e.Data != nil {
+					if e.Data == nil {
 						t.Errorf("Failed to add Miner to message bus")
 					} 
 				case msgbus.ConnectionMsg:
-					if e.Data != nil {
+					if e.Data == nil {
 						t.Errorf("Failed to add Connection to message bus")
 					} 
 				default:
@@ -262,10 +262,10 @@ func TestMockPOSTAddedToMsgBus(t *testing.T) {
 	ps.Set(msgbus.MinerMsg, msgbus.IDString(minerMSG.ID), minerMSG)
 	ps.Set(msgbus.ConnectionMsg, msgbus.IDString(connectionMSG.ID), connectionMSG)
 
-	ps.Get(msgbus.ConfigMsg, "configMsg01", ech)
-	ps.Get(msgbus.DestMsg, "destMsg01", ech)
-	ps.Get(msgbus.SellerMsg, "sellerMsg01", ech)
-	ps.Get(msgbus.ContractMsg, "contractMsg01", ech)
-	ps.Get(msgbus.MinerMsg, "minerMsg01", ech)
-	ps.Get(msgbus.ConnectionMsg, "connectionMsg01", ech)
+	ps.Get(msgbus.ConfigMsg, msgbus.IDString(configMSG.ID), ech)
+	ps.Get(msgbus.DestMsg, msgbus.IDString(destMSG.ID), ech)
+	ps.Get(msgbus.SellerMsg, msgbus.IDString(sellerMSG.ID), ech)
+	ps.Get(msgbus.ContractMsg, msgbus.IDString(contractMSG.ID), ech)
+	ps.Get(msgbus.MinerMsg, msgbus.IDString(minerMSG.ID), ech)
+	ps.Get(msgbus.ConnectionMsg, msgbus.IDString(connectionMSG.ID), ech)
 }

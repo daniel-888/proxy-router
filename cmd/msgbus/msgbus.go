@@ -22,6 +22,7 @@ const (
 	opSub      operation = "opSub"
 	opGet      operation = "opGet"
 	opSet      operation = "opSet"
+	opSearch   operation = "opSearch"
 	opUnsub    operation = "opUnsub"
 	opUnpub    operation = "opUnpub"
 	opRemove   operation = "opRemove"
@@ -34,6 +35,8 @@ const (
 	DeleteEvent       EventType = "DelEvent"
 	GetEvent          EventType = "GetEvent"
 	GetIndexEvent     EventType = "GetIdxEvent"
+	SearchEvent       EventType = "SearchEvent"
+	SearchIndexEvent  EventType = "SearchIndexEvent"
 	PublishEvent      EventType = "PubEvent"
 	UnpublishEvent    EventType = "UnpubEvent"
 	SubscribedEvent   EventType = "SubEvent"
@@ -189,17 +192,18 @@ type PubSub struct {
 }
 
 const (
-	MsgBusErrNoErr       MsgBusError = "NoErr"
-	MsgBusErrNoMsg       MsgBusError = "NoMsg"
-	MsgBusErrNoID        MsgBusError = "NoID"
-	MsgBusErrNoSub       MsgBusError = "NoSub"
-	MsgBusErrNoData      MsgBusError = "NoData"
-	MsgBusErrNoEventChan MsgBusError = "NoEventChan"
-	MsgBusErrBadMsg      MsgBusError = "BadMsg"
-	MsgBusErrBadID       MsgBusError = "BadID"
-	MsgBusErrBadData     MsgBusError = "BadData"
-	MsgBusErrDupID       MsgBusError = "DupID"
-	MsgBusErrDupData     MsgBusError = "DupData"
+	MsgBusErrNoErr         MsgBusError = "NoErr"
+	MsgBusErrNoMsg         MsgBusError = "NoMsg"
+	MsgBusErrNoID          MsgBusError = "NoID"
+	MsgBusErrNoSub         MsgBusError = "NoSub"
+	MsgBusErrNoData        MsgBusError = "NoData"
+	MsgBusErrNoEventChan   MsgBusError = "NoEventChan"
+	MsgBusErrBadMsg        MsgBusError = "BadMsg"
+	MsgBusErrBadID         MsgBusError = "BadID"
+	MsgBusErrBadData       MsgBusError = "BadData"
+	MsgBusErrBadSearchTerm MsgBusError = "BadSearchTerm"
+	MsgBusErrDupID         MsgBusError = "DupID"
+	MsgBusErrDupData       MsgBusError = "DupData"
 )
 
 type cmd struct {
@@ -207,6 +211,9 @@ type cmd struct {
 	sync     bool
 	msg      MsgType
 	ID       IDString
+	Name     string
+	IP       string
+	MAC      string
 	data     interface{}
 	eventch  EventChan
 	returnch EventChan
@@ -418,6 +425,160 @@ func (ps *PubSub) GetWait(msg MsgType, id IDString) (e Event, err error) {
 		sync:    true,
 		msg:     msg,
 		ID:      id,
+		data:    nil,
+		eventch: nil,
+	}
+
+	return ps.dispatch(&c)
+
+}
+
+//--------------------------------------------------------------------------------
+//
+//--------------------------------------------------------------------------------
+func (ps *PubSub) SearchIP(msg MsgType, ip string, ech EventChan) (err error) {
+
+	if msg == NoMsg {
+		return getCommandError(MsgBusErrNoMsg)
+	}
+
+	if ech == nil {
+		return getCommandError(MsgBusErrNoEventChan)
+	}
+
+	c := cmd{
+		op:      opSearch,
+		sync:    false,
+		msg:     msg,
+		IP:      ip,
+		data:    nil,
+		eventch: ech,
+	}
+
+	_, err = ps.dispatch(&c)
+
+	return err
+
+}
+
+//--------------------------------------------------------------------------------
+//
+//--------------------------------------------------------------------------------
+func (ps *PubSub) SearchIPWait(msg MsgType, ip string) (e Event, err error) {
+
+	if msg == NoMsg {
+		return e, getCommandError(MsgBusErrNoMsg)
+	}
+
+	c := cmd{
+		op:      opSearch,
+		sync:    true,
+		msg:     msg,
+		IP:      ip,
+		data:    nil,
+		eventch: nil,
+	}
+
+	return ps.dispatch(&c)
+
+}
+
+//--------------------------------------------------------------------------------
+//
+//--------------------------------------------------------------------------------
+func (ps *PubSub) SearchMAC(msg MsgType, mac string, ech EventChan) (err error) {
+
+	if msg == NoMsg {
+		return getCommandError(MsgBusErrNoMsg)
+	}
+
+	if ech == nil {
+		return getCommandError(MsgBusErrNoEventChan)
+	}
+
+	c := cmd{
+		op:      opSearch,
+		sync:    false,
+		msg:     msg,
+		MAC:     mac,
+		data:    nil,
+		eventch: ech,
+	}
+
+	_, err = ps.dispatch(&c)
+
+	return err
+
+}
+
+//--------------------------------------------------------------------------------
+//
+//--------------------------------------------------------------------------------
+func (ps *PubSub) SearchMACWait(msg MsgType, mac string) (e Event, err error) {
+
+	if msg == NoMsg {
+		return e, getCommandError(MsgBusErrNoMsg)
+	}
+
+	c := cmd{
+		op:      opSearch,
+		sync:    true,
+		msg:     msg,
+		MAC:     mac,
+		data:    nil,
+		eventch: nil,
+	}
+
+	return ps.dispatch(&c)
+
+}
+
+//--------------------------------------------------------------------------------
+//
+//--------------------------------------------------------------------------------
+func (ps *PubSub) SearchName(msg MsgType, name string, ech EventChan) (err error) {
+
+	if msg == NoMsg {
+		return getCommandError(MsgBusErrNoMsg)
+	}
+
+	if ech == nil {
+		return getCommandError(MsgBusErrNoEventChan)
+	}
+
+	c := cmd{
+		op:      opSearch,
+		sync:    false,
+		msg:     msg,
+		Name:    name,
+		data:    nil,
+		eventch: ech,
+	}
+
+	_, err = ps.dispatch(&c)
+
+	return err
+
+}
+
+//--------------------------------------------------------------------------------
+//
+//--------------------------------------------------------------------------------
+func (ps *PubSub) SearchNameWait(msg MsgType, name string) (e Event, err error) {
+
+	if msg == NoMsg {
+		return e, getCommandError(MsgBusErrNoMsg)
+	}
+
+	if name == "" {
+		panic("")
+	}
+
+	c := cmd{
+		op:      opSearch,
+		sync:    true,
+		msg:     msg,
+		Name:    name,
 		data:    nil,
 		eventch: nil,
 	}
@@ -767,6 +928,9 @@ loop:
 		case opGet:
 			reg.get(cmdptr)
 
+		case opSearch:
+			reg.search(cmdptr)
+
 		case opUnpub:
 			reg.unpub(cmdptr)
 
@@ -981,6 +1145,70 @@ func (reg *registry) get(c *cmd) {
 	} else {
 		event.Data = reg.data[c.msg][c.ID].data
 	}
+
+	if c.sync {
+		sendEvent(c.returnch, event)
+	}
+	if c.eventch != nil {
+		sendEvent(c.eventch, event)
+	}
+
+}
+
+//-----------------------------------------
+//
+//
+//-----------------------------------------
+func (reg *registry) search(c *cmd) {
+
+	event := Event{
+		EventType: SearchEvent,
+		Msg:       c.msg,
+		Data:      nil,
+		Err:       nil,
+	}
+
+	// Only works for Miner messages at the moment.
+	if c.msg != MinerMsg {
+		event.Err = getCommandError(MsgBusErrBadMsg)
+		return
+	}
+
+	if c.Name == "" && c.IP == "" && c.MAC != "" {
+		event.Err = getCommandError(MsgBusErrBadSearchTerm)
+		return
+	}
+
+	if _, ok := reg.data[c.msg]; !ok {
+		event.Err = getCommandError(MsgBusErrNoData)
+		return
+	}
+
+	var index IDIndex
+	switch {
+	case c.Name != "":
+		for i, _ := range reg.data[c.msg] {
+			if reg.data[c.msg][i].data.(Miner).Name == c.Name {
+				index = append(index, i)
+			}
+		}
+	case c.IP != "":
+		for i, _ := range reg.data[c.msg] {
+			if reg.data[c.msg][i].data.(Miner).IP == c.IP {
+				index = append(index, i)
+			}
+		}
+	case c.MAC != "":
+		for i, _ := range reg.data[c.msg] {
+			if reg.data[c.msg][i].data.(Miner).MAC == c.MAC {
+				index = append(index, i)
+			}
+		}
+	default:
+		panic("")
+	}
+	event.EventType = SearchIndexEvent
+	event.Data = index
 
 	if c.sync {
 		sendEvent(c.returnch, event)

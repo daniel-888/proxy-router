@@ -1,10 +1,19 @@
 package configurationmanager
 
 import (
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	"encoding/json"
+	"os"
+
+	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 )
 
-func BoilerPlateFunc() (string, error) {
-	msg := "Configuration Manager Package"
-	return lumerinlib.BoilerPlateLibFunc(msg), nil // always returns no error
+func LoadConfiguration(file string) (msgdata.ConfigInfoJSON, error) {
+	var config msgdata.ConfigInfoJSON
+	configfile, err := os.Open(file)
+	if err != nil {
+		return config, err
+	}
+	jsonParser := json.NewDecoder(configfile)
+	err = jsonParser.Decode(&config)
+	return config,err
 }
