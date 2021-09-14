@@ -1,11 +1,16 @@
 package main
 
 import (
-	"gitlab.com/TitanInd/lumerin/cmd/externalapi"
+	//"gitlab.com/TitanInd/lumerin/cmd/externalapi"
+	//"fmt"
+
+	//"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 )
 
 func main () {
-	config,connection,contract,dest,miner,seller := externalapi.InitializeJSONRepos()
-	externalapi.RunAPI(config,connection,contract,dest,miner,seller)
+	// configMap,_ := configurationmanager.LoadConfiguration("./configurationmanager/exampleconfig.json")
+	// fmt.Println(configMap)
+	// config,connection,contract,dest,miner,seller := externalapi.InitializeJSONRepos()
+	// externalapi.RunAPI(config,connection,contract,dest,miner,seller)
 }
 

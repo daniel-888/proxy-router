@@ -2,18 +2,19 @@ package configurationmanager
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"os"
-
-	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 )
 
-func LoadConfiguration(file string) (msgdata.ConfigInfoJSON, error) {
-	var config msgdata.ConfigInfoJSON
+func LoadConfiguration(file string) (map[string]interface{}, error) {
+	var data map[string]interface{}
 	configfile, err := os.Open(file)
 	if err != nil {
-		return config, err
+		return data, err
 	}
-	jsonParser := json.NewDecoder(configfile)
-	err = jsonParser.Decode(&config)
-	return config,err
+	defer configfile.Close()
+	byteValue,_ := ioutil.ReadAll(configfile)
+
+	err = json.Unmarshal([]byte(byteValue), &data)
+	return data,err
 }

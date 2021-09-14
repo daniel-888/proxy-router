@@ -27,9 +27,21 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 		DefaultDest:            "DestID01",
 		TotalAvailableHashRate: 0,
 		UnusedHashRate:         0,
-		//NewContracts:           make(map[contract.ID]bool),
-		//ReadyContracts:         make(map[ContractID]bool),
-		//ActiveContracts:        make(map[ContractID]bool),
+	}
+	seller.NewContracts = map[msgbus.ContractID]bool{
+		"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
+        "0x89921E8D51D22252D64EA34340A4161696887271": false,
+        "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
+	}
+	seller.ReadyContracts = map[msgbus.ContractID]bool{
+		"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": true,
+        "0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": false,
+        "0x397729E80F77BA09D930FE24E8D1FC74372E86D3": true,
+	}   
+    seller.ActiveContracts = map[msgbus.ContractID]bool{
+		"0x9F252E1EC723AF6D96A36B4EB2B75A262291497C": true,
+        "0xBB2EAAAAA9B08EC320FC984D7D19E28835DD94DD": false,
+        "0x407E8A225658FEE384859874952E2BBC11E98B5C": true,
 	}
 	contract := msgbus.Contract{
 		ID:						"ContractID01",
@@ -161,7 +173,6 @@ func TestMockPOSTAddedToMsgBus(t *testing.T) {
 		StartDate:				"80000",
 		EndDate:				"90000",
 	}
-
 	minerJSON := msgdata.MinerJSON{
 		ID:						"MinerID01",
 		State: 					"0",
@@ -175,9 +186,21 @@ func TestMockPOSTAddedToMsgBus(t *testing.T) {
 		DefaultDest:            "DestID01",
 		TotalAvailableHashRate: 1000,
 		UnusedHashRate:         100,
-		//NewContracts:           make(map[contract.ID]bool),
-		//ReadyContracts:         make(map[ContractID]bool),
-		//ActiveContracts:        make(map[ContractID]bool),
+	}
+	sellerJSON.NewContracts = map[msgbus.ContractID]bool{
+		"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
+        "0x89921E8D51D22252D64EA34340A4161696887271": false,
+        "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
+	}
+	sellerJSON.ReadyContracts = map[msgbus.ContractID]bool{
+		"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": true,
+        "0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": false,
+        "0x397729E80F77BA09D930FE24E8D1FC74372E86D3": true,
+	}   
+    sellerJSON.ActiveContracts = map[msgbus.ContractID]bool{
+		"0x9F252E1EC723AF6D96A36B4EB2B75A262291497C": true,
+        "0xBB2EAAAAA9B08EC320FC984D7D19E28835DD94DD": false,
+        "0x407E8A225658FEE384859874952E2BBC11E98B5C": true,
 	}
 	
 	ech := make(msgbus.EventChan)

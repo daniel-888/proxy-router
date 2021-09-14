@@ -6,18 +6,15 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
-type IDString string
-type ContractID IDString
-
 //Struct of Seller parameters in JSON 
 type SellerJSON struct {
-	ID                     	string 	`json:"id"`
-	DefaultDest          	string 	`json:"destID"`
-	TotalAvailableHashRate 	int 	`json:"totalAvailableHashrate"`
-	UnusedHashRate         	int 	`json:"unusedHashRate"`
-	NewContracts           	[]ContractID
-	ReadyContracts         	[]ContractID
-	ActiveContracts        	[]ContractID
+	ID                     	string 						`json:"id"`
+	DefaultDest          	string 						`json:"destID"`
+	TotalAvailableHashRate 	int 						`json:"totalAvailableHashrate"`
+	UnusedHashRate         	int 						`json:"unusedHashRate"`
+	NewContracts           	map[msgbus.ContractID]bool	`json:"newContracts"`
+	ReadyContracts         	map[msgbus.ContractID]bool	`json:"readyContracts"`
+	ActiveContracts        	map[msgbus.ContractID]bool	`json:"activeContracts"`
 }
 
 //Struct that stores slice of all JSON Seller structs in Repo
@@ -58,6 +55,9 @@ func (r *SellerRepo) AddSellerFromMsgBus(seller msgbus.Seller) {
 	sellerJSON.DefaultDest = string(seller.DefaultDest)
 	sellerJSON.TotalAvailableHashRate = seller.TotalAvailableHashRate
 	sellerJSON.UnusedHashRate = seller.UnusedHashRate
+	sellerJSON.NewContracts = seller.NewContracts
+	sellerJSON.ActiveContracts = seller.ActiveContracts
+	sellerJSON.ReadyContracts = seller.ReadyContracts
 	
 	r.SellerJSONs = append(r.SellerJSONs, sellerJSON)
 }
@@ -69,6 +69,9 @@ func (r *SellerRepo) UpdateSeller(id string, newSeller SellerJSON) error {
 			if newSeller.DefaultDest != "" {r.SellerJSONs[i].DefaultDest = newSeller.DefaultDest}
 			if newSeller.TotalAvailableHashRate != 0 {r.SellerJSONs[i].TotalAvailableHashRate = newSeller.TotalAvailableHashRate}
 			if newSeller.UnusedHashRate != 0 {r.SellerJSONs[i].UnusedHashRate = newSeller.UnusedHashRate}
+			if newSeller.NewContracts != nil {r.SellerJSONs[i].NewContracts = newSeller.NewContracts}
+			if newSeller.ReadyContracts != nil {r.SellerJSONs[i].ReadyContracts = newSeller.ReadyContracts}
+			if newSeller.ActiveContracts != nil {r.SellerJSONs[i].ActiveContracts = newSeller.ActiveContracts}
 
 			return nil
 		}
@@ -93,6 +96,9 @@ func ConvertSellerJSONtoSellerMSG(seller SellerJSON, msg msgbus.Seller) msgbus.S
 	msg.DefaultDest = msgbus.DestID(seller.DefaultDest)
 	msg.TotalAvailableHashRate = seller.TotalAvailableHashRate
 	msg.UnusedHashRate = seller.UnusedHashRate
+	msg.NewContracts = seller.NewContracts
+	msg.ActiveContracts = seller.ActiveContracts
+	msg.ReadyContracts = seller.ReadyContracts
 
 	return msg	
 }
