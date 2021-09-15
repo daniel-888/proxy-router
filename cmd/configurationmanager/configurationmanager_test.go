@@ -8,14 +8,20 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 func TestLoadConfig (t *testing.T) {
-	configMap,_ := LoadConfiguration("exampleconfig.json")
+	configMap,err := LoadConfiguration("exampleconfig.json")
+	if err != nil {
+		t.Errorf("LoadConfiguration returned error")
+	}
 	if configMap["id"] != "ConfigID01" && configMap["destID"] != "DestID01" && configMap["seller"] != "SellerID01" {
 		t.Errorf("Failed to correctly load exampleconfig.json")
 	}
 }
 
 func TestLoadConfigToAPIandMsgBus (t *testing.T) {
-	configMap,_ := LoadConfiguration("exampleconfig.json")
+	configMap,err := LoadConfiguration("exampleconfig.json")
+	if err != nil {
+		t.Errorf("LoadConfiguration returned error")
+	}
 	ech := make(msgbus.EventChan)
 	ps := msgbus.New(1)
 
@@ -54,8 +60,17 @@ func TestLoadConfigToAPIandMsgBus (t *testing.T) {
 	go func(ech msgbus.EventChan) {
 		for e := range ech {
 			if e.EventType == msgbus.GetEvent {
-				if e.Data == nil {
-					t.Errorf("Failed to add Config to message bus")
+				switch e.Msg {
+				case msgbus.ConfigMsg:
+					if e.Data == nil {
+						t.Errorf("Failed to add Config to message bus")
+					} 
+				case msgbus.SellerMsg:
+					if e.Data == nil {
+						t.Errorf("Failed to add Seller to message bus")
+					} 
+				default:
+	
 				}
 			}
 		}
