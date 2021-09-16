@@ -20,7 +20,8 @@ func TestBoilerPlateFunc(t *testing.T) {
 		panic("connection manager fialed")
 	}
 
-	if cm.start() != nil {
+	err = cm.Start()
+	if err != nil {
 		panic("connection manager failed to start")
 	}
 
