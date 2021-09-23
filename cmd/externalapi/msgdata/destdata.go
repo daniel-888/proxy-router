@@ -8,9 +8,10 @@ import (
 
 // Struct of Dest parameters in JSON
 type DestJSON struct {
-	ID   string `json:"id"`
-	IP   string `json:"ip"`
-	Port int	`json:"port"`
+	ID			string				`json:"id"`
+	NetHost		msgbus.DestNetHost	`json:"netHost"`
+	NetPort		msgbus.DestNetPort	`json:"netPort"`
+	NetProto	msgbus.DestNetProto	`json:"netProto"`
 }
 
 //Struct that stores slice of all JSON Dest structs in Repo
@@ -50,8 +51,9 @@ func (r *DestRepo) AddDestFromMsgBus(dest msgbus.Dest) {
 	var destJSON DestJSON
 	
 	destJSON.ID = string(dest.ID)
-	destJSON.IP = string(dest.IP)
-	destJSON.Port = dest.Port
+	destJSON.NetHost = dest.NetHost
+	destJSON.NetPort = dest.NetPort
+	destJSON.NetProto = dest.NetProto
 	
 	r.DestJSONs = append(r.DestJSONs, destJSON)
 }
@@ -60,8 +62,9 @@ func (r *DestRepo) AddDestFromMsgBus(dest msgbus.Dest) {
 func (r *DestRepo) UpdateDest(id string, newDest DestJSON) error {
 	for i,d := range r.DestJSONs {
 		if d.ID == id {
-			if newDest.IP != "" {r.DestJSONs[i].IP = newDest.IP}
-			if newDest.Port != 0 {r.DestJSONs[i].Port = newDest.Port}
+			if newDest.NetHost != "" {r.DestJSONs[i].NetHost = newDest.NetHost}
+			if newDest.NetPort != "" {r.DestJSONs[i].NetPort = newDest.NetPort}
+			if newDest.NetProto != "" {r.DestJSONs[i].NetProto = newDest.NetProto}
 
 			return nil
 		}
@@ -82,10 +85,10 @@ func (r *DestRepo) DeleteDest(id string) error {
 }
 
 func ConvertDestJSONtoDestMSG(dest DestJSON, msg msgbus.Dest) msgbus.Dest {
-	
 	msg.ID = msgbus.DestID(dest.ID)
-	msg.IP = dest.IP
-	msg.Port = dest.Port
+	msg.NetHost = dest.NetHost
+	msg.NetPort = dest.NetPort
+	msg.NetProto = dest.NetProto
 
 	return msg	
 }

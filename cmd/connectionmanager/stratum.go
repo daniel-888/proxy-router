@@ -39,30 +39,46 @@ const (
 )
 
 const (
-	MINING_AUTHORIZE      stratumMethods = "mining.authorize"
-	MINING_CONFIGURE      stratumMethods = "mining.configure"
-	MINING_NOTIFY         stratumMethods = "mining.notify"
-	MINING_SET_DIFFICULTY stratumMethods = "mining.set_difficulty"
-	MINING_SET_TARGET     stratumMethods = "mining.set_target"
-	MINING_SUBMIT         stratumMethods = "mining.submit"
-	MINING_SUBSCRIBE      stratumMethods = "mining.subscribe"
+	CLIENT_MINING_AUTHORIZE stratumMethods = "mining.authorize"
+	//	CLIENT_MINING_CAPABILITIES       stratumMethods = "mining.capabilities"
+	CLIENT_MINING_EXTRANONCE         stratumMethods = "mining.extranonce.subscribe"
+	CLIENT_MINING_SUBMIT             stratumMethods = "mining.submit"
+	CLIENT_MINING_SUBSCRIBE          stratumMethods = "mining.subscribe"
+	CLIENT_MINING_SUGGEST_DIFFICULTY stratumMethods = "mining.suggest_difficulty"
+	CLIENT_MINING_SUGGEST_TARGET     stratumMethods = "mining.suggest_target"
+	MINING_CONFIGURE                 stratumMethods = "mining.configure"
+	MINING_SET_TARGET                stratumMethods = "mining.set_target"
+	SERVER_GET_VERSION               stratumMethods = "client.get_version"
+	SERVER_RECONNECT                 stratumMethods = "client.reconnect"
+	SERVER_SHOW_MESSAGE              stratumMethods = "client.show_message"
+	SERVER_MINING_NOTIFY             stratumMethods = "mining.notify"
+	// Not sure about this method, got it once
+	SERVER_MINING_PING           stratumMethods = "mining.ping"
+	SERVER_MINING_SET_DIFFICULTY stratumMethods = "mining.set_difficulty"
+	SERVER_MINING_SET_EXTRANONCE stratumMethods = "mining.set_extranonce"
+
+//	SERVER_MINING_SET_GOAL           stratumMethods = "mining.set_goal"
 )
 
+//
+// Used for recieving incoming stratum JSON  messages
+//
 type stratumMsg struct {
 	ID     interface{} `json:"id,omitempty"`
 	Method interface{} `json:"method,omitempty"`
 	Error  interface{} `json:"error,omitempty"`
-	// Params []string    `json:"params,omitempty"`
 	Params interface{} `json:"params,omitempty"`
 	Result interface{} `json:"result,omitempty"`
 	Reject interface{} `json:"reject-reason,omitempty"`
 }
 
+//
+// Used to build outgoing JSON message
+//
 type request struct {
 	ID     int      `json:"id"`
 	Method string   `json:"method"`
 	Params []string `json:"params"`
-	// Params interface{} `json:"params"`
 }
 
 // notice ID is always null
@@ -89,38 +105,6 @@ type responce struct {
 	Error  *string     `json:"error"`
 	Result interface{} `json:"result"`
 	Reject interface{} `json:"reject-reason,omitempty"`
-}
-
-//------------------------------------------------------
-//
-//------------------------------------------------------
-func (r *request) getAuthName() (name string, err error) {
-
-	if r.Method != string(MINING_AUTHORIZE) {
-		return "", fmt.Errorf("wrong method")
-	}
-
-	fmt.Printf(" type:%T", r.Params)
-
-	name = r.Params[0]
-	// name = r.Params.([]string)[0]
-
-	return name, err
-}
-
-//------------------------------------------------------
-//
-//------------------------------------------------------
-func (r *responce) getAuthResult() (ret bool, err error) {
-
-	_, ok := r.Result.(bool)
-	if !ok {
-		err = fmt.Errorf(lumerinlib.FileLine()+" result is wrong type:%T", r.Result)
-	} else {
-		ret = r.Result.(bool)
-	}
-
-	return ret, err
 }
 
 //------------------------------------------------------
@@ -258,24 +242,24 @@ func getStratumMsg(msg []byte) (ret interface{}, err error) {
 //------------------------------------------------------
 //
 //------------------------------------------------------
-func createResponceMsg(r *responce) (msg []byte, err error) {
+func (r *request) getAuthName() (name string, err error) {
 
-	err = nil
-	fmt.Printf("Create Stratum Responce: %v\n", r)
-
-	msg, err = json.Marshal(r)
-	if err != nil {
-		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Responce Err:%s\n", err)
-		return nil, err
+	if r.Method != string(CLIENT_MINING_AUTHORIZE) {
+		return "", fmt.Errorf("wrong method")
 	}
 
-	return msg, err
+	fmt.Printf(" type:%T", r.Params)
+
+	name = r.Params[0]
+	// name = r.Params.([]string)[0]
+
+	return name, err
 }
 
 //------------------------------------------------------
 //
 //------------------------------------------------------
-func createRequestMsg(r *request) (msg []byte, err error) {
+func (r *request) createRequestMsg() (msg []byte, err error) {
 
 	err = nil
 	fmt.Printf("Create Stratum Request: %v\n", r)
@@ -292,16 +276,48 @@ func createRequestMsg(r *request) (msg []byte, err error) {
 //------------------------------------------------------
 //
 //------------------------------------------------------
-func createNoticeMsg(n *notice) (msg []byte, err error) {
+func (r *responce) getAuthResult() (ret bool, err error) {
+
+	_, ok := r.Result.(bool)
+	if !ok {
+		err = fmt.Errorf(lumerinlib.FileLine()+" result is wrong type:%T", r.Result)
+	} else {
+		ret = r.Result.(bool)
+	}
+
+	return ret, err
+}
+
+//------------------------------------------------------
+//
+//------------------------------------------------------
+func (r *responce) createResponceMsg() (msg []byte, err error) {
+
+	err = nil
+	fmt.Printf("Create Stratum Responce: %v\n", r)
+
+	msg, err = json.Marshal(r)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Responce Err:%s\n", err)
+		return nil, err
+	}
+
+	return msg, err
+}
+
+//------------------------------------------------------
+//
+//------------------------------------------------------
+func (n *notice) createNoticeMsg() (msg []byte, err error) {
 
 	err = nil
 	fmt.Printf("Create Stratum Notice: %v\n", n)
 
 	switch n.Method {
-	case string(MINING_SET_DIFFICULTY):
-		msg, err = createNoticeSetDifficultyMsg(n)
-	case string(MINING_NOTIFY):
-		msg, err = createNoticeMiningNotify(n)
+	case string(SERVER_MINING_SET_DIFFICULTY):
+		msg, err = n.createNoticeSetDifficultyMsg()
+	case string(SERVER_MINING_NOTIFY):
+		msg, err = n.createNoticeMiningNotify()
 	default:
 		msg, err = json.Marshal(n)
 	}
@@ -317,7 +333,7 @@ func createNoticeMsg(n *notice) (msg []byte, err error) {
 //------------------------------------------------------
 //
 //------------------------------------------------------
-func createNoticeSetDifficultyMsg(n *notice) (msg []byte, err error) {
+func (n *notice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
 
 	fmt.Printf(lumerinlib.Funcname()+": %v\n", n)
 
@@ -378,7 +394,7 @@ func createNoticeSetDifficultyMsg(n *notice) (msg []byte, err error) {
 //
 //
 //------------------------------------------------------
-func createNoticeMiningNotify(n *notice) (msg []byte, err error) {
+func (n *notice) createNoticeMiningNotify() (msg []byte, err error) {
 
 	fmt.Printf(lumerinlib.Funcname()+": %v\n", n)
 
@@ -439,3 +455,4 @@ func createNoticeMiningNotify(n *notice) (msg []byte, err error) {
 
 	return msg, err
 }
+

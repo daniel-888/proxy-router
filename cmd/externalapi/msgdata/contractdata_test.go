@@ -17,8 +17,8 @@ func TestAddContract(t *testing.T) {
 		Tolerance:				100,
 		Penalty:				100,
 		Priority:				100,
-		StartDate:				"Test",
-		EndDate:				"Test",
+		StartDate:				1000,
+		EndDate:				1000,
 	}
 	
 	contractRepo := NewContract()
@@ -41,8 +41,8 @@ func TestGetAllContracts(t *testing.T) {
 		contract[i].Tolerance = 100
 		contract[i].Penalty = 100
 		contract[i].Priority = 100
-		contract[i].StartDate = "Test"
-		contract[i].EndDate = "Test"
+		contract[i].StartDate = 1000
+		contract[i].EndDate = 1000
 	}
 	
 	contractRepo := NewContract()
@@ -68,8 +68,8 @@ func TestGetContract(t *testing.T) {
 		contract[i].Tolerance = 100
 		contract[i].Penalty = 100
 		contract[i].Priority = 100
-		contract[i].StartDate = "Test"
-		contract[i].EndDate = "Test"
+		contract[i].StartDate = 1000
+		contract[i].EndDate = 1000
 	}
 	
 	contractRepo := NewContract()
@@ -99,8 +99,8 @@ func TestUpdateContract(t *testing.T) {
 		contract[i].Tolerance = 100
 		contract[i].Penalty = 100
 		contract[i].Priority = 100
-		contract[i].StartDate = "Test"
-		contract[i].EndDate = "Test"
+		contract[i].StartDate = 1000
+		contract[i].EndDate = 1000
 	}
 	
 	contractRepo := NewContract()
@@ -119,8 +119,8 @@ func TestUpdateContract(t *testing.T) {
 		Tolerance:				0,
 		Penalty:				0,
 		Priority:				0,
-		StartDate:				"",
-		EndDate:				"",
+		StartDate:				0,
+		EndDate:				0,
 	}
 	
 	var results [10]ContractJSON
@@ -152,8 +152,8 @@ func TestDeleteContract(t *testing.T) {
 		contract[i].Tolerance = 100
 		contract[i].Penalty = 100
 		contract[i].Priority = 100
-		contract[i].StartDate = "Test"
-		contract[i].EndDate = "Test"
+		contract[i].StartDate = 1000
+		contract[i].EndDate = 1000
 	}
 	
 	contractRepo := NewContract()

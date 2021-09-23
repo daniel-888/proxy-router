@@ -14,9 +14,10 @@ func TestBoilerPlateFunc(t *testing.T) {
 		Seller:      "SID01",
 	}
 	dest := Dest{
-		ID:   "DestID01",
-		IP:   "127.0.0.1",
-		Port: 80,
+		ID:       DestID(DEFAULT_DEST_ID),
+		NetProto: DestNetProto("tcp"),
+		NetHost:  DestNetHost("127.0.0.1"),
+		NetPort:  DestNetPort("3334"),
 	}
 	seller := Seller{
 		ID:                     "SellerID01",
@@ -81,4 +82,5 @@ func TestBoilerPlateFunc(t *testing.T) {
 	ps.Get(ConnectionMsg, "connectionMsg01", ech)
 
 }
+
 

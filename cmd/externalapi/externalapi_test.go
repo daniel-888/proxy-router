@@ -14,8 +14,9 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 
 	dest := msgbus.Dest{
 		ID:   "DestID01",
-		IP:   "127.0.0.1",
-		Port: 80,
+		NetHost:   "127.0.0.1",
+		NetPort: 	"80",
+		NetProto:   "tcp",
 	}
 	config := msgbus.ConfigInfo{
 		ID:          "ConfigID01",
@@ -54,8 +55,8 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 		Tolerance:				10,
 		Penalty:				100,
 		Priority:				1,
-		StartDate:				time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC),
-		EndDate:				time.Date(2021, 10, 31, 0, 0, 0, 0, time.UTC),
+		StartDate:				1000000,
+		EndDate:				1000000,
 	}
 	
 	miner := msgbus.Miner{
@@ -142,9 +143,9 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 func TestMockPOSTAddedToMsgBus(t *testing.T) {	
 	// Mock POST Requests by declaring new JSON structures and adding them to api repos
 	destJSON := msgdata.DestJSON {
-		ID:   "DestID01",
-		IP:   "127.0.0.1",
-		Port: 80,
+		NetHost:   "127.0.0.1",
+		NetPort: 	"80",
+		NetProto:   "tcp",
 	}
 	configJSON := msgdata.ConfigInfoJSON{
 		ID:          "ConfigID01",
@@ -170,8 +171,8 @@ func TestMockPOSTAddedToMsgBus(t *testing.T) {
 		Tolerance:				10,
 		Penalty:				100,
 		Priority:				1,
-		StartDate:				"80000",
-		EndDate:				"90000",
+		StartDate:				1000000,
+		EndDate:				1000000,
 	}
 	minerJSON := msgdata.MinerJSON{
 		ID:						"MinerID01",

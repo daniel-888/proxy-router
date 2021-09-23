@@ -2,8 +2,6 @@ package msgdata
 
 import (
 	"errors"
-	//"strconv"
-	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
@@ -20,8 +18,8 @@ type ContractJSON struct {
 	Tolerance        	int 	`json:"tolerance"`
 	Penalty          	int 	`json:"penalty"`
 	Priority         	int 	`json:"priority"`
-	StartDate        	string 	`json:"startDate"`
-	EndDate          	string 	`json:"endDate"`
+	StartDate        	int 	`json:"startDate"`
+	EndDate          	int 	`json:"endDate"`
 }
 
 //Struct that stores slice of all JSON Contract structs in Repo
@@ -68,8 +66,8 @@ func (r *ContractRepo) AddContractFromMsgBus(contract msgbus.Contract) {
 	contractJSON.Tolerance = contract.Tolerance
 	contractJSON.Penalty = contract.Penalty
 	contractJSON.Priority = contract.Priority
-	contractJSON.StartDate = contract.StartDate.String()
-	contractJSON.EndDate = contract.EndDate.String()
+	contractJSON.StartDate = contract.StartDate
+	contractJSON.EndDate = contract.EndDate
 	
 	r.ContractJSONs = append(r.ContractJSONs, contractJSON)
 }
@@ -85,8 +83,8 @@ func (r *ContractRepo) UpdateContract(id string, newContract ContractJSON) error
 			if newContract.CurrentHashRate != 0 {r.ContractJSONs[i].CurrentHashRate = newContract.CurrentHashRate}
 			if newContract.Tolerance != 0 {r.ContractJSONs[i].Tolerance = newContract.Tolerance}
 			if newContract.Priority != 0 {r.ContractJSONs[i].Priority = newContract.Priority}
-			if newContract.StartDate != "" {r.ContractJSONs[i].StartDate = newContract.StartDate}
-			if newContract.EndDate != "" {r.ContractJSONs[i].EndDate = newContract.EndDate}
+			if newContract.StartDate != 0 {r.ContractJSONs[i].StartDate = newContract.StartDate}
+			if newContract.EndDate != 0 {r.ContractJSONs[i].EndDate = newContract.EndDate}
 
 			return nil
 		}
@@ -117,8 +115,8 @@ func ConvertContractJSONtoContractMSG(contract ContractJSON, msg msgbus.Contract
 	msg.Tolerance = contract.Tolerance
 	msg.Penalty = contract.Penalty
 	msg.Priority = contract.Priority
-	msg.StartDate,_ = time.Parse(contract.StartDate, "000000")
-	msg.EndDate,_ = time.Parse(contract.EndDate, "000000")
+	msg.StartDate = contract.StartDate
+	msg.EndDate = contract.EndDate
 
 	return msg	
 }

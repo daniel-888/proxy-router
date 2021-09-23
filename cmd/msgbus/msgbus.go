@@ -68,21 +68,21 @@ const (
 )
 
 const (
-	ConnNewState         ConnectionState = "NewState"
-	ConnSrcOpenState     ConnectionState = "SrcOpenState"
-	ConnAuthState        ConnectionState = "AuthState"
-	ConnVerifyState      ConnectionState = "VerifyState"
-	ConnRoutingState     ConnectionState = "RoutingState"
-	ConnConnectingState  ConnectionState = "ConnectingState"
-	ConnConnectedState   ConnectionState = "ConnectedState"
-	ConnConnectErrState  ConnectionState = "ConnectErrState"
-	ConnMsgErrState      ConnectionState = "MsgErrState"
-	ConnRouteChangeState ConnectionState = "RouteChangeState"
-	ConnDstCloseState    ConnectionState = "DstCloseState"
-	ConnSrcCloseState    ConnectionState = "SrcCloseState"
-	ConnShutdownState    ConnectionState = "ShutdownState"
-	ConnErrorState       ConnectionState = "ErrorState"
-	ConnClosedState      ConnectionState = "ClosedState"
+	ConnNewState          ConnectionState = "NewState"
+	ConnSrcSubscribeState ConnectionState = "SrcSubscribeState"
+	ConnAuthState         ConnectionState = "AuthState"
+	ConnVerifyState       ConnectionState = "VerifyState"
+	ConnRoutingState      ConnectionState = "RoutingState"
+	ConnConnectingState   ConnectionState = "ConnectingState"
+	ConnConnectedState    ConnectionState = "ConnectedState"
+	ConnConnectErrState   ConnectionState = "ConnectErrState"
+	ConnMsgErrState       ConnectionState = "MsgErrState"
+	ConnRouteChangeState  ConnectionState = "RouteChangeState"
+	ConnDstCloseState     ConnectionState = "DstCloseState"
+	ConnSrcCloseState     ConnectionState = "SrcCloseState"
+	ConnShutdownState     ConnectionState = "ShutdownState"
+	ConnErrorState        ConnectionState = "ErrorState"
+	ConnClosedState       ConnectionState = "ClosedState"
 )
 
 // Need to figure out the IDString for this, for now it is just a string
@@ -94,6 +94,8 @@ type BuyerID IDString
 type ContractID IDString
 type MinerID IDString
 type ConnectionID IDString
+
+const DEFAULT_DEST_ID DestID = "DefaultDestID"
 
 type Event struct {
 	EventType EventType
@@ -114,10 +116,14 @@ type registryData struct {
 	data interface{}
 }
 
+type DestNetProto string
+type DestNetHost string
+type DestNetPort string
 type Dest struct {
-	ID   DestID
-	IP   string
-	Port int
+	ID       DestID
+	NetHost  DestNetHost
+	NetPort  DestNetPort
+	NetProto DestNetProto
 }
 
 type ConfigInfo struct {
@@ -147,8 +153,8 @@ type Contract struct {
 	Tolerance        int
 	Penalty          int
 	Priority         int
-	StartDate        time.Time
-	EndDate          time.Time
+	StartDate        int
+	EndDate          int
 }
 
 //
@@ -197,6 +203,7 @@ const (
 	MsgBusErrNoID          MsgBusError = "NoID"
 	MsgBusErrNoSub         MsgBusError = "NoSub"
 	MsgBusErrNoData        MsgBusError = "NoData"
+	MsgBusErrNoSearchTerm  MsgBusError = "NoSearchTerm"
 	MsgBusErrNoEventChan   MsgBusError = "NoEventChan"
 	MsgBusErrBadMsg        MsgBusError = "BadMsg"
 	MsgBusErrBadID         MsgBusError = "BadID"
@@ -446,6 +453,10 @@ func (ps *PubSub) SearchIP(msg MsgType, ip string, ech EventChan) (err error) {
 		return getCommandError(MsgBusErrNoEventChan)
 	}
 
+	if ip == "" {
+		return getCommandError(MsgBusErrNoSearchTerm)
+	}
+
 	c := cmd{
 		op:      opSearch,
 		sync:    false,
@@ -468,6 +479,10 @@ func (ps *PubSub) SearchIPWait(msg MsgType, ip string) (e Event, err error) {
 
 	if msg == NoMsg {
 		return e, getCommandError(MsgBusErrNoMsg)
+	}
+
+	if ip == "" {
+		return e, getCommandError(MsgBusErrNoSearchTerm)
 	}
 
 	c := cmd{
@@ -496,6 +511,10 @@ func (ps *PubSub) SearchMAC(msg MsgType, mac string, ech EventChan) (err error) 
 		return getCommandError(MsgBusErrNoEventChan)
 	}
 
+	if mac == "" {
+		return getCommandError(MsgBusErrNoSearchTerm)
+	}
+
 	c := cmd{
 		op:      opSearch,
 		sync:    false,
@@ -518,6 +537,10 @@ func (ps *PubSub) SearchMACWait(msg MsgType, mac string) (e Event, err error) {
 
 	if msg == NoMsg {
 		return e, getCommandError(MsgBusErrNoMsg)
+	}
+
+	if mac == "" {
+		return e, getCommandError(MsgBusErrNoSearchTerm)
 	}
 
 	c := cmd{
@@ -546,6 +569,10 @@ func (ps *PubSub) SearchName(msg MsgType, name string, ech EventChan) (err error
 		return getCommandError(MsgBusErrNoEventChan)
 	}
 
+	if name == "" {
+		return getCommandError(MsgBusErrNoSearchTerm)
+	}
+
 	c := cmd{
 		op:      opSearch,
 		sync:    false,
@@ -571,7 +598,7 @@ func (ps *PubSub) SearchNameWait(msg MsgType, name string) (e Event, err error) 
 	}
 
 	if name == "" {
-		panic("")
+		return e, getCommandError(MsgBusErrNoSearchTerm)
 	}
 
 	c := cmd{
@@ -955,11 +982,14 @@ loop:
 }
 
 //-----------------------------------------
+//
 //-----------------------------------------
-func sendEvent(e EventChan, event Event) {
-	go func(e EventChan, event Event) {
-		e <- event
-	}(e, event)
+func (event *Event) send(e EventChan) {
+
+	go func(e EventChan) {
+		e <- *event
+	}(e)
+
 }
 
 //-----------------------------------------
@@ -993,17 +1023,20 @@ func (reg *registry) pub(c *cmd) {
 
 	// If sync, return the event
 	if c.sync {
-		sendEvent(c.returnch, event)
+		// sendEvent(c.returnch, event)
+		event.send(c.returnch)
 	}
 
 	if c.eventch != nil {
-		sendEvent(c.eventch, event)
+		// sendEvent(c.eventch, event)
+		event.send(c.eventch)
 	}
 
 	// If no error, copy the event to everyone interested
 	if event.Err != nil {
 		for ech, _ := range reg.notify[c.msg] {
-			sendEvent(ech, event)
+			//sendEvent(ech, event)
+			event.send(ech)
 		}
 	}
 
@@ -1046,11 +1079,11 @@ func (reg *registry) sub(c *cmd) {
 	}
 
 	if c.sync {
-		sendEvent(c.returnch, event)
+		event.send(c.returnch)
 	}
 
 	if c.eventch != nil {
-		sendEvent(c.eventch, event)
+		event.send(c.eventch)
 	}
 }
 
@@ -1097,17 +1130,17 @@ func (reg *registry) set(c *cmd) {
 	}
 
 	if c.sync {
-		sendEvent(c.returnch, event)
+		event.send(c.returnch)
 	}
 
 	if c.eventch != nil {
-		sendEvent(c.eventch, event)
+		event.send(c.eventch)
 	}
 
 	// Notify anyone listening
-	for eventch, _ := range reg.data[c.msg][c.ID].sub.eventchan {
-		if _, ok := reg.data[c.msg][c.ID].sub.eventchan[eventch]; ok {
-			sendEvent(eventch, event)
+	for ech, _ := range reg.data[c.msg][c.ID].sub.eventchan {
+		if _, ok := reg.data[c.msg][c.ID].sub.eventchan[ech]; ok {
+			event.send(ech)
 		} else {
 			panic("eventchannel was not ok in set()")
 		}
@@ -1147,10 +1180,10 @@ func (reg *registry) get(c *cmd) {
 	}
 
 	if c.sync {
-		sendEvent(c.returnch, event)
+		event.send(c.returnch)
 	}
 	if c.eventch != nil {
-		sendEvent(c.eventch, event)
+		event.send(c.eventch)
 	}
 
 }
@@ -1211,10 +1244,10 @@ func (reg *registry) search(c *cmd) {
 	event.Data = index
 
 	if c.sync {
-		sendEvent(c.returnch, event)
+		event.send(c.returnch)
 	}
 	if c.eventch != nil {
-		sendEvent(c.eventch, event)
+		event.send(c.eventch)
 	}
 
 }
@@ -1255,10 +1288,10 @@ func (reg *registry) unsub(c *cmd) {
 	}
 
 	if c.sync {
-		sendEvent(c.returnch, event)
+		event.send(c.returnch)
 	}
 	if c.eventch != nil {
-		sendEvent(c.eventch, event)
+		event.send(c.eventch)
 	}
 
 }
@@ -1287,19 +1320,19 @@ func (reg *registry) unpub(c *cmd) {
 	}
 
 	if c.sync {
-		sendEvent(c.returnch, event)
+		event.send(c.returnch)
 	}
 
 	if c.eventch != nil {
-		sendEvent(c.eventch, event)
+		event.send(c.eventch)
 	}
 
 	for ech, _ := range reg.data[c.msg][c.ID].sub.eventchan {
-		sendEvent(ech, event)
+		event.send(ech)
 	}
 
 	for ech, _ := range reg.notify[c.msg] {
-		sendEvent(ech, event)
+		event.send(ech)
 	}
 
 	delete(reg.data[c.msg], c.ID)
@@ -1343,7 +1376,7 @@ func (reg *registry) removeAndClose(c *cmd) {
 	close(c.eventch)
 
 	if c.sync {
-		sendEvent(c.returnch, event)
+		event.send(c.returnch)
 	}
 
 }
@@ -1366,3 +1399,4 @@ func GetRandomIDString() (i IDString) {
 	i = IDString(str)
 	return i
 }
+
