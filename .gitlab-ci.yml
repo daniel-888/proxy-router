@@ -1,0 +1,17 @@
+stages:
+  - compile
+  - test
+
+build:
+  stage: compile
+  image: golang:latest
+  script:
+    - go get -d -v ./cmd
+    - go build -o bin/lumerin -v ./cmd
+
+test:
+  stage: test
+  image: golang:latest
+  script: 
+    - go test ./...
+

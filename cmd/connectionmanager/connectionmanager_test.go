@@ -9,6 +9,9 @@ import (
 
 func TestBoilerPlateFunc(t *testing.T) {
 
+	//
+	// Need a clean shutdown routine HERE
+	//
 	waitchan := make(chan int)
 
 	ps := msgbus.New(1)
