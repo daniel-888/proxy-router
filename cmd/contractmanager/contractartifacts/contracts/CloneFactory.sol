@@ -12,7 +12,8 @@ import './Implementation.sol';
 
 contract CloneFactory {
   address baseImplementation; 
-  address validator;
+  address contractManager;
+  address lmn;
   address proxy;
 
   constructor() {
@@ -29,18 +30,13 @@ contract CloneFactory {
     address _seller
   ) external returns (address) {
     address _newContract = Clones.clone(baseImplementation); 
-    Implementation(_newContract).initialize(_price, _limit, _speed, _length, _seller, validator);
+    Implementation(_newContract).initialize(_price, _limit, _speed, _length, _seller, contractManager, lmn);
     return _newContract;
   }
 
 
-  function getHashRateContractParameters(address _contract) public returns (uint[] memory) {
-    return Implementation(_contract).getContractVariables();
-  }
-
-
-  function setChangeValidatorAddress(address _validator) public { //add modifier to specify owner
-    validator = _validator;
+  function setChangeContractManagerAddress(address _contractManager) public { //add modifier to specify owner
+    contractManager = _contractManager;
   }
 
 

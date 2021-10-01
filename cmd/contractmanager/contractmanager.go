@@ -5,18 +5,39 @@ import (
 	"fmt"
 	"log"
 
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
-	// "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	// "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	// "gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+
+	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/implementation"
 )
-func BoilerPlateFunc() (string, error) {
-	msg := "Contract Manager Package"
-	return lumerinlib.BoilerPlateLibFunc(msg), nil // always returns no error
-}
+
+type ContractState uint8
+
+const (
+	Available	ContractState = 0
+	Active		ContractState = 1
+	Running		ContractState = 2
+	Complete	ContractState = 3
+)
+
+type HashrateContractValues struct {
+	State			ContractState
+	Price 			uint
+	Limit 			uint
+	Speed 			uint	
+	Length 			uint
+	Port 			uint
+	ValidationFee	uint
+	Buyer 			common.Address
+	Seller 			common.Address
+	IpAddr			string
+	Username		string
+	Password		string
+} 
 
 func SetUpClient(account common.Address, rpcClient string) *ethclient.Client {
 	client, err := ethclient.Dial(rpcClient)
@@ -35,53 +56,117 @@ func SetUpClient(account common.Address, rpcClient string) *ethclient.Client {
 	return client
 }
 
-// func SubscribeToContractCreatedEvent(client *ethclient.Client, contractAddress common.Address) {
-//     query := ethereum.FilterQuery{
-//         Addresses: []common.Address{contractAddress},
-//     }
+func SubscribeToContractEvents(client *ethclient.Client, contractAddress common.Address) (chan types.Log, ethereum.Subscription) {
+    query := ethereum.FilterQuery{
+        Addresses: []common.Address{contractAddress},
+    }
 
-//     logs := make(chan types.Log)
-//     sub, err := client.SubscribeFilterLogs(context.Background(), query, logs)
-//     if err != nil {
-//         log.Fatal(err)
-//     }
+    logs := make(chan types.Log)
+    sub, err := client.SubscribeFilterLogs(context.Background(), query, logs)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-// 	for {	
-// 		select {
-// 		case err := <-sub.Err():
-// 			log.Fatal(err)
-// 		case vLog := <-logs:
-// 			fmt.Printf("Log Block Number: %d\n", vLog.BlockNumber)
-//         	fmt.Printf("Log Index: %d\n", vLog.Index)
+	return logs, sub
+}
 
-// 			hashrateContractAddress := common.HexToAddress(vLog.Topics[1].Hex())
-// 			fmt.Printf("Address of created Hashrate Contract: %s\n", hashrateContractAddress.Hex())
-// 		}
-// 	}
-// }
 
-// func ReadHashrateContract(client *ethclient.Client, contractAddress common.Address) (uint, uint, uint, uint) {
-// 	instance, err := implementation.NewImplementation(common.Address, client)
-//     if err != nil {
-//         log.Fatal(err)
-//     }
+func ReadHashrateContract(client *ethclient.Client, contractAddress common.Address) HashrateContractValues {
+	instance, err := implementation.NewImplementation(contractAddress, client)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-// 	price, err := instance.contractCost
-// 	if err != nil {
-//         log.Fatal(err)
-//     }
-// 	limit, err := instance.limit
-// 	if err != nil {
-//         log.Fatal(err)
-//     }
-// 	speed, err := instance.speed
-// 	if err != nil {
-//         log.Fatal(err)
-//     }
-// 	length, err := instance.length
-// 	if err != nil {
-//         log.Fatal(err)
-//     }
+	var contractValues HashrateContractValues
 
-// 	return price,limit,speed,length
-// }
+	state, err := instance.ContractState(nil)
+	if err != nil {
+        log.Fatal(err)
+    }
+	contractValues.State = ContractState(state)
+
+	price, err := instance.Price(nil)
+	if err != nil {
+        log.Fatal(err)
+    }
+	contractValues.Price = uint(price.Uint64())	
+
+	limit, err := instance.Limit(nil)
+	if err != nil {
+        log.Fatal(err)
+    }
+	contractValues.Limit = uint(limit.Uint64())	
+
+	speed, err := instance.Speed(nil)
+	if err != nil {
+        log.Fatal(err)
+    }
+	contractValues.Speed = uint(speed.Uint64())	
+
+	length, err := instance.Length(nil)
+	if err != nil {
+        log.Fatal(err)
+    }
+	contractValues.Length = uint(length.Uint64())	
+
+	port, err := instance.Port(nil)
+	if err != nil {
+        log.Fatal(err)
+    }
+	contractValues.Port = uint(port.Uint64())	
+
+	validationFee, err := instance.ValidationFee(nil)
+	if err != nil {
+        log.Fatal(err)
+    }
+	contractValues.ValidationFee = uint(validationFee.Uint64())	
+
+	buyer, err := instance.Buyer(nil)
+	if err != nil {
+        log.Fatal(err)
+    }
+	contractValues.Buyer = buyer
+
+	seller, err := instance.Seller(nil)
+	if err != nil {
+        log.Fatal(err)
+    }
+	contractValues.Seller = seller
+
+	ipaddr, err := instance.Ipaddress(nil)
+	if err != nil {
+        log.Fatal(err)
+    }
+	contractValues.IpAddr = ipaddr
+
+	username, err := instance.Username(nil)
+	if err != nil {
+        log.Fatal(err)
+    }
+	contractValues.Username = username
+
+	password, err := instance.Password(nil)
+	if err != nil {
+        log.Fatal(err)
+    }
+	contractValues.Password = password
+
+	return contractValues
+}
+
+func CreateContractMsg (contractAddress common.Address, contractValues HashrateContractValues) msgbus.Contract {
+	contractStateToString := map[ContractState]msgbus.ContractState {
+		Available:	"Available",
+		Active: 	"Active",
+		Running:	"Running",
+		Complete:	"Complete",
+	}
+
+	var ContractMsg msgbus.Contract
+	ContractMsg.ID = msgbus.ContractID(contractAddress.Hex())
+	ContractMsg.State = contractStateToString[contractValues.State]
+	ContractMsg.Dest = msgbus.DestID(contractValues.IpAddr)
+	ContractMsg.Buyer = msgbus.BuyerID(contractValues.Buyer.Hex())
+
+	return ContractMsg
+}

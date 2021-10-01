@@ -18,33 +18,24 @@ contract WebFacing is Ownable{
   Ledger l; //contract object for the ledger
   CloneFactory cf; //contract object for the clone factory
 
-  constructor(address _ledgerAddress, address _cloneFactoryAddress, address _validator, address _proxy) {
+  constructor(address _ledgerAddress, address _cloneFactoryAddress, address _contractManager, address _proxy) {
     l = Ledger(_ledgerAddress); //accesses the deployed ledger smart contract
     cf = CloneFactory(_cloneFactoryAddress); //accesses the deployed ledger smart contract
-    cf.setChangeValidatorAddress(_validator);
+    cf.setChangeContractManagerAddress(_contractManager);
     cf.setChangeProxyAddress(_proxy);
   }
 
-  //event which is listened to by the proxy server and by the validator
-  event contractPurchase(address _contract);
+  event contractCreated(address indexed _contract);
 
   function setCreateRentalContract(uint _price, uint _limit, uint _speed, uint _length) public {
     address newAddress = cf.setCreateNewRentalContract(_price, _limit, _speed, _length, msg.sender); 
     l.setAddContractToStorage(newAddress, msg.sender); 
+    emit contractCreated(newAddress);
   }
 
 
   function getListOfContracts() public view returns (address[] memory) {
     return l.getListOfContractsLedger();
-  }
-
-  
-  function setPurchaseContract(address _contract, string memory _ip_address, uint _port, string memory _username) 
-    public payable { 
-    require(msg.value == Implementation(_contract).price(), "inadequate funds");
-    Implementation(_contract).setPurchaseContract(_ip_address, _port); 
-    // add in function call to ledger to update contracts buyer variable
-    emit contractPurchase(_contract); 
   }
 
   function setUpdateLedgerAddress(address _ledgerAddress) public onlyOwner {
