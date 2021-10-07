@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func LoadConfiguration(file string) (map[string]interface{}, error) {
+func LoadConfiguration(file string, pkg string) (map[string]interface{}, error) {
 	var data map[string]interface{}
 	configfile, err := os.Open(file)
 	if err != nil {
@@ -16,5 +16,5 @@ func LoadConfiguration(file string) (map[string]interface{}, error) {
 	byteValue,_ := ioutil.ReadAll(configfile)
 
 	err = json.Unmarshal([]byte(byteValue), &data)
-	return data,err
+	return data[pkg].(map[string]interface{}),err
 }

@@ -147,14 +147,12 @@ type Contract struct {
 	State            ContractState
 	Buyer            BuyerID
 	Dest             DestID
-	CommitedHashRate int
-	TargetHashRate   int
-	CurrentHashRate  int
-	Tolerance        int
-	Penalty          int
-	Priority         int
-	StartDate        int
-	EndDate          int
+	Price			 int
+	Limit			 int
+	Speed			 int
+	Length        	 int
+	Port          	 int
+	ValidationFee    int
 }
 
 //

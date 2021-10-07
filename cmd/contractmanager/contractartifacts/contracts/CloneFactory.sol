@@ -12,14 +12,20 @@ import './Implementation.sol';
 
 contract CloneFactory {
   address baseImplementation; 
-  address contractManager;
-  address lmn;
+  address validator;
   address proxy;
+  address lmnDeploy;
+  address webfacingAddress;
 
-  constructor() {
+  constructor(address _lmn, address _validator, address _proxy) {
     Implementation _imp = new Implementation();
     baseImplementation = address(_imp);
+    lmnDeploy = _lmn;
+    validator = _validator;
+    proxy = _proxy;
   }
+
+  event contractCreated(address indexed _address); //emitted whenever a contract is created
 
   //function to create a new Implementation contract
   function setCreateNewRentalContract(
@@ -30,17 +36,9 @@ contract CloneFactory {
     address _seller
   ) external returns (address) {
     address _newContract = Clones.clone(baseImplementation); 
-    Implementation(_newContract).initialize(_price, _limit, _speed, _length, _seller, contractManager, lmn);
+    Implementation(_newContract).initialize(_price, _limit, _speed, _length, _seller, validator, lmnDeploy);
+    emit contractCreated(_newContract);
     return _newContract;
   }
 
-
-  function setChangeContractManagerAddress(address _contractManager) public { //add modifier to specify owner
-    contractManager = _contractManager;
-  }
-
-
-  function setChangeProxyAddress(address _proxy) public { //add modifier to specify owner
-    proxy = _proxy;
-  }
 }

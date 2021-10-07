@@ -26,17 +26,15 @@ const (
 
 type HashrateContractValues struct {
 	State			ContractState
-	Price 			uint
-	Limit 			uint
-	Speed 			uint	
-	Length 			uint
-	Port 			uint
-	ValidationFee	uint
+	Price 			int
+	Limit 			int
+	Speed 			int	
+	Length 			int
+	Port 			int
+	ValidationFee	int
 	Buyer 			common.Address
 	Seller 			common.Address
 	IpAddr			string
-	Username		string
-	Password		string
 } 
 
 func SetUpClient(account common.Address, rpcClient string) *ethclient.Client {
@@ -89,37 +87,37 @@ func ReadHashrateContract(client *ethclient.Client, contractAddress common.Addre
 	if err != nil {
         log.Fatal(err)
     }
-	contractValues.Price = uint(price.Uint64())	
+	contractValues.Price = int(price.Int64())	
 
 	limit, err := instance.Limit(nil)
 	if err != nil {
         log.Fatal(err)
     }
-	contractValues.Limit = uint(limit.Uint64())	
+	contractValues.Limit = int(limit.Int64())	
 
 	speed, err := instance.Speed(nil)
 	if err != nil {
         log.Fatal(err)
     }
-	contractValues.Speed = uint(speed.Uint64())	
+	contractValues.Speed = int(speed.Int64())	
 
 	length, err := instance.Length(nil)
 	if err != nil {
         log.Fatal(err)
     }
-	contractValues.Length = uint(length.Uint64())	
+	contractValues.Length = int(length.Int64())	
 
 	port, err := instance.Port(nil)
 	if err != nil {
         log.Fatal(err)
     }
-	contractValues.Port = uint(port.Uint64())	
+	contractValues.Port = int(port.Int64())	
 
 	validationFee, err := instance.ValidationFee(nil)
 	if err != nil {
         log.Fatal(err)
     }
-	contractValues.ValidationFee = uint(validationFee.Uint64())	
+	contractValues.ValidationFee = int(validationFee.Int64())	
 
 	buyer, err := instance.Buyer(nil)
 	if err != nil {
@@ -139,18 +137,6 @@ func ReadHashrateContract(client *ethclient.Client, contractAddress common.Addre
     }
 	contractValues.IpAddr = ipaddr
 
-	username, err := instance.Username(nil)
-	if err != nil {
-        log.Fatal(err)
-    }
-	contractValues.Username = username
-
-	password, err := instance.Password(nil)
-	if err != nil {
-        log.Fatal(err)
-    }
-	contractValues.Password = password
-
 	return contractValues
 }
 
@@ -165,8 +151,14 @@ func CreateContractMsg (contractAddress common.Address, contractValues HashrateC
 	var ContractMsg msgbus.Contract
 	ContractMsg.ID = msgbus.ContractID(contractAddress.Hex())
 	ContractMsg.State = contractStateToString[contractValues.State]
-	ContractMsg.Dest = msgbus.DestID(contractValues.IpAddr)
 	ContractMsg.Buyer = msgbus.BuyerID(contractValues.Buyer.Hex())
+	ContractMsg.Dest = msgbus.DestID(contractValues.IpAddr)
+	ContractMsg.Price = contractValues.Price
+	ContractMsg.Limit = contractValues.Limit
+	ContractMsg.Speed = contractValues.Speed
+	ContractMsg.Length = contractValues.Length
+	ContractMsg.Port = contractValues.Port
+	ContractMsg.ValidationFee = contractValues.ValidationFee
 
 	return ContractMsg
 }

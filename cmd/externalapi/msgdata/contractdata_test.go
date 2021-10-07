@@ -7,18 +7,16 @@ import (
 
 func TestAddContract(t *testing.T) {
 	contract := ContractJSON{
-		ID:						"Test",
-		State: 					"Test",
-		Buyer: 					"Test",
-		Dest:					"Test",
-		CommitedHashRate: 		100,		
-		TargetHashRate:   		100,
-		CurrentHashRate:		100,
-		Tolerance:				100,
-		Penalty:				100,
-		Priority:				100,
-		StartDate:				1000,
-		EndDate:				1000,
+		ID:				"Test",
+		State: 			"Test",
+		Buyer: 			"Test",
+		Dest:			"Test",
+		Price: 			100,
+		Limit: 			100,
+		Speed: 			100,
+		Length: 		100,
+		Port: 			100,
+		ValidationFee:	100,
 	}
 	
 	contractRepo := NewContract()
@@ -36,13 +34,12 @@ func TestGetAllContracts(t *testing.T) {
 		contract[i].State = "Test"
 		contract[i].Buyer = "Test"
 		contract[i].Dest = "Test"
-		contract[i].CommitedHashRate = 100
-		contract[i].TargetHashRate = 100
-		contract[i].Tolerance = 100
-		contract[i].Penalty = 100
-		contract[i].Priority = 100
-		contract[i].StartDate = 1000
-		contract[i].EndDate = 1000
+		contract[i].Price = 100
+		contract[i].Limit = 100
+		contract[i].Speed = 100
+		contract[i].Length = 100
+		contract[i].Port = 100
+		contract[i].ValidationFee = 100
 	}
 	
 	contractRepo := NewContract()
@@ -63,13 +60,12 @@ func TestGetContract(t *testing.T) {
 		contract[i].State = "Test"
 		contract[i].Buyer = "Test"
 		contract[i].Dest = "Test"
-		contract[i].CommitedHashRate = 100
-		contract[i].TargetHashRate = 100
-		contract[i].Tolerance = 100
-		contract[i].Penalty = 100
-		contract[i].Priority = 100
-		contract[i].StartDate = 1000
-		contract[i].EndDate = 1000
+		contract[i].Price = 100
+		contract[i].Limit = 100
+		contract[i].Speed = 100
+		contract[i].Length = 100
+		contract[i].Port = 100
+		contract[i].ValidationFee = 100
 	}
 	
 	contractRepo := NewContract()
@@ -94,13 +90,12 @@ func TestUpdateContract(t *testing.T) {
 		contract[i].State = "Test"
 		contract[i].Buyer = "Test"
 		contract[i].Dest = "Test"
-		contract[i].CommitedHashRate = 100
-		contract[i].TargetHashRate = 100
-		contract[i].Tolerance = 100
-		contract[i].Penalty = 100
-		contract[i].Priority = 100
-		contract[i].StartDate = 1000
-		contract[i].EndDate = 1000
+		contract[i].Price = 100
+		contract[i].Limit = 100
+		contract[i].Speed = 100
+		contract[i].Length = 100
+		contract[i].Port = 100
+		contract[i].ValidationFee = 100
 	}
 	
 	contractRepo := NewContract()
@@ -109,18 +104,16 @@ func TestUpdateContract(t *testing.T) {
 	}
 
 	contractUpdates := ContractJSON{
-		ID:						"",
-		State: 					"Updated",
-		Buyer: 					"",
-		Dest:					"",
-		CommitedHashRate: 		0,		
-		TargetHashRate:   		0,
-		CurrentHashRate:		0,
-		Tolerance:				0,
-		Penalty:				0,
-		Priority:				0,
-		StartDate:				0,
-		EndDate:				0,
+		ID:				"",
+		State: 			"Updated",
+		Buyer: 			"",
+		Dest:			"",
+		Price: 			0,
+		Limit: 			0,
+		Speed: 			0,
+		Length: 		0,
+		Port: 			0,
+		ValidationFee:	0,
 	}
 	
 	var results [10]ContractJSON
@@ -147,13 +140,12 @@ func TestDeleteContract(t *testing.T) {
 		contract[i].State = "Test"
 		contract[i].Buyer = "Test"
 		contract[i].Dest = "Test"
-		contract[i].CommitedHashRate = 100
-		contract[i].TargetHashRate = 100
-		contract[i].Tolerance = 100
-		contract[i].Penalty = 100
-		contract[i].Priority = 100
-		contract[i].StartDate = 1000
-		contract[i].EndDate = 1000
+		contract[i].Price = 100
+		contract[i].Limit = 100
+		contract[i].Speed = 100
+		contract[i].Length = 100
+		contract[i].Port = 100
+		contract[i].ValidationFee = 100
 	}
 	
 	contractRepo := NewContract()

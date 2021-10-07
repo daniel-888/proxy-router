@@ -30,8 +30,8 @@ var (
 
 // LedgerMetaData contains all meta data concerning the Ledger contract.
 var LedgerMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"name\":\"getListOfContractsLedger\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rentalContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_seller\",\"type\":\"address\"}],\"name\":\"setAddContractToStorage\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
-	Bin: "0x608060405234801561001057600080fd5b506103a0806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80638d8c48f71461003b578063d70f8d6e14610057575b600080fd5b610055600480360381019061005091906101fc565b610075565b005b61005f610159565b60405161006c91906102c1565b60405180910390f35b816000808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055506001829080600181540180825580915050600190039060005260206000200160009091909190916101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055505050565b606060018054806020026020016040519081016040528092919081815260200182805480156101dd57602002820191906000526020600020905b8160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019060010190808311610193575b5050505050905090565b6000813590506101f681610353565b92915050565b600080604083850312156102135761021261034e565b5b6000610221858286016101e7565b9250506020610232858286016101e7565b9150509250929050565b60006102488383610254565b60208301905092915050565b61025d8161031c565b82525050565b600061026e826102f3565b610278818561030b565b9350610283836102e3565b8060005b838110156102b457815161029b888261023c565b97506102a6836102fe565b925050600181019050610287565b5085935050505092915050565b600060208201905081810360008301526102db8184610263565b905092915050565b6000819050602082019050919050565b600081519050919050565b6000602082019050919050565b600082825260208201905092915050565b60006103278261032e565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b600080fd5b61035c8161031c565b811461036757600080fd5b5056fea26469706673582212209aa1e22db96b0df79590dba56a1c8e35a58193828893d2e718183ae659c976c764736f6c63430008070033",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_validator\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"getListOfContractsLedger\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rentalContract\",\"type\":\"address\"}],\"name\":\"setAddContractToStorage\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b506040516104273803806104278339818101604052810190610032919061008e565b80600160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050610109565b600081519050610088816100f2565b92915050565b6000602082840312156100a4576100a36100ed565b5b60006100b284828501610079565b91505092915050565b60006100c6826100cd565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b600080fd5b6100fb816100bb565b811461010657600080fd5b50565b61030f806101186000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c8063015e9d4b1461003b578063d70f8d6e14610057575b600080fd5b6100556004803603810190610050919061017e565b610075565b005b61005f6100db565b60405161006c9190610230565b60405180910390f35b6000819080600181540180825580915050600190039060005260206000200160009091909190916101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050565b6060600080548060200260200160405190810160405280929190818152602001828054801561015f57602002820191906000526020600020905b8160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019060010190808311610115575b5050505050905090565b600081359050610178816102c2565b92915050565b600060208284031215610194576101936102bd565b5b60006101a284828501610169565b91505092915050565b60006101b783836101c3565b60208301905092915050565b6101cc8161028b565b82525050565b60006101dd82610262565b6101e7818561027a565b93506101f283610252565b8060005b8381101561022357815161020a88826101ab565b97506102158361026d565b9250506001810190506101f6565b5085935050505092915050565b6000602082019050818103600083015261024a81846101d2565b905092915050565b6000819050602082019050919050565b600081519050919050565b6000602082019050919050565b600082825260208201905092915050565b60006102968261029d565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b600080fd5b6102cb8161028b565b81146102d657600080fd5b5056fea26469706673582212200316938975603c09689925c8083e30d7fcd1d745ec9f9b319fc3b47ba696dc0064736f6c63430008070033",
 }
 
 // LedgerABI is the input ABI used to generate the binding from.
@@ -43,7 +43,7 @@ var LedgerABI = LedgerMetaData.ABI
 var LedgerBin = LedgerMetaData.Bin
 
 // DeployLedger deploys a new Ethereum contract, binding an instance of Ledger to it.
-func DeployLedger(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Ledger, error) {
+func DeployLedger(auth *bind.TransactOpts, backend bind.ContractBackend, _validator common.Address) (common.Address, *types.Transaction, *Ledger, error) {
 	parsed, err := LedgerMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
@@ -52,7 +52,7 @@ func DeployLedger(auth *bind.TransactOpts, backend bind.ContractBackend) (common
 		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(LedgerBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(LedgerBin), backend, _validator)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -232,23 +232,23 @@ func (_Ledger *LedgerCallerSession) GetListOfContractsLedger() ([]common.Address
 	return _Ledger.Contract.GetListOfContractsLedger(&_Ledger.CallOpts)
 }
 
-// SetAddContractToStorage is a paid mutator transaction binding the contract method 0x8d8c48f7.
+// SetAddContractToStorage is a paid mutator transaction binding the contract method 0x015e9d4b.
 //
-// Solidity: function setAddContractToStorage(address _rentalContract, address _seller) returns()
-func (_Ledger *LedgerTransactor) SetAddContractToStorage(opts *bind.TransactOpts, _rentalContract common.Address, _seller common.Address) (*types.Transaction, error) {
-	return _Ledger.contract.Transact(opts, "setAddContractToStorage", _rentalContract, _seller)
+// Solidity: function setAddContractToStorage(address _rentalContract) returns()
+func (_Ledger *LedgerTransactor) SetAddContractToStorage(opts *bind.TransactOpts, _rentalContract common.Address) (*types.Transaction, error) {
+	return _Ledger.contract.Transact(opts, "setAddContractToStorage", _rentalContract)
 }
 
-// SetAddContractToStorage is a paid mutator transaction binding the contract method 0x8d8c48f7.
+// SetAddContractToStorage is a paid mutator transaction binding the contract method 0x015e9d4b.
 //
-// Solidity: function setAddContractToStorage(address _rentalContract, address _seller) returns()
-func (_Ledger *LedgerSession) SetAddContractToStorage(_rentalContract common.Address, _seller common.Address) (*types.Transaction, error) {
-	return _Ledger.Contract.SetAddContractToStorage(&_Ledger.TransactOpts, _rentalContract, _seller)
+// Solidity: function setAddContractToStorage(address _rentalContract) returns()
+func (_Ledger *LedgerSession) SetAddContractToStorage(_rentalContract common.Address) (*types.Transaction, error) {
+	return _Ledger.Contract.SetAddContractToStorage(&_Ledger.TransactOpts, _rentalContract)
 }
 
-// SetAddContractToStorage is a paid mutator transaction binding the contract method 0x8d8c48f7.
+// SetAddContractToStorage is a paid mutator transaction binding the contract method 0x015e9d4b.
 //
-// Solidity: function setAddContractToStorage(address _rentalContract, address _seller) returns()
-func (_Ledger *LedgerTransactorSession) SetAddContractToStorage(_rentalContract common.Address, _seller common.Address) (*types.Transaction, error) {
-	return _Ledger.Contract.SetAddContractToStorage(&_Ledger.TransactOpts, _rentalContract, _seller)
+// Solidity: function setAddContractToStorage(address _rentalContract) returns()
+func (_Ledger *LedgerTransactorSession) SetAddContractToStorage(_rentalContract common.Address) (*types.Transaction, error) {
+	return _Ledger.Contract.SetAddContractToStorage(&_Ledger.TransactOpts, _rentalContract)
 }

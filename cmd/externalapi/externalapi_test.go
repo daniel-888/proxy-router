@@ -1,9 +1,11 @@
 package externalapi
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
+	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
@@ -13,8 +15,8 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 	ps := msgbus.New(1)
 
 	dest := msgbus.Dest{
-		ID:   "DestID01",
-		NetHost:   "127.0.0.1",
+		ID:   		"DestID01",
+		NetHost:   	"127.0.0.1",
 		NetPort: 	"80",
 		NetProto:   "tcp",
 	}
@@ -45,18 +47,16 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
         "0x407E8A225658FEE384859874952E2BBC11E98B5C": true,
 	}
 	contract := msgbus.Contract{
-		ID:						"ContractID01",
-		State: 					msgbus.ContActiveState,
-		Buyer: 					"Buyer ID01",
-		Dest:					"DestID01",
-		CommitedHashRate: 		9000,		
-		TargetHashRate:   		10000,
-		CurrentHashRate:		8000,
-		Tolerance:				10,
-		Penalty:				100,
-		Priority:				1,
-		StartDate:				1000000,
-		EndDate:				1000000,
+		ID:				"ContractID01",
+		State: 			msgbus.ContActiveState,
+		Buyer: 			"Buyer ID01",
+		Dest:			"DestID01",
+		Price: 			100,
+		Limit: 			100,
+		Speed: 			100,
+		Length: 		100,
+		Port: 			100,
+		ValidationFee:	100,
 	}
 	
 	miner := msgbus.Miner{
@@ -142,67 +142,40 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 
 func TestMockPOSTAddedToMsgBus(t *testing.T) {	
 	// Mock POST Requests by declaring new JSON structures and adding them to api repos
-	destJSON := msgdata.DestJSON {
-		NetHost:   "127.0.0.1",
-		NetPort: 	"80",
-		NetProto:   "tcp",
+	eaConfig,err := configurationmanager.LoadConfiguration("../configurationmanager/testconfig.json", "externalAPI")
+	if err != nil {
+		t.Errorf("LoadConfiguration returned error")
 	}
-	configJSON := msgdata.ConfigInfoJSON{
-		ID:          "ConfigID01",
-		DefaultDest: "DestID01",
-		Seller:      "SellerID01",
-	}
-	connectionJSON := msgdata.ConnectionJSON{
-		ID:        				"ConnectionID01",
-		Miner:    				"MinerID01",
-		Dest:      				"DestID01",
-		State:     				"0",
-		TotalHash: 				10000,
-		StartDate: 				"80000",
-	}
-	contractJSON := msgdata.ContractJSON{
-		ID:						"ContractID01",
-		State: 					"0",
-		Buyer: 					"Buyer ID01",
-		Dest:					"DestID01",
-		CommitedHashRate: 		9000,		
-		TargetHashRate:   		10000,
-		CurrentHashRate:		8000,
-		Tolerance:				10,
-		Penalty:				100,
-		Priority:				1,
-		StartDate:				1000000,
-		EndDate:				1000000,
-	}
-	minerJSON := msgdata.MinerJSON{
-		ID:						"MinerID01",
-		State: 					"0",
-		Seller:   				"SellerID01",
-		Dest:					"DestID01",	
-		InitialMeasuredHashRate: 10000,
-		CurrentHashRate:         9000,
-	}
-	sellerJSON := msgdata.SellerJSON{
-		ID:                     "SellerID01",
-		DefaultDest:            "DestID01",
-		TotalAvailableHashRate: 1000,
-		UnusedHashRate:         100,
-	}
-	sellerJSON.NewContracts = map[msgbus.ContractID]bool{
-		"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
-        "0x89921E8D51D22252D64EA34340A4161696887271": false,
-        "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
-	}
-	sellerJSON.ReadyContracts = map[msgbus.ContractID]bool{
-		"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": true,
-        "0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": false,
-        "0x397729E80F77BA09D930FE24E8D1FC74372E86D3": true,
-	}   
-    sellerJSON.ActiveContracts = map[msgbus.ContractID]bool{
-		"0x9F252E1EC723AF6D96A36B4EB2B75A262291497C": true,
-        "0xBB2EAAAAA9B08EC320FC984D7D19E28835DD94DD": false,
-        "0x407E8A225658FEE384859874952E2BBC11E98B5C": true,
-	}
+
+	dest := eaConfig["dest"].(map[string]interface{})
+	destMarshaled,_ := json.Marshal(dest)
+	destJSON := msgdata.DestJSON {}
+	json.Unmarshal(destMarshaled, &destJSON)
+
+	config := eaConfig["config"].(map[string]interface{})
+	configMarshaled,_ := json.Marshal(config)
+	configJSON := msgdata.ConfigInfoJSON {}
+	json.Unmarshal(configMarshaled, &configJSON)
+
+	connection := eaConfig["connection"].(map[string]interface{})
+	connectionMarshaled,_ := json.Marshal(connection)
+	connectionJSON := msgdata.ConnectionJSON {}
+	json.Unmarshal(connectionMarshaled, &connectionJSON)
+
+	contract := eaConfig["contract"].(map[string]interface{})
+	contractMarshaled,_ := json.Marshal(contract)
+	contractJSON := msgdata.ContractJSON {}
+	json.Unmarshal(contractMarshaled, &contractJSON)
+
+	miner := eaConfig["miner"].(map[string]interface{})
+	minerMarshaled,_ := json.Marshal(miner)
+	minerJSON := msgdata.MinerJSON {}
+	json.Unmarshal(minerMarshaled, &minerJSON)
+
+	seller := eaConfig["seller"].(map[string]interface{})
+	sellerMarshaled,_ := json.Marshal(seller)
+	sellerJSON := msgdata.SellerJSON {}
+	json.Unmarshal(sellerMarshaled, &sellerJSON)
 	
 	ech := make(msgbus.EventChan)
 	ps := msgbus.New(1)
