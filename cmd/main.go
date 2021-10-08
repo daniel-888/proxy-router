@@ -4,11 +4,13 @@ import (
 	"fmt"
 
 	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
+
 	// "gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
+
 	// "gitlab.com/TitanInd/lumerin/cmd/contractmanager"
-	// "gitlab.com/TitanInd/lumerin/cmd/externalapi"
+
 	"gitlab.com/TitanInd/lumerin/cmd/localvalidator"
 	"gitlab.com/TitanInd/lumerin/cmd/logging"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
@@ -16,9 +18,14 @@ import (
 )
 
 func main() {
-
+	
 	done := make(chan int)
-
+	
+	//
+	// Fire up logger
+	//
+	logging.Init(false)
+	
 	//
 	// Fire up the Message Bus
 	//
@@ -66,7 +73,9 @@ func main() {
 
 	//	time.Sleep(5 * time.Second)
 
+
 	<-done
+	logging.Cleanup()
 	return
 
 	fmt.Println(accountingmanager.BoilerPlateFunc())
@@ -76,8 +85,6 @@ func main() {
 	// fmt.Println(contractmanager.BoilerPlateFunc())
 	// fmt.Println(externalapi.BoilerPlateFunc())
 	fmt.Println(localvalidator.BoilerPlateFunc())
-	fmt.Println(logging.BoilerPlateFunc())
+	// fmt.Println(logging.BoilerPlateFunc())
 	fmt.Println(walletmanager.BoilerPlateFunc())
 }
-
-
