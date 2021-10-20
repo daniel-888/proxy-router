@@ -7,44 +7,51 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
-func TestLoadConfig (t *testing.T) {
-	configMap,err := LoadConfiguration("exampleconfig.json")
+
+func TestLoadConfig(t *testing.T) {
+	cmConfig,err := LoadConfiguration("testconfig.json", "configurationManager")
 	if err != nil {
 		t.Errorf("LoadConfiguration returned error")
 	}
-	if configMap["id"] != "ConfigID01" && configMap["destID"] != "DestID01" && configMap["seller"] != "SellerID01" {
-		t.Errorf("Failed to correctly load exampleconfig.json")
+
+	if cmConfig["id"] != "ConfigID01" && cmConfig["destID"] != "DestID01" && cmConfig["seller"] != "SellerID01" {
+		t.Errorf("Failed to correctly load configuration file")
 	}
 }
 
-func TestLoadConfigToAPIandMsgBus (t *testing.T) {
-	configMap,err := LoadConfiguration("exampleconfig.json")
+func TestLoadConfigFromServer(t *testing.T) {
+	DownloadConfig("https://lumerin-node-configs.s3.amazonaws.com/config.json")
+}
+
+func TestLoadConfigToAPIandMsgBus(t *testing.T) {
+	cmConfig,err := LoadConfiguration("testconfig.json", "configurationManager")
 	if err != nil {
 		t.Errorf("LoadConfiguration returned error")
 	}
+
 	ech := make(msgbus.EventChan)
 	ps := msgbus.New(1)
 
 	var config msgdata.ConfigInfoJSON
-	config.ID = configMap["id"].(string)
-	config.ID = configMap["destID"].(string)
-	config.ID = configMap["seller"].(string)
+	config.ID = cmConfig["id"].(string)
+	config.ID = cmConfig["destID"].(string)
+	config.ID = cmConfig["seller"].(string)
 
 	var seller msgdata.SellerJSON
 	newContractsMap := make(map[msgbus.ContractID]bool)
-	for key,value := range configMap["newContracts"].(map[string]interface{}){
+	for key,value := range cmConfig["newContracts"].(map[string]interface{}){
 		newContractsMap[msgbus.ContractID(key)] = value.(bool)
 	}
 	readyContractsMap := make(map[msgbus.ContractID]bool)
-	for key,value := range configMap["readyContracts"].(map[string]interface{}){
+	for key,value := range cmConfig["readyContracts"].(map[string]interface{}){
 		readyContractsMap[msgbus.ContractID(key)] = value.(bool)
 	}
 	activeContractsMap := make(map[msgbus.ContractID]bool)
-	for key,value := range configMap["activeContracts"].(map[string]interface{}){
+	for key,value := range cmConfig["activeContracts"].(map[string]interface{}){
 		activeContractsMap[msgbus.ContractID(key)] = value.(bool)
 	}
 
-	seller.ID = configMap["seller"].(string)
+	seller.ID = cmConfig["seller"].(string)
 	seller.NewContracts = newContractsMap
 	seller.ReadyContracts = readyContractsMap
 	seller.ActiveContracts = activeContractsMap
@@ -87,4 +94,12 @@ func TestLoadConfigToAPIandMsgBus (t *testing.T) {
 	
 	ps.Get(msgbus.ConfigMsg, msgbus.IDString(config.ID), ech)
 	ps.Get(msgbus.SellerMsg, msgbus.IDString(seller.ID), ech)
+}
+
+func TestLoadMsgBusFromConfig(t *testing.T) {
+	ps,ech := LoadMsgBusFromConfig()
+
+	ps.Get(msgbus.DestMsg, msgbus.IDString("DestID01"), ech)
+	ps.Get(msgbus.SellerMsg, msgbus.IDString("SellerID01"), ech)
+	ps.Get(msgbus.ConfigMsg, msgbus.IDString("ConfigID01"), ech)
 }

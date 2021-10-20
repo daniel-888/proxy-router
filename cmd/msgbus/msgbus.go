@@ -143,18 +143,16 @@ type Seller struct {
 }
 
 type Contract struct {
-	ID               ContractID
-	State            ContractState
-	Buyer            BuyerID
-	Dest             DestID
-	CommitedHashRate int
-	TargetHashRate   int
-	CurrentHashRate  int
-	Tolerance        int
-	Penalty          int
-	Priority         int
-	StartDate        int
-	EndDate          int
+	ID               		ContractID
+	State            		ContractState
+	Buyer            		BuyerID
+	Price			 		int
+	Limit			 		int
+	Speed			 		int
+	Length        	 		int
+	Port          	 		int
+	ValidationFee    		int
+	StartingBlockTimestamp	int
 }
 
 //

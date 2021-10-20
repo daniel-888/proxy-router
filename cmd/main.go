@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
 
 	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
 
@@ -14,7 +14,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/localvalidator"
 	"gitlab.com/TitanInd/lumerin/cmd/logging"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/cmd/walletmanager"
+	// "gitlab.com/TitanInd/lumerin/cmd/walletmanager"
 )
 
 func main() {

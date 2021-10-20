@@ -9,7 +9,7 @@ import (
 // Struct of ConfigInfo parameters in JSON
 type ConfigInfoJSON struct {
 	ID          		string `json:"id"`
-	DefaultDest 		string `json:"destID"`
+	DefaultDest 		string `json:"defaultDest"`
 	Seller     		 	string `json:"seller"`
 }
 
