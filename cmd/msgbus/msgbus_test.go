@@ -82,5 +82,3 @@ func TestBoilerPlateFunc(t *testing.T) {
 	ps.Get(ConnectionMsg, "connectionMsg01", ech)
 
 }
-
-

@@ -9,7 +9,10 @@ import (
 
 func TestBoilerPlateFunc(t *testing.T) {
 
-	// waitchan := make(chan int)
+	//
+	// Need a clean shutdown routine HERE
+	//
+	waitchan := make(chan int)
 
 	ps := msgbus.New(1)
 
@@ -26,7 +29,6 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 
 	fmt.Println("Break point")
-	//<-waitchan
+	<-waitchan
 
 }
-
