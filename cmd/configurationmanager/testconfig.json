@@ -1,4 +1,8 @@
 {
+    "walletData": {
+        "walletAddress": ""
+    },
+    
     "accountingManager": {
 
     },
@@ -25,7 +29,12 @@
     },
 
     "connectionManager": {
-
+        "sourceHost": "",
+        "sourcePort": "",
+        "sourceProto": "",
+        "defaultPoolHost": "",
+        "defaultPoolPort": "",
+        "defaultPoolProto": ""
     },
 
     "connectionScheduler": {
@@ -38,9 +47,12 @@
         "rpcClientAddress": "ws://3.217.127.193:8545",
         "cloneFactoryAddress": "",
         "ledgerAddress": "",
-        "lumerinTokenAddress": "0x397729E80F77BA09D930FE24E8D1FC74372E86D3",
+        "lumerinTokenAddress": "",
         "validatorAddress": "0x85A256C5688D012263D5A79EE37E84FC35EC4524",
-        "proxyAddress": "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3"
+        "proxyAddress": "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3",
+        "minShareAmtPerMin": 10,
+        "minShareAvgPerHour": 10,
+	    "shareDropTolerance": 10
     },
 
     "externalAPI": {
@@ -67,13 +79,13 @@
             "id": "ContractID01",
             "state": "0",
             "buyer": "Buyer ID01",
-            "dest": "DestID01",
             "price": 100,
             "limit": 100,
             "speed": 100,
             "length": 100,
             "port": 100,
-            "validationFee": 100
+            "validationFee": 100,
+            "StartingBlockTimestamp": 100
         },
         "miner": {
             "id": "MinerID01",
@@ -111,7 +123,9 @@
     },
 
     "logging": {
-
+        "level": 4,
+        "filePath": "/var/log/lumerin.log",
+        "testFilePath": "/var/log/test/lumerin.log"  
     },
 
     "msgbus": {

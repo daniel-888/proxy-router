@@ -10,13 +10,13 @@ func TestAddContract(t *testing.T) {
 		ID:				"Test",
 		State: 			"Test",
 		Buyer: 			"Test",
-		Dest:			"Test",
 		Price: 			100,
 		Limit: 			100,
 		Speed: 			100,
 		Length: 		100,
 		Port: 			100,
 		ValidationFee:	100,
+		StartingBlockTimestamp: 100,
 	}
 	
 	contractRepo := NewContract()
@@ -33,13 +33,13 @@ func TestGetAllContracts(t *testing.T) {
 		contract[i].ID = "Test" + fmt.Sprint(i)
 		contract[i].State = "Test"
 		contract[i].Buyer = "Test"
-		contract[i].Dest = "Test"
 		contract[i].Price = 100
 		contract[i].Limit = 100
 		contract[i].Speed = 100
 		contract[i].Length = 100
 		contract[i].Port = 100
 		contract[i].ValidationFee = 100
+		contract[i].StartingBlockTimestamp = 100
 	}
 	
 	contractRepo := NewContract()
@@ -59,13 +59,13 @@ func TestGetContract(t *testing.T) {
 		contract[i].ID = "Test" + fmt.Sprint(i)
 		contract[i].State = "Test"
 		contract[i].Buyer = "Test"
-		contract[i].Dest = "Test"
 		contract[i].Price = 100
 		contract[i].Limit = 100
 		contract[i].Speed = 100
 		contract[i].Length = 100
 		contract[i].Port = 100
 		contract[i].ValidationFee = 100
+		contract[i].StartingBlockTimestamp = 100
 	}
 	
 	contractRepo := NewContract()
@@ -89,13 +89,13 @@ func TestUpdateContract(t *testing.T) {
 		contract[i].ID = "Test" + fmt.Sprint(i)
 		contract[i].State = "Test"
 		contract[i].Buyer = "Test"
-		contract[i].Dest = "Test"
 		contract[i].Price = 100
 		contract[i].Limit = 100
 		contract[i].Speed = 100
 		contract[i].Length = 100
 		contract[i].Port = 100
 		contract[i].ValidationFee = 100
+		contract[i].StartingBlockTimestamp = 100
 	}
 	
 	contractRepo := NewContract()
@@ -107,13 +107,13 @@ func TestUpdateContract(t *testing.T) {
 		ID:				"",
 		State: 			"Updated",
 		Buyer: 			"",
-		Dest:			"",
 		Price: 			0,
 		Limit: 			0,
 		Speed: 			0,
 		Length: 		0,
 		Port: 			0,
 		ValidationFee:	0,
+		StartingBlockTimestamp: 100,
 	}
 	
 	var results [10]ContractJSON
@@ -139,13 +139,13 @@ func TestDeleteContract(t *testing.T) {
 		contract[i].ID = "Test" + fmt.Sprint(i)
 		contract[i].State = "Test"
 		contract[i].Buyer = "Test"
-		contract[i].Dest = "Test"
 		contract[i].Price = 100
 		contract[i].Limit = 100
 		contract[i].Speed = 100
 		contract[i].Length = 100
 		contract[i].Port = 100
 		contract[i].ValidationFee = 100
+		contract[i].StartingBlockTimestamp = 100
 	}
 	
 	contractRepo := NewContract()

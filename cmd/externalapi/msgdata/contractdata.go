@@ -8,16 +8,16 @@ import (
 
 // Struct of Contract parameters in JSON 
 type ContractJSON struct {
-	ID               string 	`json:"id"`
-	State            string 	`json:"state"`
-	Buyer			 string 	`json:"buyer"`
-	Dest			 string		`json:"dest"`
-	Price			 int		`json:"price"`
-	Limit			 int		`json:"limit"`
-	Speed			 int		`json:"speed"`
-	Length        	 int		`json:"length"`
-	Port          	 int		`json:"port"`
-	ValidationFee    int		`json:"validationFee"`
+	ID               		string 	`json:"id"`
+	State            		string 	`json:"state"`
+	Buyer			 		string 	`json:"buyer"`
+	Price			 		int		`json:"price"`
+	Limit			 		int		`json:"limit"`
+	Speed			 		int		`json:"speed"`
+	Length        	 		int		`json:"length"`
+	Port          	 		int		`json:"port"`
+	ValidationFee    		int		`json:"validationFee"`
+	StartingBlockTimestamp	int		`json:"startingBlockTimestamp"`
 }
 
 //Struct that stores slice of all JSON Contract structs in Repo
@@ -57,13 +57,13 @@ func (r *ContractRepo) AddContractFromMsgBus(contract msgbus.Contract) {
 	contractJSON.ID = string(contract.ID)
 	contractJSON.State = string(contract.State)
 	contractJSON.Buyer = string(contract.Buyer)
-	contractJSON.Dest = string(contract.Dest)
 	contractJSON.Price = contract.Price 
 	contractJSON.Limit = contract.Limit
 	contractJSON.Speed = contract.Speed
 	contractJSON.Length = contract.Length
 	contractJSON.Port = contract.Port
 	contractJSON.ValidationFee = contract.ValidationFee
+	contractJSON.StartingBlockTimestamp = contract.StartingBlockTimestamp
 	
 	r.ContractJSONs = append(r.ContractJSONs, contractJSON)
 }
@@ -74,13 +74,13 @@ func (r *ContractRepo) UpdateContract(id string, newContract ContractJSON) error
 		if c.ID == id {
 			if newContract.State != "" {r.ContractJSONs[i].State = newContract.State}
 			if newContract.Buyer != "" {r.ContractJSONs[i].Buyer = newContract.Buyer}
-			if newContract.Dest != "" {r.ContractJSONs[i].Dest = newContract.Dest}
 			if newContract.Price != 0 {r.ContractJSONs[i].Price = newContract.Price}
 			if newContract.Limit != 0 {r.ContractJSONs[i].Limit = newContract.Limit}
 			if newContract.Speed != 0 {r.ContractJSONs[i].Speed = newContract.Speed}
 			if newContract.Length != 0 {r.ContractJSONs[i].Length = newContract.Length}
 			if newContract.Port != 0 {r.ContractJSONs[i].Port = newContract.Port}
 			if newContract.ValidationFee != 0 {r.ContractJSONs[i].ValidationFee = newContract.ValidationFee}
+			if newContract.StartingBlockTimestamp != 0 {r.ContractJSONs[i].StartingBlockTimestamp = newContract.StartingBlockTimestamp}
 
 			return nil
 		}
@@ -104,13 +104,30 @@ func ConvertContractJSONtoContractMSG(contract ContractJSON, msg msgbus.Contract
 	msg.ID = msgbus.ContractID(contract.ID)
 	msg.State = msgbus.ContractState(contract.State)
 	msg.Buyer = msgbus.BuyerID(contract.Buyer)
-	msg.Dest = msgbus.DestID(contract.Dest)
 	msg.Price = contract.Price 
 	msg.Limit = contract.Limit
 	msg.Speed = contract.Speed
 	msg.Length = contract.Length
 	msg.Port = contract.Port
 	msg.ValidationFee = contract.ValidationFee
+	msg.StartingBlockTimestamp = contract.StartingBlockTimestamp
 
 	return msg	
+}
+
+func ConvertContractMSGtoContractJSON(msg msgbus.Contract) ContractJSON {
+	var contract ContractJSON
+
+	contract.ID = string(msg.ID)
+	contract.State = string(msg.State)
+	contract.Buyer = string(msg.Buyer)
+	contract.Price = msg.Price
+	contract.Limit = msg.Limit
+	contract.Speed = msg.Speed
+	contract.Length = msg.Length
+	contract.Port = msg.Port
+	contract.ValidationFee = msg.ValidationFee
+	contract.StartingBlockTimestamp = msg.StartingBlockTimestamp
+
+	return contract	
 }

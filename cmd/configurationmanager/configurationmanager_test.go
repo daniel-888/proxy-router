@@ -7,24 +7,28 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
-func TestLoadConfig (t *testing.T) {
+
+func TestLoadConfig(t *testing.T) {
 	cmConfig,err := LoadConfiguration("testconfig.json", "configurationManager")
 	if err != nil {
 		t.Errorf("LoadConfiguration returned error")
 	}
-	//cmConfig := configMap["configurationManager"].(map[string]interface{})
 
 	if cmConfig["id"] != "ConfigID01" && cmConfig["destID"] != "DestID01" && cmConfig["seller"] != "SellerID01" {
-		t.Errorf("Failed to correctly load exampleconfig.json")
+		t.Errorf("Failed to correctly load configuration file")
 	}
 }
 
-func TestLoadConfigToAPIandMsgBus (t *testing.T) {
+func TestLoadConfigFromServer(t *testing.T) {
+	DownloadConfig("https://lumerin-node-configs.s3.amazonaws.com/config.json")
+}
+
+func TestLoadConfigToAPIandMsgBus(t *testing.T) {
 	cmConfig,err := LoadConfiguration("testconfig.json", "configurationManager")
 	if err != nil {
 		t.Errorf("LoadConfiguration returned error")
 	}
-	// cmConfig := configMap["configurationManager"].(map[string]interface{})
+
 	ech := make(msgbus.EventChan)
 	ps := msgbus.New(1)
 
@@ -90,4 +94,12 @@ func TestLoadConfigToAPIandMsgBus (t *testing.T) {
 	
 	ps.Get(msgbus.ConfigMsg, msgbus.IDString(config.ID), ech)
 	ps.Get(msgbus.SellerMsg, msgbus.IDString(seller.ID), ech)
+}
+
+func TestLoadMsgBusFromConfig(t *testing.T) {
+	ps,ech := LoadMsgBusFromConfig()
+
+	ps.Get(msgbus.DestMsg, msgbus.IDString("DestID01"), ech)
+	ps.Get(msgbus.SellerMsg, msgbus.IDString("SellerID01"), ech)
+	ps.Get(msgbus.ConfigMsg, msgbus.IDString("ConfigID01"), ech)
 }

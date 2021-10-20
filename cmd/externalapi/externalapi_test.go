@@ -50,13 +50,13 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 		ID:				"ContractID01",
 		State: 			msgbus.ContActiveState,
 		Buyer: 			"Buyer ID01",
-		Dest:			"DestID01",
 		Price: 			100,
 		Limit: 			100,
 		Speed: 			100,
 		Length: 		100,
 		Port: 			100,
 		ValidationFee:	100,
+		StartingBlockTimestamp: 100,
 	}
 	
 	miner := msgbus.Miner{

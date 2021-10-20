@@ -143,16 +143,16 @@ type Seller struct {
 }
 
 type Contract struct {
-	ID               ContractID
-	State            ContractState
-	Buyer            BuyerID
-	Dest             DestID
-	Price			 int
-	Limit			 int
-	Speed			 int
-	Length        	 int
-	Port          	 int
-	ValidationFee    int
+	ID               		ContractID
+	State            		ContractState
+	Buyer            		BuyerID
+	Price			 		int
+	Limit			 		int
+	Speed			 		int
+	Length        	 		int
+	Port          	 		int
+	ValidationFee    		int
+	StartingBlockTimestamp	int
 }
 
 //

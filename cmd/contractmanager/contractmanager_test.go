@@ -14,12 +14,14 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi"
+	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/clonefactory"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/ledger"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/webfacing"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/implementation"
+	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/lumerintoken"
 )
 
 func DeployContract(client *ethclient.Client,
@@ -61,6 +63,12 @@ func DeployContract(client *ethclient.Client,
 			log.Fatal(err)
 		}
 		return address
+	case "LumerinToken":
+		address, _, _, err := lumerintoken.DeployLumerintoken(auth, client)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return address
 	case "CloneFactory":
 		address, _, _, err := clonefactory.DeployClonefactory(auth, client, lmnAddress, validatorAddress, proxyAddress)
 		if err != nil {
@@ -86,7 +94,8 @@ func CreateHashrateContract(client *ethclient.Client,
 	_price int,
 	_limit int,
 	_speed int,
-	_length int) {
+	_length int,
+	_validationFee int) {
 	privateKey, err := crypto.HexToECDSA(privateKeyString)
 	if err != nil {
 		log.Fatal(err)
@@ -117,12 +126,13 @@ func CreateHashrateContract(client *ethclient.Client,
 	limit := big.NewInt(int64(_limit))
 	speed := big.NewInt(int64(_speed))
 	length := big.NewInt(int64(_length))
-	tx, err := instance.SetCreateRentalContract(auth, price, limit, speed, length)
+	validationFee := big.NewInt(int64(_validationFee))
+	tx, err := instance.SetCreateRentalContract(auth, price, limit, speed, length, validationFee)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("tx sent: %s\n\n", tx.Hash().Hex())
+	fmt.Printf("tx sent: %s\n", tx.Hash().Hex())
 }
 
 func PurchaseHashrateContract(client *ethclient.Client,
@@ -160,7 +170,7 @@ func PurchaseHashrateContract(client *ethclient.Client,
 		log.Fatal(err)
 	}
 
-	tx, err := instance.SetPurchaseContract(auth, _hashrateContract, _buyer, _ipaddress, _username, _password)
+	tx, err := instance.SetPurchaseContract(auth, _hashrateContract, _buyer, fromAddress,false,_ipaddress, _username, _password)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -201,7 +211,7 @@ func SetFundHashrateContract(client *ethclient.Client,
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("tx sent: %s\n\n", tx.Hash().Hex())
+	fmt.Printf("tx sent: %s\n", tx.Hash().Hex())
 }
 
 func TestContractManager(t *testing.T) {
@@ -210,6 +220,7 @@ func TestContractManager(t *testing.T) {
 	_, _, contractRepo, _, _, _ := externalapi.InitializeJSONRepos()
 	var contractMsgs [5]msgbus.Contract
 	var hashrateContractAddresses [5]common.Address
+	var constructorParams [5]common.Address 
 
 	cmConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/testconfig.json", "contractManager")
 	if err != nil {
@@ -222,15 +233,15 @@ func TestContractManager(t *testing.T) {
 	rpcClient := cmConfig["rpcClientAddress"].(string)
 	client := SetUpClient(contractManagerAccount, rpcClient)
 
-	lmnAddress := common.HexToAddress(cmConfig["lumerinTokenAddress"].(string))    // dummy address
 	validatorAddress := common.HexToAddress(cmConfig["validatorAddress"].(string)) // dummy address
 	proxyAddress := common.HexToAddress(cmConfig["proxyAddress"].(string))         // dummy address
 
-	constructorParams := [5]common.Address{
-		lmnAddress,
-		validatorAddress,
-		proxyAddress,
-	}
+	// deploy Lumerin Token
+	lmnAddress := DeployContract(client, contractManagerAccount, contractManagerPrivateKey, constructorParams, "LumerinToken")
+
+	constructorParams[0] = lmnAddress
+	constructorParams[1] = validatorAddress
+	constructorParams[2] = proxyAddress
 
 	// deploy Clone Factory and Ledger contracts
 	cfAddress := DeployContract(client, contractManagerAccount, contractManagerPrivateKey, constructorParams, "CloneFactory")
@@ -251,40 +262,19 @@ func TestContractManager(t *testing.T) {
 	// confirm 5 contract creation events were emitted by WebFacing contract and print out address of Hashrate contract created
 	for i := 0; i < 5; i++ {
 		// create new Hashrate contracts with arbitrary filled out parameters
-		CreateHashrateContract(client, contractManagerAccount, contractManagerPrivateKey, wfAddress, int(i*5), int(i*10), int(i*20), int(i*40))
+		CreateHashrateContract(client, contractManagerAccount, contractManagerPrivateKey, wfAddress, int(i*5), int(i*10), int(i*20), int(i*40), 30)
 
 		select {
 		case err := <-cfSub.Err():
 			log.Fatal(err)
 
-		case vLog := <-cfLogs:
-			fmt.Printf("Log Block Number: %d\n", vLog.BlockNumber)
-			fmt.Printf("Log Index: %d\n", vLog.Index)
+		case cfLog := <-cfLogs:
+			fmt.Printf("Log Block Number: %d\n", cfLog.BlockNumber)
+			fmt.Printf("Log Index: %d\n", cfLog.Index)
 
-			hashrateContractAddresses[i] = common.HexToAddress(vLog.Topics[1].Hex())
-			fmt.Printf("Address of created Hashrate Contract: %s\n", hashrateContractAddresses[i].Hex())
+			hashrateContractAddresses[i] = common.HexToAddress(cfLog.Topics[1].Hex())
+			fmt.Printf("Address of created Hashrate Contract: %s\n\n", hashrateContractAddresses[i].Hex())
 		}
-	}
-
-	// subcribe to events emitted by 3rd Hashrate contract
-	hLogs, hSub := SubscribeToContractEvents(client, hashrateContractAddresses[2])
-
-	buyerAddress := common.HexToAddress("0x25c1230C7EFC00cFd2fcAA3a44f30948853824bc") // account from ganache instance
-	// purchase 3rd created Hashrate contract to fill out rest of contract parameters and emit purchase event
-	PurchaseHashrateContract(client, contractManagerAccount, contractManagerPrivateKey, wfAddress,
-		hashrateContractAddresses[2], buyerAddress, "IP Address", "Username", "Password")
-	// SetFundHashrateContract(client, contractManagerAccount, contractManagerPrivateKey, hashrateContractAddresses[2])
-	
-	select {
-	case err := <-hSub.Err():
-		log.Fatal(err)
-
-	case vLog := <-hLogs:
-		fmt.Printf("Log Block Number: %d\n", vLog.BlockNumber)
-		fmt.Printf("Log Index: %d\n", vLog.Index)
-
-		buyerAddress := common.HexToAddress(string(vLog.Data))
-		fmt.Printf("Address of Buyer: %s\n\n", buyerAddress.Hex())
 	}
 
 	// check data was added to message bus
@@ -303,19 +293,11 @@ func TestContractManager(t *testing.T) {
 		contractValues := ReadHashrateContract(client, hashrateContractAddresses[i])
 		fmt.Printf("%+v\n", contractValues)
 
-		if i == 2 { // purchased Hashrate contract
-			if contractValues.State != 0 || contractValues.Price != int(i*5) || contractValues.Limit != int(i*10) || 
-			contractValues.Speed != int(i*20) || contractValues.Length != int(i*40) || contractValues.Port != 0 || contractValues.Buyer != buyerAddress ||
-			contractValues.Seller != contractManagerAccount || contractValues.IpAddr != "IP Address" {
-				t.Errorf("Read contract values not equal to expected values")
-			}
-		} else { // rest of unpurchased Hashrate contracts
-			if contractValues.State != 0 || contractValues.Price != int(i*5) || contractValues.Limit != int(i*10) || contractValues.Speed != int(i*20) ||
-				contractValues.Length != int(i*40) || contractValues.Port != 0 || contractValues.Seller != contractManagerAccount || contractValues.IpAddr != "" {
-				t.Errorf("Read contract values not equal to expected values")
-			}
+		if contractValues.State != 0 || contractValues.Price != int(i*5) || contractValues.Limit != int(i*10) || contractValues.Speed != int(i*20) ||
+			contractValues.Length != int(i*40) || contractValues.Port != 0 || contractValues.Seller != contractManagerAccount{
+			t.Errorf("Read contract values not equal to expected values")
 		}
-
+		
 		// push read in contract values into message bus contract struct
 		contractMsgs[i] = CreateContractMsg(hashrateContractAddresses[i], contractValues)
 		ps.Pub(msgbus.ContractMsg, msgbus.IDString(contractMsgs[i].ID), msgbus.Contract{})
@@ -332,4 +314,61 @@ func TestContractManager(t *testing.T) {
 			t.Errorf("Contract struct not added")
 		}
 	}
-}
+
+	// subcribe to events emitted by webfacing to read purchase event
+	wLogs, wSub := SubscribeToContractEvents(client, wfAddress)
+
+	// account from ganache instance
+	buyerAddress := common.HexToAddress("0x25c1230C7EFC00cFd2fcAA3a44f30948853824bc") 
+	// purchase 3rd created Hashrate contract to fill out rest of contract parameters and emit purchase event
+	PurchaseHashrateContract(client, contractManagerAccount, contractManagerPrivateKey, wfAddress,
+		hashrateContractAddresses[2], buyerAddress, "IP Address", "Username", "Password")
+	// SetFundHashrateContract(client, contractManagerAccount, contractManagerPrivateKey, hashrateContractAddresses[2])
+
+	select {
+	case err := <-wSub.Err():
+		log.Fatal(err)
+
+	case wLog := <-wLogs:
+		fmt.Printf("Log Block Number: %d\n", wLog.BlockNumber)
+		fmt.Printf("Log Index: %d\n", wLog.Index)
+
+		buyerAddress := common.HexToAddress(string(wLog.Data))
+		fmt.Printf("Address of Buyer: %s\n\n", buyerAddress.Hex())
+	}
+
+	// confirm purchase changed values in hashrate contract
+	purchasedContractValues := ReadHashrateContract(client, hashrateContractAddresses[2])
+	if purchasedContractValues.State != 0 || purchasedContractValues.Price != int(10) || purchasedContractValues.Limit != int(20) || 
+		purchasedContractValues.Speed != int(40) || purchasedContractValues.Length != int(80) || purchasedContractValues.Port != 0 || purchasedContractValues.Buyer != buyerAddress ||
+		purchasedContractValues.Seller != contractManagerAccount {
+			t.Errorf("Read contract values from purchased contract not equal to expected values")
+	}
+
+	// update msgbus struct and contract API repo for contract with new values
+	purchasedContractMsg := CreateContractMsg(hashrateContractAddresses[2], purchasedContractValues)
+	ps.Set(msgbus.ContractMsg, msgbus.IDString(purchasedContractMsg.ID), purchasedContractMsg)
+	ps.Get(msgbus.ContractMsg, msgbus.IDString(purchasedContractMsg.ID), ech)
+
+	contractJSON := msgdata.ConvertContractMSGtoContractJSON(purchasedContractMsg)
+	contractRepo.UpdateContract(contractRepo.ContractJSONs[2].ID, contractJSON)
+	fmt.Printf("API Contract Repo: %+v\n\n", contractRepo.ContractJSONs[2])
+
+	// Contract Manager Receives message from validator and checks to see contract is meeting threshold requirements
+	// thresholds := DefineThresholdParams("../configurationmanager/testconfig.json")
+	// vmsg := make(chan ValidatorMsg)
+
+	// go func (){
+	// 	valmsg := ValidatorMsg {
+	// 		ShareAmtPerMin:		5,
+	// 		ShareAvgPerHour:	5,
+	// 		ShareDrop:			5,
+	// 		HashesCompleted:	10,
+	// 		ContractFulfilled:	false,
+	// 	} 
+	// 	vmsg<-valmsg
+	// }()
+	
+	// CloseOutMonitor(client, contractManagerAccount, contractManagerPrivateKey, hashrateContractAddresses[2], vmsg, thresholds)
+
+}	
