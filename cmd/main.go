@@ -18,14 +18,14 @@ import (
 )
 
 func main() {
-	
+
 	done := make(chan int)
-	
+
 	//
 	// Fire up logger
 	//
 	logging.Init(false)
-	
+
 	//
 	// Fire up the Message Bus
 	//
@@ -38,7 +38,7 @@ func main() {
 	dest := msgbus.Dest{
 		ID:       msgbus.DestID(msgbus.DEFAULT_DEST_ID),
 		NetProto: msgbus.DestNetProto("tcp"),
-		NetHost:  msgbus.DestNetHost("127.0.0.1"),
+		NetHost:  msgbus.DestNetHost("0.0.0.0"),
 		NetPort:  msgbus.DestNetPort("3334"),
 	}
 
@@ -72,7 +72,6 @@ func main() {
 	//	ps.Set(msgbus.DestMsg, "destMsg01", dest)
 
 	//	time.Sleep(5 * time.Second)
-
 
 	<-done
 	logging.Cleanup()

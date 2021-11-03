@@ -1,0 +1,6 @@
+
+
+echo "Running: env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o lumerin_amd64/lumerin"
+
+env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o lumerin_amd64/lumerin
+
