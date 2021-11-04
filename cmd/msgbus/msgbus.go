@@ -153,6 +153,9 @@ type Contract struct {
 	Port          	 		int
 	ValidationFee    		int
 	StartingBlockTimestamp	int
+	IpAddress				string
+	Username				string
+	Password				string
 }
 
 //

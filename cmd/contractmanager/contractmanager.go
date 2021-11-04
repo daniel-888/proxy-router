@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum"
@@ -39,7 +40,16 @@ type HashrateContractValues struct {
 	StartingBlockTimestamp	int
 	Buyer 					common.Address
 	Seller 					common.Address
+	IpAddress				string
+	Username				string
+	Password				string
 } 
+
+type MiningPoolInformation struct {
+	IpAddress	string 
+	Username	string
+	Password	string
+}
 
 type ThresholdParams struct {
 	MinShareAmtPerMin	int
@@ -47,35 +57,30 @@ type ThresholdParams struct {
 	ShareDropTolerance	int
 }
 
-type ValidatorMsg struct {
-	ShareAmtPerMin		int		`json:"shareAmtPerMin"`
-	ShareAvgPerHour		int		`json:"shareAvgPerHour"`
-	ShareDrop			int		`json:"shareDrop"`
-	HashesCompleted		int		`json:"hashesCompleted"`
-	ContractFulfilled 	bool	`json:"contractFulfilled"`
-}
+func SetUpClient(configPath string) *ethclient.Client {
+	configaData, err := configurationmanager.LoadConfiguration(configPath, "contractManager")
+	if err != nil {
+		log.Fatal(err)
+	}
+	clientAddress := configaData["rpcClientAddress"].(string)
+	contractManagerAccount := common.HexToAddress(configaData["contractManagerAccount"].(string))
 
-type ValidatedParams struct {
-	ShareAmtPerMin		int
-	ShareAvgPerHour		int
-	ShareDrop			int
-	HashesCompleted		int
-	ContractFulfilled 	bool
-}
-
-func SetUpClient(account common.Address, rpcClient string) *ethclient.Client {
-	client, err := ethclient.Dial(rpcClient)
+	client, err := ethclient.Dial(clientAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Connected to rpc client at %v\n", rpcClient)
+	fmt.Printf("Connected to rpc client at %v\n", clientAddress)
 
-    balance, err := client.BalanceAt(context.Background(), account, nil)
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Printf("Account Balance of %v: %v\n",account.Hex(),balance) 
+	balance, err := client.BalanceAt(context.Background(), contractManagerAccount, nil) 
+	if err != nil {
+		log.Fatal(err)
+	}
+	fbalance := new(big.Float)
+	fbalance.SetString(balance.String())
+	ethValue := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
+
+	fmt.Println("Balance of contract manager account:", ethValue, "ETH") 
 
 	return client
 }
@@ -165,7 +170,40 @@ func ReadHashrateContract(client *ethclient.Client, contractAddress common.Addre
 	return contractValues
 }
 
-func SetContractCloseOut(client *ethclient.Client,
+/*
+	TODO: Mining pool info will be encrypted moving forward so decryption logic will need to be implemented
+*/
+func ReadMiningPoolInformation(client *ethclient.Client, fromAddress common.Address, contractAddress common.Address) MiningPoolInformation {
+	var auth *bind.CallOpts = new(bind.CallOpts)
+	auth.From = fromAddress
+	BlockNumber,err := client.BlockNumber(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	auth.BlockNumber = big.NewInt(int64(BlockNumber))
+
+	instance, err := implementation.NewImplementation(contractAddress, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Address %s getting mining pool info from contract %s\n\n", fromAddress, contractAddress)
+	fmt.Printf("Call opts: %+v\n\n", auth)
+	ipaddress,username,password,err := instance.GetMiningPoolInformation(auth)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	miningPoolInfo := MiningPoolInformation{
+		IpAddress: ipaddress,
+		Username: username,
+		Password: password,
+	}
+
+	return miningPoolInfo
+}
+
+func setContractCloseOut(client *ethclient.Client,
 	fromAddress common.Address,
 	privateKeyString string,
 	contractAddress common.Address) {
@@ -184,7 +222,15 @@ func SetContractCloseOut(client *ethclient.Client,
 		log.Fatal(err)
 	}
 
-	auth := bind.NewKeyedTransactor(privateKey)
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainId)
+	if err != nil {
+		log.Fatal(err)
+	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)      // in wei
 	auth.GasLimit = uint64(3000000) // in units
@@ -202,7 +248,7 @@ func SetContractCloseOut(client *ethclient.Client,
 	fmt.Printf("tx sent: %s\n\n", tx.Hash().Hex())
 }
 
-func CreateContractMsg (contractAddress common.Address, contractValues HashrateContractValues) msgbus.Contract {
+func CreateContractMsg(contractAddress common.Address, contractValues HashrateContractValues) msgbus.Contract {
 	contractStateToString := map[ContractState]msgbus.ContractState {
 		Available:	"Available",
 		Active: 	"Active",
@@ -210,19 +256,25 @@ func CreateContractMsg (contractAddress common.Address, contractValues HashrateC
 		Complete:	"Complete",
 	}
 
-	var ContractMsg msgbus.Contract
-	ContractMsg.ID = msgbus.ContractID(contractAddress.Hex())
-	ContractMsg.State = contractStateToString[contractValues.State]
-	ContractMsg.Buyer = msgbus.BuyerID(contractValues.Buyer.Hex())
-	ContractMsg.Price = contractValues.Price
-	ContractMsg.Limit = contractValues.Limit
-	ContractMsg.Speed = contractValues.Speed
-	ContractMsg.Length = contractValues.Length
-	ContractMsg.Port = contractValues.Port
-	ContractMsg.ValidationFee = contractValues.ValidationFee
-	ContractMsg.StartingBlockTimestamp = contractValues.StartingBlockTimestamp
+	var contractMsg msgbus.Contract
+	contractMsg.ID = msgbus.ContractID(contractAddress.Hex())
+	contractMsg.State = contractStateToString[contractValues.State]
+	contractMsg.Buyer = msgbus.BuyerID(contractValues.Buyer.Hex())
+	contractMsg.Price = contractValues.Price
+	contractMsg.Limit = contractValues.Limit
+	contractMsg.Speed = contractValues.Speed
+	contractMsg.Length = contractValues.Length
+	contractMsg.Port = contractValues.Port
+	contractMsg.ValidationFee = contractValues.ValidationFee
+	contractMsg.StartingBlockTimestamp = contractValues.StartingBlockTimestamp
 
-	return ContractMsg
+	return contractMsg
+}
+
+func UpdateContractMsgMiningInfo(contractMsg *msgbus.Contract, miningPoolInfo MiningPoolInformation) {
+	contractMsg.IpAddress = miningPoolInfo.IpAddress
+	contractMsg.Username = miningPoolInfo.Username
+	contractMsg.Password = miningPoolInfo.Password
 }
 
 func DefineThresholdParams(configFilePath string) ThresholdParams {
@@ -231,47 +283,50 @@ func DefineThresholdParams(configFilePath string) ThresholdParams {
 	if err != nil {
         log.Fatal(err)
     }
-	fmt.Println("here1")
+
 	tParams.MinShareAmtPerMin = int(configParams["minShareAmtPerMin"].(float64))
 	tParams.MinShareAvgPerHour = int(configParams["minShareAvgPerHour"].(float64))
 	tParams.ShareDropTolerance = int(configParams["shareDropTolerance"].(float64))
-	fmt.Println("here2")
+
 	return tParams
 }
 
-func consumeValidatorMsg(contractAddress common.Address, msgs <-chan ValidatorMsg, params chan<- ValidatedParams) {
-	for msg := range msgs {
-		log.Printf("Contract Address: %s\n", contractAddress.Hex())
-		params <- ValidatedParams{
-			ShareAmtPerMin: int(msg.ShareAmtPerMin),
-			ShareAvgPerHour: int(msg.ShareAvgPerHour),
-			ShareDrop: int(msg.ShareDrop),
-			HashesCompleted: int(msg.HashesCompleted),
-			ContractFulfilled: bool(msg.ContractFulfilled),
-		}
-	}
-}
-
+/*
+	TODO: Implement similar closeout monitor that checks threshold parameters are being met
+*/
 func CloseOutMonitor(client *ethclient.Client,
 	fromAddress common.Address,
 	privateKeyString string,
 	contractAddress common.Address, 
-	msgs chan ValidatorMsg, 
-	thresholds ThresholdParams) {
-	params := make(chan ValidatedParams)
-	go consumeValidatorMsg(contractAddress, msgs, params)
+	minerID msgbus.IDString,
+	contractMsg msgbus.Contract,
+	ps *msgbus.PubSub) bool	{
+	ech := make(msgbus.EventChan)
+	hashRate := make(chan int)
+	ps.Sub(msgbus.MinerMsg, minerID, ech)
+	ps.Get(msgbus.MinerMsg, minerID, ech)
 
-	param := <-params
-	if param.ShareAmtPerMin < thresholds.MinShareAmtPerMin || param.ShareAvgPerHour < thresholds.MinShareAvgPerHour || param.ShareDrop > thresholds.ShareDropTolerance {
-		log.Printf("Closing out contract %s for not meeting threshold requirements\n", contractAddress.Hex())
-		SetContractCloseOut(client,fromAddress,privateKeyString,contractAddress)
-		return
-	}
-	if param.ContractFulfilled {
-		log.Printf("Closing out contract %s for fulfilling requirements\n", contractAddress.Hex())
-		SetContractCloseOut(client,fromAddress,privateKeyString,contractAddress)
-		return
+	go readMinerHashrate(ech, hashRate)
+
+	currentHashRate := <-hashRate
+	if currentHashRate < contractMsg.Speed {
+		log.Printf("Closing out contract %s for not meeting hashrate requirements\n", contractAddress.Hex())
+		setContractCloseOut(client,fromAddress,privateKeyString,contractAddress)
+		return false
 	}
 
-	log.Printf("Contract at %s has %d hashes completed\n", contractAddress.Hex(), param.HashesCompleted)
+	log.Println("Contract hashrate is being fulfilled")
+
+	close(hashRate)
+	close(ech)
+	return true
+}
+
+func readMinerHashrate(ech msgbus.EventChan, currentHashRate chan int){
+	for e := range ech {
+		if e.EventType == msgbus.GetEvent {
+			minerInfo := e.Data.(msgbus.Miner)
+			currentHashRate <- minerInfo.CurrentHashRate
+		}
+	}
 }
