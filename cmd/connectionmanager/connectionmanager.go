@@ -1612,4 +1612,3 @@ func (cm *ConnectionManager) listenForIncomingConnections(l net.Listener) {
 	}
 
 }
-

@@ -1400,4 +1400,3 @@ func GetRandomIDString() (i IDString) {
 	i = IDString(str)
 	return i
 }
-

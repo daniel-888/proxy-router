@@ -455,4 +455,3 @@ func (n *notice) createNoticeMiningNotify() (msg []byte, err error) {
 
 	return msg, err
 }
-
