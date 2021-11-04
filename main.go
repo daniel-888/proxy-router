@@ -46,7 +46,7 @@ func main() {
 	//
 	configMap, err := configurationmanager.LoadConfiguration("lumerinconfig.json")
 	if err != nil {
-		panic("Unable to read configuration file\n")
+		panic(fmt.Sprintf("Unable to read configuration file\n%s", err))
 	}
 
 	_ = configMap
