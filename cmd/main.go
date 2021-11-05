@@ -1,26 +1,23 @@
 package main
 
 import (
-	// "fmt"
+	"fmt"
 
 	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
-
-	// "gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
+	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
-
-	// "gitlab.com/TitanInd/lumerin/cmd/contractmanager"
-
+	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/localvalidator"
 	"gitlab.com/TitanInd/lumerin/cmd/logging"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	// "gitlab.com/TitanInd/lumerin/cmd/walletmanager"
+	"gitlab.com/TitanInd/lumerin/cmd/walletmanager"
 )
 
 func main() {
 	
 	done := make(chan int)
-	
+
 	//
 	// Fire up logger
 	//
@@ -34,7 +31,6 @@ func main() {
 	//
 	// Setup Default Dest
 	//
-
 	dest := msgbus.Dest{
 		ID:       msgbus.DestID(msgbus.DEFAULT_DEST_ID),
 		NetProto: msgbus.DestNetProto("tcp"),
@@ -73,6 +69,22 @@ func main() {
 
 	//	time.Sleep(5 * time.Second)
 
+	//
+	//Fire up contract manager
+	//
+	contractmanagerConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/testconfig.json", "contractManager")
+	if err != nil {
+		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
+	}
+
+	cman, err := contractmanager.New(ps, contractmanagerConfig)
+	if err != nil {
+		panic(fmt.Sprintf("contract manager failed:%s", err))
+	}
+	err = cman.Start()
+	if err != nil {
+		panic(fmt.Sprintf("connection manager failed to start:%s", err))
+	}
 
 	<-done
 	logging.Cleanup()
