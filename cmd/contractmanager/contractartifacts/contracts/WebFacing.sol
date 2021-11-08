@@ -11,6 +11,7 @@ import "./Ownable.sol";
 /// @author Josh Kean (Lumerin)
 /// @notice Additional functions may be added as project needs evolve
 
+
 contract WebFacing is Ownable{
   Ledger l; //contract object for the ledger
   CloneFactory cf; //contract object for the clone factory
@@ -46,11 +47,10 @@ contract WebFacing is Ownable{
                               address _buyer, 
                               address _validator, 
                               bool _withValidator, 
-                              string memory _ip_address, 
-                              string memory _username, 
-                              string memory _password) 
+                              string memory _encryptedPoolData
+			      )
     public payable { 
-    Implementation(_contract).setPurchaseContract(_ip_address, _username, _password, _buyer, _validator, _withValidator); 
+    Implementation(_contract).setPurchaseContract{value:msg.value}(_encryptedPoolData, _buyer, _validator, _withValidator); 
     // add in function call to ledger to update contracts buyer variable
     emit contractPurchase(_contract); 
   }

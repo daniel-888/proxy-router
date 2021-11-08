@@ -36,7 +36,7 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
         "0x89921E8D51D22252D64EA34340A4161696887271": false,
         "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
 	}
-	seller.ReadyContracts = map[msgbus.ContractID]bool{
+	seller.CompleteContracts = map[msgbus.ContractID]bool{
 		"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": true,
         "0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": false,
         "0x397729E80F77BA09D930FE24E8D1FC74372E86D3": true,
@@ -54,7 +54,6 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 		Limit: 			100,
 		Speed: 			100,
 		Length: 		100,
-		Port: 			100,
 		ValidationFee:	100,
 		StartingBlockTimestamp: 100,
 	}

@@ -138,11 +138,13 @@ type Seller struct {
 	TotalAvailableHashRate int
 	UnusedHashRate         int
 	NewContracts           map[ContractID]bool
-	ReadyContracts         map[ContractID]bool
+	ReadyContracts		   map[ContractID]bool
 	ActiveContracts        map[ContractID]bool
+	CompleteContracts      map[ContractID]bool
 }
 
 type Contract struct {
+	IsSeller				bool
 	ID               		ContractID
 	State            		ContractState
 	Buyer            		BuyerID
@@ -150,12 +152,11 @@ type Contract struct {
 	Limit			 		int
 	Speed			 		int
 	Length        	 		int
-	Port          	 		int
 	ValidationFee    		int
 	StartingBlockTimestamp	int
 	IpAddress				string
+	Port					string
 	Username				string
-	Password				string
 }
 
 //
