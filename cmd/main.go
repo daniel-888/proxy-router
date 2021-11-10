@@ -1,9 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 
 	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
+	"gitlab.com/TitanInd/lumerin/cmd/commandline"
 	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
@@ -15,14 +17,16 @@ import (
 )
 
 func main() {
-	
+
 	done := make(chan int)
+
+	flag.Parse()
 
 	//
 	// Fire up logger
 	//
 	logging.Init(false)
-	
+
 	//
 	// Fire up the Message Bus
 	//
@@ -49,6 +53,11 @@ func main() {
 	//
 	// Fire up the connection Manager
 	//
+	//connectionmanagerConfig, err := configurationmanager.LoadConfiguration("../connectionmanager/testconfig.json", "connectionManager")
+	//if err != nil {
+	//	panic(fmt.Sprintf("failed to load connection manager configuration:%s", err))
+	//}
+
 	cm, err := connectionmanager.New(ps)
 	if err != nil {
 		panic(fmt.Sprintf("connection manager failed:%s", err))
@@ -72,7 +81,7 @@ func main() {
 	//
 	//Fire up contract manager
 	//
-	contractmanagerConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/testconfig.json", "contractManager")
+	contractmanagerConfig, err := configurationmanager.LoadConfiguration(commandline.ConfigFile, "contractManager")
 	if err != nil {
 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 	}
@@ -86,6 +95,7 @@ func main() {
 		panic(fmt.Sprintf("connection manager failed to start:%s", err))
 	}
 
+	fmt.Printf("Main() done inializing\n")
 	<-done
 	logging.Cleanup()
 	return
