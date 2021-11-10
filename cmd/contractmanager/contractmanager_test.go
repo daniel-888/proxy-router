@@ -657,10 +657,10 @@ func TestCreateUnsignedTransaction(t *testing.T) {
 }
 func TestSellerRoutine(t *testing.T) {
 	ps := msgbus.New(10)
-	//ts := BeforeEach()
+	ts := BeforeEach()
 	var hashrateContractAddress [3]common.Address  
-	hashrateContractAddress[0] = common.HexToAddress("0xa5e6cd816545c883bfa246e96bf7d3648d84d881")
-	hashrateContractAddress[1] = common.HexToAddress("0xbb05218023c62fe691bb78b3969eab50077b6a07")
+	// hashrateContractAddress[0] = common.HexToAddress("0xa5e6cd816545c883bfa246e96bf7d3648d84d881")
+	// hashrateContractAddress[1] = common.HexToAddress("0xbb05218023c62fe691bb78b3969eab50077b6a07")
 	
 	contractmanagerConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/sellerconfig.json", "contractManager")
 	if err != nil {
@@ -671,15 +671,14 @@ func TestSellerRoutine(t *testing.T) {
 	if err != nil {
 		panic(fmt.Sprintf("contract manager failed:%s", err))
 	}
-	// cman.webFacingAddress = ts.webFacingAddress
-	// cman.cloneFactoryAddress = ts.cloneFactoryAddress
-	// cman.ledgerAddress = ts.ledgerAddress
-	
+	cman.webFacingAddress = ts.webFacingAddress
+	cman.cloneFactoryAddress = ts.cloneFactoryAddress
+	cman.ledgerAddress = ts.ledgerAddress
 	
 	// subcribe to events emitted by clonefactory contract to read contract creation event
 	cfLogs, cfSub := SubscribeToContractEvents(cman.rpcClient, cman.cloneFactoryAddress)
 	go func () {
-		i := 2
+		i := 0
 		for {
 			select {
 			case err := <-cfSub.Err():
@@ -693,32 +692,126 @@ func TestSellerRoutine(t *testing.T) {
 		}
 	}()
 	
-	/*
 	CreateHashrateContract(cman.rpcClient,cman.account,cman.privateKey,cman.webFacingAddress,int(0),int(0),int(30),int(10),int(0)) 
 	CreateHashrateContract(cman.rpcClient,cman.account,cman.privateKey,cman.webFacingAddress,int(0),int(0),int(30),int(10),int(0)) 
-	time.Sleep(time.Millisecond*40000)
-		*/
+	time.Sleep(time.Millisecond*10000)
+
 	err = cman.StartSeller()
 	if err != nil {
 		panic(fmt.Sprintf("contract manager failed to start:%s", err))
 	}
 
-	time.Sleep(time.Millisecond*20000)
+	time.Sleep(time.Millisecond*10000)
 	PurchaseHashrateContract(cman.rpcClient, cman.account, cman.privateKey, cman.webFacingAddress, hashrateContractAddress[0], cman.account, "IpAddress1|8888|ryan")
-	time.Sleep(time.Millisecond*20000)
+	time.Sleep(time.Millisecond*10000)
 	SetFundContract(cman.rpcClient, cman.account, cman.privateKey, hashrateContractAddress[0])
-	time.Sleep(time.Millisecond*40000)
+	time.Sleep(time.Millisecond*10000)
 	PurchaseHashrateContract(cman.rpcClient, cman.account, cman.privateKey, cman.webFacingAddress, hashrateContractAddress[1], cman.account, "IpAddress2|8888|ryan")
-	time.Sleep(time.Millisecond*20000)
+	time.Sleep(time.Millisecond*10000)
 	SetFundContract(cman.rpcClient, cman.account, cman.privateKey, hashrateContractAddress[1])
-	time.Sleep(time.Millisecond*40000)
+	time.Sleep(time.Millisecond*10000)
 
-	CreateHashrateContract(cman.rpcClient,cman.account,cman.privateKey,cman.webFacingAddress,int(0),int(0),int(30),int(10),int(0)) 
-	time.Sleep(time.Millisecond*30000)
+	// test early closeout
+	CreateHashrateContract(cman.rpcClient,cman.account,cman.privateKey,cman.webFacingAddress,int(0),int(0),int(30),int(100),int(0)) 
+	time.Sleep(time.Millisecond*10000)
 
 	PurchaseHashrateContract(cman.rpcClient, cman.account, cman.privateKey, cman.webFacingAddress, hashrateContractAddress[2], cman.account, "IpAddress3|8888|ryan")
-	time.Sleep(time.Millisecond*30000)
+	time.Sleep(time.Millisecond*10000)
 	SetFundContract(cman.rpcClient, cman.account, cman.privateKey, hashrateContractAddress[2])
+	time.Sleep(time.Millisecond*10000)
+	setContractCloseOut(cman.rpcClient,cman.account,cman.privateKey,hashrateContractAddress[2])
+	waitchan := make(chan bool)
+	<-waitchan
+}
+
+func TestBuyerRoutine(t *testing.T) {
+	ps := msgbus.New(10)
+	ts := BeforeEach()
+	var hashrateContractAddress [3]common.Address  
+	
+	contractmanagerConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/sellerconfig.json", "contractManager")
+	if err != nil {
+		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
+	}
+
+	cman, err := New(ps, contractmanagerConfig)
+	if err != nil {
+		panic(fmt.Sprintf("contract manager failed:%s", err))
+	}
+	cman.webFacingAddress = ts.webFacingAddress
+	cman.cloneFactoryAddress = ts.cloneFactoryAddress
+	cman.ledgerAddress = ts.ledgerAddress
+
+	miner1 := msgbus.Miner {
+		ID:		msgbus.MinerID("MinerID01"),
+		IP: 	"IpAddress1",	
+		CurrentHashRate:	30,
+	}
+	miner2 := msgbus.Miner {
+		ID:		msgbus.MinerID("MinerID02"),
+		IP: 	"IpAddress2",
+		CurrentHashRate:	20,
+	}
+	ps.Pub(msgbus.MinerMsg,msgbus.IDString(miner1.ID),miner1)
+	ps.Pub(msgbus.MinerMsg,msgbus.IDString(miner2.ID),miner2)
+
+	// subcribe to events emitted by clonefactory contract to read contract creation event
+	cfLogs, cfSub := SubscribeToContractEvents(cman.rpcClient, cman.cloneFactoryAddress)
+	go func () {
+		i := 0
+		for {
+			select {
+			case err := <-cfSub.Err():
+				log.Fatal(err)
+			case cfLog := <-cfLogs:
+				hashrateContractAddress[i] = common.HexToAddress(cfLog.Topics[1].Hex())
+				fmt.Printf("Address of created Hashrate Contract: %s\n\n", hashrateContractAddress[i].Hex())
+				
+				i++
+			}
+		}
+	}()
+
+	CreateHashrateContract(cman.rpcClient,cman.account,cman.privateKey,cman.webFacingAddress,int(0),int(0),int(30),int(10),int(0)) 
+	CreateHashrateContract(cman.rpcClient,cman.account,cman.privateKey,cman.webFacingAddress,int(0),int(0),int(30),int(10),int(0))
+
+	time.Sleep(time.Millisecond*5000)
+	PurchaseHashrateContract(cman.rpcClient, cman.account, cman.privateKey, cman.webFacingAddress, hashrateContractAddress[0], cman.account, "IpAddress1|8888|ryan")
+	PurchaseHashrateContract(cman.rpcClient, cman.account, cman.privateKey, cman.webFacingAddress, hashrateContractAddress[1], cman.account, "IpAddress2|8888|ryan")
+
+	time.Sleep(time.Millisecond*5000)
+	SetFundContract(cman.rpcClient, cman.account, cman.privateKey, hashrateContractAddress[0])
+	SetFundContract(cman.rpcClient, cman.account, cman.privateKey, hashrateContractAddress[1])
+	
+	err = cman.StartBuyer()
+	if err != nil {
+		panic(fmt.Sprintf("contract manager failed to start:%s", err))
+	}
+
+	time.Sleep(time.Millisecond*20000)
+	
+	// miner hashrate fall below promised hashrate
+	miner1.CurrentHashRate = 20
+	ps.Set(msgbus.MinerMsg, msgbus.IDString(miner1.ID), miner1)
+	
+
+	time.Sleep(time.Millisecond*5000)
+	miner3 := msgbus.Miner {
+		ID:		msgbus.MinerID("MinerID03"),
+		IP: 	"IpAddress3",
+		CurrentHashRate:	30,
+	}
+	ps.Pub(msgbus.MinerMsg,msgbus.IDString(miner3.ID),miner3)
+
+	time.Sleep(time.Millisecond*10000)
+	CreateHashrateContract(cman.rpcClient,cman.account,cman.privateKey,cman.webFacingAddress,int(0),int(0),int(30),int(10),int(0)) 
+
+	time.Sleep(time.Millisecond*5000)
+	PurchaseHashrateContract(cman.rpcClient, cman.account, cman.privateKey, cman.webFacingAddress, hashrateContractAddress[2], cman.account, "IpAddress3|8888|ryan")
+
+	time.Sleep(time.Millisecond*5000)
+	SetFundContract(cman.rpcClient, cman.account, cman.privateKey, hashrateContractAddress[2])
+
 	waitchan := make(chan bool)
 	<-waitchan
 }

@@ -49,6 +49,7 @@ const (
 	ConfigMsg     MsgType = "ConfigMsg"
 	DestMsg       MsgType = "DestMsg"
 	SellerMsg     MsgType = "SellerMsg"
+	BuyerMsg      MsgType = "BuyerMsg"
 	ContractMsg   MsgType = "ContractMsg"
 	MinerMsg      MsgType = "MinerMsg"
 	ConnectionMsg MsgType = "ConnectionMsg"
@@ -56,10 +57,10 @@ const (
 )
 
 const (
-	ContNewState      ContractState = "NewState"
-	ContReadyState    ContractState = "ReadyState"
-	ContActiveState   ContractState = "ActiveState"
-	ContCompleteState ContractState = "CompleteState"
+	ContAvailableState 	ContractState = "AvailableState"
+	ContActiveState		ContractState = "ActiveState"
+	ContRunningState	ContractState = "RunningState"
+	ContCompleteState	ContractState = "CompleteState"
 )
 
 const (
@@ -137,9 +138,17 @@ type Seller struct {
 	DefaultDest            DestID
 	TotalAvailableHashRate int
 	UnusedHashRate         int
-	NewContracts           map[ContractID]bool
-	ReadyContracts		   map[ContractID]bool
-	ActiveContracts        map[ContractID]bool
+	AvailableContracts     map[ContractID]bool
+	ActiveContracts		   map[ContractID]bool
+	RunningContracts       map[ContractID]bool
+	CompleteContracts      map[ContractID]bool
+}
+
+type Buyer struct {
+	ID                     BuyerID
+	DefaultDest            DestID
+	ActiveContracts		   map[ContractID]bool
+	RunningContracts       map[ContractID]bool
 	CompleteContracts      map[ContractID]bool
 }
 

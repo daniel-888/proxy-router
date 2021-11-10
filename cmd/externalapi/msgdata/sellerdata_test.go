@@ -14,7 +14,7 @@ func TestAddSeller(t *testing.T) {
 		TotalAvailableHashRate: 100,
 		UnusedHashRate:         100,
 	}
-	seller.NewContracts = map[msgbus.ContractID]bool{
+	seller.AvailableContracts = map[msgbus.ContractID]bool{
 		"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
         "0x89921E8D51D22252D64EA34340A4161696887271": false,
         "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
@@ -45,7 +45,7 @@ func TestGetAllSellers(t *testing.T) {
 		seller[i].DefaultDest = "Test"
 		seller[i].TotalAvailableHashRate = 100
 		seller[i].UnusedHashRate = 100
-		seller[i].NewContracts = map[msgbus.ContractID]bool{
+		seller[i].AvailableContracts = map[msgbus.ContractID]bool{
 			"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
 			"0x89921E8D51D22252D64EA34340A4161696887271": false,
 			"0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
@@ -80,7 +80,7 @@ func TestGetSeller(t *testing.T) {
 		seller[i].DefaultDest = "Test"
 		seller[i].TotalAvailableHashRate = 100
 		seller[i].UnusedHashRate = 100
-		seller[i].NewContracts = map[msgbus.ContractID]bool{
+		seller[i].AvailableContracts = map[msgbus.ContractID]bool{
 			"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
 			"0x89921E8D51D22252D64EA34340A4161696887271": false,
 			"0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
@@ -119,7 +119,7 @@ func TestUpdateSeller(t *testing.T) {
 		seller[i].DefaultDest = "Test"
 		seller[i].TotalAvailableHashRate = 100
 		seller[i].UnusedHashRate = 100
-		seller[i].NewContracts = map[msgbus.ContractID]bool{
+		seller[i].AvailableContracts = map[msgbus.ContractID]bool{
 			"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
 			"0x89921E8D51D22252D64EA34340A4161696887271": false,
 			"0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
@@ -147,7 +147,7 @@ func TestUpdateSeller(t *testing.T) {
 		TotalAvailableHashRate: 10001,
 		UnusedHashRate:         0,
 	}
-	sellerUpdates.NewContracts = map[msgbus.ContractID]bool{}
+	sellerUpdates.AvailableContracts = map[msgbus.ContractID]bool{}
 	sellerUpdates.CompleteContracts = map[msgbus.ContractID]bool{}   
     sellerUpdates.ActiveContracts = map[msgbus.ContractID]bool{}
 	
@@ -175,7 +175,7 @@ func TestDeleteSeller(t *testing.T) {
 		seller[i].DefaultDest = "Test"
 		seller[i].TotalAvailableHashRate = 100
 		seller[i].UnusedHashRate = 100
-		seller[i].NewContracts = map[msgbus.ContractID]bool{
+		seller[i].AvailableContracts = map[msgbus.ContractID]bool{
 			"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
 			"0x89921E8D51D22252D64EA34340A4161696887271": false,
 			"0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,

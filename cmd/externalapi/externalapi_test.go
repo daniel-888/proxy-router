@@ -31,7 +31,7 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 		TotalAvailableHashRate: 0,
 		UnusedHashRate:         0,
 	}
-	seller.NewContracts = map[msgbus.ContractID]bool{
+	seller.AvailableContracts = map[msgbus.ContractID]bool{
 		"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
         "0x89921E8D51D22252D64EA34340A4161696887271": false,
         "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
