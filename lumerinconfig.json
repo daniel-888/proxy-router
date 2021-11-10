@@ -1,0 +1,145 @@
+{
+    "walletData": {
+        "walletAddress": ""
+    },
+    
+    "accountingManager": {
+
+    },
+
+    "configurationManager": {
+        "id": "ConfigID01",
+        "destID": "DestID01",
+        "seller": "SellerID01",
+        "newContracts": {
+            "0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
+            "0x89921E8D51D22252D64EA34340A4161696887271": false,
+            "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true
+        },
+        "readyContracts": {
+            "0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": true,
+            "0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": false,
+            "0x397729E80F77BA09D930FE24E8D1FC74372E86D3": true
+        },
+        "activeContracts": {
+            "0x9F252E1EC723AF6D96A36B4EB2B75A262291497C": true,
+            "0xBB2EAAAAA9B08EC320FC984D7D19E28835DD94DD": false,
+            "0x407E8A225658FEE384859874952E2BBC11E98B5C": true
+        }
+    },
+
+    "connectionManager": {
+        "sourceHost": "",
+        "sourcePort": "",
+        "sourceProto": "",
+        "defaultPoolHost": "",
+        "defaultPoolPort": "",
+        "defaultPoolProto": ""
+    },
+
+    "connectionScheduler": {
+
+    },
+
+    "contractManager": {
+        "contractManagerAccount": "0x923B7a35e7b845498830Ee40cA8E72993F25b908",
+        "contractManagerPrivateKey": "be639c4750361f3c75ecd8320ad2e5893889bcef2d2d34cc5d9fb87acfff2d10",
+        "rpcClientAddress": "ws://127.0.0.1:7545",
+        "contractManagerAccount1": "0x0FDcC9fF7D6F5f79c4e80e797916713a2d05A9cA",
+        "contractManagerPrivateKey1": "5a25d76802639b7df2f8b9c0339e67662db8a5e81368288dde5bcef0bf606de9",
+        "rpcClientAddress1": "wss://ropsten.infura.io/ws/v3/4b68229d56fe496e899f07c3d41cb08a",
+        "contractManagerAccount2": "0x0FDcC9fF7D6F5f79c4e80e797916713a2d05A9cA",
+        "contractManagerPrivateKey2": "5a25d76802639b7df2f8b9c0339e67662db8a5e81368288dde5bcef0bf606de9",
+        "rpcClientAddress2": "wss://54.198.4.68:8546",
+        "cloneFactoryAddress": "",
+        "webFacingAddress": "",
+        "ledgerAddress": "",
+        "lumerinTokenAddress": "",
+        "validatorAddress": "0x508CD3988E2b4B8f1d243b961a855347349f6F63",
+        "proxyAddress": "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3",
+        "minShareAmtPerMin": 10,
+        "minShareAvgPerHour": 10,
+	    "shareDropTolerance": 10
+    },
+
+    "externalAPI": {
+        "dest": {
+            "id": "DestID01",
+            "netHost": "127.0.0.1",
+		    "netPort": "80",
+		    "netProto": "tcp"
+        },
+        "config": {
+            "id": "ConfigID01",
+		    "defaultDest": "DestID01",
+		    "seller": "SellerID01"
+        },
+        "connection": {
+            "id": "ConnectionID01",
+            "miner": "MinerID01",
+            "dest": "DestID01",
+            "state": "0",
+            "totalHash": 10000,
+            "startDate": "80000"
+        },
+        "contract": {
+            "id": "ContractID01",
+            "state": "0",
+            "buyer": "Buyer ID01",
+            "price": 100,
+            "limit": 100,
+            "speed": 100,
+            "length": 100,
+            "port": 100,
+            "validationFee": 100,
+            "StartingBlockTimestamp": 100
+        },
+        "miner": {
+            "id": "MinerID01",
+            "state": "0",
+            "seller": "SellerID01",
+            "dest": "DestID01",	
+            "initialMeasuredHashRate": 10000,
+            "currentHashRate": 9000
+        },
+        "seller": {
+            "id": "SellerID01",
+            "defaultDest": "DestID01",
+		    "totalAvailableHashRate": 1000,
+		    "unusedHashRate": 100,
+            "newContracts": {
+                "0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
+                "0x89921E8D51D22252D64EA34340A4161696887271": false,
+                "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true
+            },
+            "readyContracts": {
+                "0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": true,
+                "0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": false,
+                "0x397729E80F77BA09D930FE24E8D1FC74372E86D3": true
+            },
+            "activeContracts": {
+                "0x9F252E1EC723AF6D96A36B4EB2B75A262291497C": true,
+                "0xBB2EAAAAA9B08EC320FC984D7D19E28835DD94DD": false,
+                "0x407E8A225658FEE384859874952E2BBC11E98B5C": true
+            }
+        }
+    },
+
+    "localValidator": {
+
+    },
+
+    "logging": {
+        "level": 4,
+        "filePath": "~/lumerin.log",
+        "testFilePath": "~/lumerin.log"  
+    },
+
+    "msgbus": {
+
+    },
+
+    "walletManager": {
+
+    }
+}
