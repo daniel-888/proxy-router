@@ -66,11 +66,6 @@ func main() {
 	//
 	//Fire up contract manager
 	//
-<<<<<<< HEAD
-	// contractmanagerConfig, err := configurationmanager.LoadConfiguration(configfilepath, "contractmanager")
-	// contractmanagerConfig, err := configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/lumerinconfig.json", "contractmanager")
-=======
->>>>>>> origin/dev-ryan
 	contractmanagerConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/sellerconfig.json", "contractManager")
 	if err != nil {
 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
