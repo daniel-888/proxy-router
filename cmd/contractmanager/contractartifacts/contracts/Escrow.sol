@@ -19,7 +19,7 @@ contract Escrow {
     Lumerin myToken;
     
     //internal function which will be called by the hashrate contract
-    function setParameters(address _validator, address _titanToken) internal { 
+    function setParameters(address _titanToken) internal { 
         titanToken = _titanToken;
         myToken = Lumerin(titanToken);
     }
@@ -36,8 +36,11 @@ contract Escrow {
     
     // @notice Find out how much is left to fullfill the Escrow to say it's funded.
     // @dev This is used to determine if the contract amount has been fullfilled and return how much is left to be fullfilled. 
-    // @dev only works if underpayment. overpayment won't work
-    function dueAmount() public view returns (uint256) {
+    function dueAmount() internal returns (uint256) {
+       if (myToken.balanceOf(address(this)) > contractTotal ) {
+		myToken.transfer(escrow_purchaser, myToken.balanceOf(address(this)) - contractTotal); 
+		return 0;
+       }
        return contractTotal - myToken.balanceOf(address(this));
     }
     

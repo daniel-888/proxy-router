@@ -43,4 +43,3 @@ contract CloneFactory {
   }
 
 }
-

@@ -12,9 +12,10 @@ type SellerJSON struct {
 	DefaultDest          	string 						`json:"destID"`
 	TotalAvailableHashRate 	int 						`json:"totalAvailableHashrate"`
 	UnusedHashRate         	int 						`json:"unusedHashRate"`
-	NewContracts           	map[msgbus.ContractID]bool	`json:"newContracts"`
-	ReadyContracts         	map[msgbus.ContractID]bool	`json:"readyContracts"`
-	ActiveContracts        	map[msgbus.ContractID]bool	`json:"activeContracts"`
+	AvailableContracts		map[msgbus.ContractID]bool	`json:"availableContracts"`
+	ActiveContracts			map[msgbus.ContractID]bool	`json:"activeContracts"`
+	RunningContracts		map[msgbus.ContractID]bool	`json:"runningContracts"`
+	CompleteContracts		map[msgbus.ContractID]bool	`json:"completeContracts"`
 }
 
 //Struct that stores slice of all JSON Seller structs in Repo
@@ -55,9 +56,10 @@ func (r *SellerRepo) AddSellerFromMsgBus(seller msgbus.Seller) {
 	sellerJSON.DefaultDest = string(seller.DefaultDest)
 	sellerJSON.TotalAvailableHashRate = seller.TotalAvailableHashRate
 	sellerJSON.UnusedHashRate = seller.UnusedHashRate
-	sellerJSON.NewContracts = seller.NewContracts
+	sellerJSON.AvailableContracts = seller.AvailableContracts
 	sellerJSON.ActiveContracts = seller.ActiveContracts
-	sellerJSON.ReadyContracts = seller.ReadyContracts
+	sellerJSON.RunningContracts = seller.RunningContracts
+	sellerJSON.CompleteContracts = seller.CompleteContracts
 	
 	r.SellerJSONs = append(r.SellerJSONs, sellerJSON)
 }
@@ -69,10 +71,10 @@ func (r *SellerRepo) UpdateSeller(id string, newSeller SellerJSON) error {
 			if newSeller.DefaultDest != "" {r.SellerJSONs[i].DefaultDest = newSeller.DefaultDest}
 			if newSeller.TotalAvailableHashRate != 0 {r.SellerJSONs[i].TotalAvailableHashRate = newSeller.TotalAvailableHashRate}
 			if newSeller.UnusedHashRate != 0 {r.SellerJSONs[i].UnusedHashRate = newSeller.UnusedHashRate}
-			if newSeller.NewContracts != nil {r.SellerJSONs[i].NewContracts = newSeller.NewContracts}
-			if newSeller.ReadyContracts != nil {r.SellerJSONs[i].ReadyContracts = newSeller.ReadyContracts}
+			if newSeller.AvailableContracts != nil {r.SellerJSONs[i].AvailableContracts = newSeller.AvailableContracts}
 			if newSeller.ActiveContracts != nil {r.SellerJSONs[i].ActiveContracts = newSeller.ActiveContracts}
-
+			if newSeller.RunningContracts != nil {r.SellerJSONs[i].RunningContracts = newSeller.RunningContracts}
+			if newSeller.CompleteContracts != nil {r.SellerJSONs[i].CompleteContracts = newSeller.CompleteContracts}
 			return nil
 		}
 	}
@@ -96,9 +98,10 @@ func ConvertSellerJSONtoSellerMSG(seller SellerJSON, msg msgbus.Seller) msgbus.S
 	msg.DefaultDest = msgbus.DestID(seller.DefaultDest)
 	msg.TotalAvailableHashRate = seller.TotalAvailableHashRate
 	msg.UnusedHashRate = seller.UnusedHashRate
-	msg.NewContracts = seller.NewContracts
+	msg.AvailableContracts = seller.AvailableContracts
 	msg.ActiveContracts = seller.ActiveContracts
-	msg.ReadyContracts = seller.ReadyContracts
+	msg.RunningContracts = seller.RunningContracts
+	msg.CompleteContracts = seller.CompleteContracts
 
 	return msg	
 }

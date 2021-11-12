@@ -61,7 +61,6 @@ func (r *ContractRepo) AddContractFromMsgBus(contract msgbus.Contract) {
 	contractJSON.Limit = contract.Limit
 	contractJSON.Speed = contract.Speed
 	contractJSON.Length = contract.Length
-	contractJSON.Port = contract.Port
 	contractJSON.ValidationFee = contract.ValidationFee
 	contractJSON.StartingBlockTimestamp = contract.StartingBlockTimestamp
 	
@@ -108,7 +107,6 @@ func ConvertContractJSONtoContractMSG(contract ContractJSON, msg msgbus.Contract
 	msg.Limit = contract.Limit
 	msg.Speed = contract.Speed
 	msg.Length = contract.Length
-	msg.Port = contract.Port
 	msg.ValidationFee = contract.ValidationFee
 	msg.StartingBlockTimestamp = contract.StartingBlockTimestamp
 
@@ -125,7 +123,6 @@ func ConvertContractMSGtoContractJSON(msg msgbus.Contract) ContractJSON {
 	contract.Limit = msg.Limit
 	contract.Speed = msg.Speed
 	contract.Length = msg.Length
-	contract.Port = msg.Port
 	contract.ValidationFee = msg.ValidationFee
 	contract.StartingBlockTimestamp = msg.StartingBlockTimestamp
 
