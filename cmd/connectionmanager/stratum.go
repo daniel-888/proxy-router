@@ -64,12 +64,13 @@ const (
 // Used for recieving incoming stratum JSON  messages
 //
 type stratumMsg struct {
-	ID     interface{} `json:"id,omitempty"`
-	Method interface{} `json:"method,omitempty"`
-	Error  interface{} `json:"error,omitempty"`
-	Params interface{} `json:"params,omitempty"`
-	Result interface{} `json:"result,omitempty"`
-	Reject interface{} `json:"reject-reason,omitempty"`
+	ID      interface{} `json:"id,omitempty"`
+	Jsonrpc interface{} `jsonrpc:"jsonrpc,omitempty"`
+	Method  interface{} `json:"method,omitempty"`
+	Error   interface{} `json:"error,omitempty"`
+	Params  interface{} `json:"params,omitempty"`
+	Result  interface{} `json:"result,omitempty"`
+	Reject  interface{} `json:"reject-reason,omitempty"`
 }
 
 //
@@ -95,9 +96,10 @@ type noticeMiningSetDifficulty struct {
 }
 
 type noticeMiningNotify struct {
-	ID     *string       `json:"id"`
-	Method string        `json:"method"`
-	Params []interface{} `json:"params"`
+	ID      *string       `json:"id"`
+	Jsonrpc *string       `json:"jsonrpc"`
+	Method  string        `json:"method"`
+	Params  []interface{} `json:"params"`
 }
 
 type responce struct {
@@ -168,6 +170,9 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 
 			case "result":
 				msg.Result = value
+
+			case "jsonrpc":
+				msg.Jsonrpc = value
 
 			default:
 				panic(fmt.Sprintf("Key Value: %s", key))

@@ -1,30 +1,31 @@
 package main
 
 import (
-	// "fmt"
+	"fmt"
 
 	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
+	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 
-	// "gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
+	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
-
-	// "gitlab.com/TitanInd/lumerin/cmd/contractmanager"
-
+	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/localvalidator"
 	"gitlab.com/TitanInd/lumerin/cmd/logging"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	// "gitlab.com/TitanInd/lumerin/cmd/walletmanager"
+	"gitlab.com/TitanInd/lumerin/cmd/walletmanager"
 )
 
 func main() {
 
 	done := make(chan int)
+	config.Init()
 
 	//
 	// Fire up logger
 	//
 	logging.Init(false)
+	defer logging.Cleanup()
 
 	//
 	// Fire up the Message Bus
@@ -58,6 +59,25 @@ func main() {
 		panic(fmt.Sprintf("connection manager failed:%s", err))
 	}
 	err = cm.Start()
+	if err != nil {
+		panic(fmt.Sprintf("connection manager failed to start:%s", err))
+	}
+
+	//
+	//Fire up contract manager
+	//
+	// contractmanagerConfig, err := configurationmanager.LoadConfiguration(configfilepath, "contractmanager")
+	// contractmanagerConfig, err := configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/lumerinconfig.json", "contractmanager")
+	contractmanagerConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/sellerconfig.json", "contractManager")
+	if err != nil {
+		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
+	}
+
+	cman, err := contractmanager.New(ps, contractmanagerConfig)
+	if err != nil {
+		panic(fmt.Sprintf("contract manager failed:%s", err))
+	}
+	err = cman.Start()
 	if err != nil {
 		panic(fmt.Sprintf("connection manager failed to start:%s", err))
 	}
