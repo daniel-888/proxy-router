@@ -30,13 +30,15 @@ func init() {
 	//
 	// Read in command line flags
 	//
-	for _, v := range ConfigMap {
+	for i, v := range ConfigMap {
 		if v.flagname != "" {
-			s := ""
-			v.flagval = &s
-			flag.StringVar(v.flagval, v.flagname, "default", v.flagusage)
+			v.flagval = flag.String(v.flagname, "", v.flagusage)
+			fmt.Printf("Val:'%s' set to:'%s', default:'%s'\n", v.flagname, *v.flagval, v.defval)
+			ConfigMap[i] = v
 		}
 	}
+
+	Init()
 
 	//
 	// Read in environmental variables
@@ -85,7 +87,7 @@ func ConfigGetConfigName(cc ConfigConst) (v string, e error) {
 
 func ConfigGetVal(cc ConfigConst) (v string, e error) {
 	if val, ok := ConfigMap[cc]; ok {
-		if val.flagval != nil {
+		if val.flagval != nil && *val.flagval != "" {
 			v = *val.flagval
 		} else if val.envval != nil {
 			v = *val.envval

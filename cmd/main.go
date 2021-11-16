@@ -17,15 +17,25 @@ import (
 )
 
 func main() {
+	var buyer bool = false
 
 	done := make(chan int)
-	config.Init()
+	// config.Init()
+
+	buyerstr, err := config.ConfigGetVal(config.BuyerNode)
+	if err != nil {
+		panic(fmt.Sprintf("Getting Buynernode val failed: %s\n", err))
+	}
+
+	if buyerstr != "false" {
+		buyer = true
+	}
 
 	//
 	// Fire up logger
 	//
-	logging.Init(false)
-	defer logging.Cleanup()
+	// logging.Init(false)
+	// defer logging.Cleanup()
 
 	//
 	// Fire up the Message Bus
@@ -39,7 +49,7 @@ func main() {
 	dest := msgbus.Dest{
 		ID:       msgbus.DestID(msgbus.DEFAULT_DEST_ID),
 		NetProto: msgbus.DestNetProto("tcp"),
-		NetHost:  msgbus.DestNetHost("0.0.0.0"),
+		NetHost:  msgbus.DestNetHost("127.0.0.1"),
 		NetPort:  msgbus.DestNetPort("3334"),
 	}
 
@@ -66,7 +76,13 @@ func main() {
 	//
 	//Fire up contract manager
 	//
-	contractmanagerConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/sellerconfig.json", "contractManager")
+	var contractmanagerConfig map[string]interface{}
+
+	if buyer {
+		contractmanagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/buyerconfig.json", "contractManager")
+	} else {
+		contractmanagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/sellerconfig.json", "contractManager")
+	}
 	if err != nil {
 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 	}
@@ -75,7 +91,11 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("contract manager failed:%s", err))
 	}
-	err = cman.StartSeller()
+	if buyer {
+		err = cman.StartBuyer()
+	} else {
+		err = cman.StartSeller()
+	}
 	if err != nil {
 		panic(fmt.Sprintf("contract manager failed to start:%s", err))
 	}

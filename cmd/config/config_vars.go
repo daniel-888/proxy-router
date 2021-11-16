@@ -7,6 +7,7 @@ package config
 type ConfigConst string
 
 const (
+	BuyerNode                        ConfigConst = "BuyerNode"
 	ConfigHelp                       ConfigConst = "ConfigHelp"
 	ConfigContractEthURL             ConfigConst = "ConfigContractEthURL"
 	ConfigContractManagerAcct        ConfigConst = "ConfigContractManagerAcct"
@@ -37,6 +38,16 @@ type configitem struct {
 // Define all Configuration constants that can be read in from the command line and the environment
 //
 var ConfigMap = map[ConfigConst]configitem{
+	BuyerNode: {
+		flagname:   "buyer",
+		flagusage:  "Sets the system Seller or Buyer mode",
+		envname:    "",
+		configname: "",
+		defval:     "false",
+		configval:  nil,
+		envval:     nil,
+		flagval:    nil,
+	},
 	ConfigHelp: {
 		flagname:   "help",
 		flagusage:  "Display The help Screen",
