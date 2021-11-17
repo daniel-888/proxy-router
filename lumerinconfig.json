@@ -1,4 +1,6 @@
 {
+    "version": 1,
+
     "walletData": {
         "walletAddress": ""
     },
@@ -131,8 +133,8 @@
 
     "logging": {
         "level": 4,
-        "filePath": "/var/log/lumerin.log",
-        "testFilePath": "/var/log/test/lumerin.log"  
+        "filePath": "~/lumerin.log",
+        "testFilePath": "~/lumerin.log"  
     },
 
     "msgbus": {

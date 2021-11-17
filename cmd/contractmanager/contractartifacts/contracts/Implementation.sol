@@ -2,9 +2,7 @@
 
 pragma solidity >0.8.0;
 
-import "./Clones.sol";
 import "./Initializable.sol";
-import "./Math.sol";
 import "./Escrow.sol";
 
 
@@ -29,9 +27,7 @@ contract Implementation is Initializable, Escrow{
   address public seller; //address of the seller of the contract
   address contractManager; //should be hardcoded somewhere...
   address penaltyTarget; //will only have a value assigned if a a penalty is called
-  string ipaddress; //ipaddress that hashrate power should be credited to
-  string username; //mining pool username
-  string password; //mining pool password
+  string public encryptedPoolData; //encrypted data for pool target info
 
   mapping(address => bool) approved;
 
@@ -53,7 +49,7 @@ contract Implementation is Initializable, Escrow{
     validationFee = _validationFee;
     contractManager = _contractManager;
     contractState = ContractState.Available;
-    setParameters(contractManager, _lmn);
+    setParameters(_lmn);
   }
 
 
@@ -63,38 +59,24 @@ contract Implementation is Initializable, Escrow{
   }
 
   event contractPurchased(address _buyer);
-  event contractClosed();
-  event contractCanceled();
+  event contractClosed(address caller);
+  event contractFunded(address caller);
   
-  //returns the ipaddress, username, and password
-  function getMiningPoolInformation() external view onlyApproved returns (string memory, string memory, string memory) {
-    return (ipaddress, username, password);
-  }
 
   //need to remove lmn from contract call, also need to remove from webfacing
-  function setPurchaseContract(
-    string memory _ipaddress, 
-    string memory _username, 
-    string memory _password, 
-    address _buyer,
-    address _validator,
-    bool _withValidator
-  ) 
+  function setPurchaseContract( string memory _encryptedPoolData, address _buyer, address _validator, bool _withValidator) 
     payable external {
     require(contractState == ContractState.Available, "contract is not in an available state");
-    ipaddress = _ipaddress;
-    username = _username;
-    password = _password;
+    encryptedPoolData = _encryptedPoolData;
     buyer = _buyer;
     contractManager = _validator;
     createEscrow(seller, buyer, price);
     if (_withValidator == true) {
       approved[_validator] = true;
-      require(msg.value == 100, "validation fee not sent");
-    } else {
-      approved[_buyer] = true;
-      approved[seller] = true;
-    }
+      require(msg.value == validationFee, "validation fee not sent");
+    } 
+	approved[_buyer] = true;
+	approved[seller] = true;
     emit contractPurchased(msg.sender); //might need to replace this with an additional passed in variable for the contract purchaser
   }
 
@@ -112,17 +94,22 @@ contract Implementation is Initializable, Escrow{
     sellerPayOut = price - buyerPayOut;
     withdrawFunds(sellerPayOut, buyerPayOut);
     contractState = ContractState.Complete;
-    emit contractClosed();
+    emit contractClosed(msg.sender);
   }
 
   //function which checks to see if lumerin has been sent to the contracts address
+  //this call is necessary since somebody could fund a contract with lumerin before setPurchaseContract
+  //and then another person could call the setPurchaseContract function, essentially "stealing" the contract
   function setFundContract() external {
     //if escrow is fully funded, set contract state to running
     require(dueAmount() == 0, "lumerin tokens need to be sent to the contract");
-    require(approved[buyer] == true || approved[contractManager] == true, "the buyer has not been set");
+    require(approved[buyer] == true, "the contract has not been purchased");
     startingBlockTimestamp = block.timestamp;
     contractState = ContractState.Running;
+    emit contractFunded(msg.sender);
   }
 }
+
+
 
 

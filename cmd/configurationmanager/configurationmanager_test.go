@@ -38,13 +38,9 @@ func TestLoadConfigToAPIandMsgBus(t *testing.T) {
 	config.ID = cmConfig["seller"].(string)
 
 	var seller msgdata.SellerJSON
-	newContractsMap := make(map[msgbus.ContractID]bool)
-	for key,value := range cmConfig["newContracts"].(map[string]interface{}){
-		newContractsMap[msgbus.ContractID(key)] = value.(bool)
-	}
-	readyContractsMap := make(map[msgbus.ContractID]bool)
-	for key,value := range cmConfig["readyContracts"].(map[string]interface{}){
-		readyContractsMap[msgbus.ContractID(key)] = value.(bool)
+	availableContractsMap := make(map[msgbus.ContractID]bool)
+	for key,value := range cmConfig["availableContracts"].(map[string]interface{}){
+		availableContractsMap[msgbus.ContractID(key)] = value.(bool)
 	}
 	activeContractsMap := make(map[msgbus.ContractID]bool)
 	for key,value := range cmConfig["activeContracts"].(map[string]interface{}){
@@ -52,8 +48,7 @@ func TestLoadConfigToAPIandMsgBus(t *testing.T) {
 	}
 
 	seller.ID = cmConfig["seller"].(string)
-	seller.NewContracts = newContractsMap
-	seller.ReadyContracts = readyContractsMap
+	seller.AvailableContracts = availableContractsMap
 	seller.ActiveContracts = activeContractsMap
 
 	configRepo,_,_,_,_,sellerRepo := externalapi.InitializeJSONRepos()

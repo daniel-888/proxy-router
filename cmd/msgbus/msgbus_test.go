@@ -24,9 +24,9 @@ func TestBoilerPlateFunc(t *testing.T) {
 		DefaultDest:            "DestID01",
 		TotalAvailableHashRate: 0,
 		UnusedHashRate:         0,
-		NewContracts:           make(map[ContractID]bool),
-		ReadyContracts:         make(map[ContractID]bool),
-		ActiveContracts:        make(map[ContractID]bool),
+		AvailableContracts:      make(map[ContractID]bool),
+		ActiveContracts:         make(map[ContractID]bool),
+		RunningContracts:        make(map[ContractID]bool),
 	}
 	contract := Contract{}
 	miner := Miner{}

@@ -5,22 +5,25 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/sirupsen/logrus"
+	"gitlab.com/TitanInd/lumerin/cmd/config"
 
 	debugger "runtime/debug"
 )
 
 type Config struct {
-	Level int `json:"level"`
-	FilePath string `json:"filePath"`
+	Level        int    `json:"level"`
+	FilePath     string `json:"filePath"`
 	TestFilePath string `json:"testFilePath"`
 }
 
 func loadConfiguration(file string) (Config, error) {
-	var config Config;
+	var config Config
 	configFile, err := os.Open(file)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{stacktraceField: getStacktrace(), id: trace.id}).Errorf(errorM.message, "Could not load logger config file")
@@ -46,6 +49,25 @@ var logFile *os.File
 // TODO: set test mode using environment variable and remove parameter
 func Init(isTestMode bool) {
 	once.Do(func() {
+
+		filePath, err := config.ConfigGetVal(config.ConfigLogFilePath)
+
+		if err != err {
+			log.Fatalf("failed to get log file path: %s", err)
+		}
+
+		logLevelStr, err := config.ConfigGetVal(config.ConfigLogLevel)
+
+		if err != err {
+			log.Fatalf("failed to get log level: %s", err)
+		}
+
+		logLevel, err := strconv.Atoi(logLevelStr)
+
+		if err != err {
+			log.Fatalf("failed to convert log level to int: %s", err)
+		}
+
 		// Change working directory to logging directory to be consistent with tests
 		os.Chdir("./logging")
 		// Register Cleanup() to fire when fatal level message is logged
@@ -54,11 +76,11 @@ func Init(isTestMode bool) {
 		standardLogger = &StandardLogger{baseLogger}
 		standardLogger.Formatter = &logrus.JSONFormatter{}
 		// Load config, set log level and file path
-		var logLevel int;
-		var filePath string;
+		// var logLevel int;
+		// var filePath string;
 		config, err := loadConfiguration("config.json")
 		if err != nil {
-			logLevel = int(logrus.InfoLevel);
+			logLevel = int(logrus.InfoLevel)
 			filePath = "/var/log/lumerin.log"
 		} else {
 			filePath = config.FilePath
@@ -111,11 +133,12 @@ type LogMessage struct {
 
 // LogEvent enum: add events as needed
 type LogEvent int
+
 const (
 	Trace LogEvent = 0
 	Debug LogEvent = 1
-	Info LogEvent = 2
-	Warn LogEvent = 3
+	Info  LogEvent = 2
+	Warn  LogEvent = 3
 	Error LogEvent = 4
 	Fatal LogEvent = 5
 	Panic LogEvent = 6
@@ -123,21 +146,22 @@ const (
 
 // Default format only handles two arguments: add new formats as needed
 const defaultLogFormat = "%s - %s"
+
 // Declare log messages to standardize log entries: add new messages as needed
 var (
 	trace = LogMessage{int(Trace), defaultLogFormat}
 	debug = LogMessage{int(Debug), defaultLogFormat}
-	info = LogMessage{int(Info), defaultLogFormat}
-	warn = LogMessage{int(Warn), defaultLogFormat}
+	info  = LogMessage{int(Info), defaultLogFormat}
+	warn  = LogMessage{int(Warn), defaultLogFormat}
 	// name errorM to avoid clash with error
 	errorM = LogMessage{int(Error), defaultLogFormat}
-	fatal = LogMessage{int(Fatal), defaultLogFormat}
-	panic = LogMessage{int(Panic), defaultLogFormat}
-  )
+	fatal  = LogMessage{int(Fatal), defaultLogFormat}
+	panic  = LogMessage{int(Panic), defaultLogFormat}
+)
 
 // Additional log entry fields
 const (
-	id = "eventId"
+	id              = "eventId"
 	stacktraceField = "stacktrace"
 )
 
@@ -154,19 +178,19 @@ func (l *StandardLogger) TraceEvent(msg string, args ...interface{}) {
 	l.getLoggerEntryWithFields().Tracef(trace.message, msg, args)
 }
 
-func (l*StandardLogger) DebugEvent(msg string, args ...interface{}) {
+func (l *StandardLogger) DebugEvent(msg string, args ...interface{}) {
 	l.getLoggerEntryWithFields().Debugf(debug.message, msg, args)
 }
 
-func (l*StandardLogger) InfoEvent(msg string, args ...interface{}) {
+func (l *StandardLogger) InfoEvent(msg string, args ...interface{}) {
 	l.getLoggerEntryWithFields().Infof(info.message, msg, args)
 }
 
-func (l*StandardLogger) WarnEvent(msg string, args ...interface{}) {
+func (l *StandardLogger) WarnEvent(msg string, args ...interface{}) {
 	l.getLoggerEntryWithFields().Warnf(warn.message, msg, args)
 }
 
-func (l*StandardLogger) ErrorEvent(msg string, args ...interface{}) {
+func (l *StandardLogger) ErrorEvent(msg string, args ...interface{}) {
 	l.getLoggerEntryWithFields().Errorf(errorM.message, msg, args)
 }
 

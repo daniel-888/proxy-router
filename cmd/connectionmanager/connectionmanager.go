@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
@@ -96,6 +97,7 @@ type connection struct {
 //------------------------------------------
 //
 //------------------------------------------
+// func New(ps *msgbus.PubSub, config map[string]interface{}) (cm *ConnectionManager, err error) {
 func New(ps *msgbus.PubSub) (cm *ConnectionManager, err error) {
 	cm = &ConnectionManager{
 		ps: ps,
@@ -1570,18 +1572,26 @@ func (c *connection) dispatchLoop() {
 //------------------------------------------
 func (cm *ConnectionManager) Start() error {
 
-	// Need this to be configurable
-	// HERE
-
-	l, err := net.Listen("tcp", "localhost"+":"+"3333")
+	ip, err := config.ConfigGetVal(config.ConfigConnectionListenIP)
 	if err != nil {
-		fmt.Printf("Listener Error %s\n", err)
+		panic(err)
+	}
+	port, err := config.ConfigGetVal(config.ConfigConnectionListenPort)
+	if err != nil {
+		panic(err)
+	}
+
+	listener := ip + ":" + port
+
+	l, err := net.Listen("tcp", listener)
+	if err != nil {
+		fmt.Printf("Listener Error for %s, %s\n", listener, err)
 		return err
 	}
 
 	go cm.listenForIncomingConnections(l)
 
-	// fmt.Printf("Connection Manager Started\n")
+	fmt.Printf("Connection Manager Started\n")
 
 	return nil
 }
