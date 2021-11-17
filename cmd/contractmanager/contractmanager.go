@@ -20,6 +20,8 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 
+	"gitlab.com/TitanInd/lumerin/localvalidator/validator"
+
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/implementation"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/ledger"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/webfacing"
@@ -426,6 +428,7 @@ func hashrateContractMonitor(addr msgbus.ContractID, hrLogs chan types.Log, hrSu
 					cm.ps.SetWait(msgbus.ContractMsg, msgbus.IDString(addr), contractMsg)
 
 				case contractFundedSigHash.Hex():
+					//validator setup message will take place in this section of the lumerin node
 					fmt.Printf("Address of funded Hashrate Contract : %s\n\n", addr)
 
 					// update contract state in msgbus to running and broadcast to closeout routine that contract is running
@@ -445,6 +448,8 @@ func hashrateContractMonitor(addr msgbus.ContractID, hrLogs chan types.Log, hrSu
 					contractMsg.State = msgbus.ContRunningState
 					cm.ps.SetWait(msgbus.ContractMsg, msgbus.IDString(addr), contractMsg)
 					runningContractAddr <- addr
+					newValidator := validator.MakeNewValidator()
+					//message from the default mining pool that provides the block header information
 
 				case contractClosedSigHash.Hex():
 					fmt.Printf("Hashrate Contract %s Closed \n\n", addr)
