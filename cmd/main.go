@@ -77,6 +77,8 @@ func main() {
 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 	}
 
+	fmt.Println(contractmanagerConfig)
+
 	cman, err := contractmanager.New(ps, contractmanagerConfig)
 	if err != nil {
 		panic(fmt.Sprintf("contract manager failed:%s", err))
