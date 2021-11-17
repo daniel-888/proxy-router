@@ -2,15 +2,8 @@
     "walletData": {
         "walletAddress": ""
     },
-    
-    "accountingManager": {
-
-    },
-
-    "configurationManager": {
-
-    },
-
+    "accountingManager": {},
+    "configurationManager": {},
     "connectionManager": {
         "sourceHost": "",
         "sourcePort": "",
@@ -19,46 +12,29 @@
         "defaultPoolPort": "",
         "defaultPoolProto": ""
     },
-
-    "connectionScheduler": {
-
-    },
-
+    "connectionScheduler": {},
     "contractManager": {
-        "nodeWalletAddress":  "0x923B7a35e7b845498830Ee40cA8E72993F25b908",
-        "contractManagerAccount": "0x923B7a35e7b845498830Ee40cA8E72993F25b908",
-        "contractManagerPrivateKey": "be639c4750361f3c75ecd8320ad2e5893889bcef2d2d34cc5d9fb87acfff2d10",
-        "rpcClientAddress": "ws://127.0.0.1:7545",
-        "cloneFactoryAddress": "",
-        "webFacingAddress": "",
-        "ledgerAddress": "",
+        "nodeWalletAddress": "0x76B2c085bCDB9F44D513C01946F4a0aD9AB588cf",
+        "contractManagerAccount": "0x76B2c085bCDB9F44D513C01946F4a0aD9AB588cf",
+        "contractManagerPrivateKey": "c291994a1d353db0ca11bab1300a6f327d4660723a5de7298f68b5e3b107bdf1",
+        "rpcClientAddress": "wss://ropsten.infura.io/ws/v3/4b68229d56fe496e899f07c3d41cb08a",
+        "cloneFactoryAddress": "0x32ef573e7B4AbE68146FCb43F1159D2CAd910426",
+        "webFacingAddress": "0x9BC541E50b8f49B62341401D0Ffa2845c05b304d",
+        "ledgerAddress": "0xEBD6900afc6FFd2ed24f1f442964BC754428373e",
         "lumerinTokenAddress": "",
         "validatorAddress": "0x85A256C5688D012263D5A79EE37E84FC35EC4524",
         "proxyAddress": "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3",
         "minShareAmtPerMin": 10,
         "minShareAvgPerHour": 10,
-	    "shareDropTolerance": 10
+        "shareDropTolerance": 10
     },
-
-    "externalAPI": {
-
-    },
-
-    "localValidator": {
-
-    },
-
+    "externalAPI": {},
+    "localValidator": {},
     "logging": {
         "level": 4,
         "filePath": "/var/log/lumerin.log",
-        "testFilePath": "/var/log/test/lumerin.log"    
+        "testFilePath": "/var/log/test/lumerin.log"
     },
-
-    "msgbus": {
-
-    },
-
-    "walletManager": {
-
-    }
+    "msgbus": {},
+    "walletManager": {}
 }

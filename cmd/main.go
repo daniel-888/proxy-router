@@ -5,6 +5,8 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
+
+	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
@@ -15,14 +17,26 @@ import (
 )
 
 func main() {
-	
+	var buyer bool = false
+
 	done := make(chan int)
+	// config.Init()
+
+	buyerstr, err := config.ConfigGetVal(config.BuyerNode)
+	if err != nil {
+		panic(fmt.Sprintf("Getting Buynernode val failed: %s\n", err))
+	}
+
+	if buyerstr != "false" {
+		buyer = true
+	}
 
 	//
 	// Fire up logger
 	//
-	logging.Init(false)
-	
+	// logging.Init(false)
+	// defer logging.Cleanup()
+
 	//
 	// Fire up the Message Bus
 	//
@@ -31,6 +45,7 @@ func main() {
 	//
 	// Setup Default Dest
 	//
+
 	dest := msgbus.Dest{
 		ID:       msgbus.DestID(msgbus.DEFAULT_DEST_ID),
 		NetProto: msgbus.DestNetProto("tcp"),
@@ -58,21 +73,16 @@ func main() {
 		panic(fmt.Sprintf("connection manager failed to start:%s", err))
 	}
 
-	//	ps.PubWait(msgbus.DestMsg, "destMsg01", msgbus.Dest{})
-	//	ps.Sub(msgbus.DestMsg, "destMsg01", ech)
-	//	ps.Set(msgbus.DestMsg, "destMsg01", dest)
-
-	//	ps.Get(msgbus.DestMsg, "destMsg01", ech)
-	//	ps.Get(msgbus.DestMsg, "", ech)
-
-	//	ps.Set(msgbus.DestMsg, "destMsg01", dest)
-
-	//	time.Sleep(5 * time.Second)
-
 	//
 	//Fire up contract manager
 	//
-	contractmanagerConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/sellerconfig.json", "contractManager")
+	var contractmanagerConfig map[string]interface{}
+
+	if buyer {
+		contractmanagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/buyerconfig.json", "contractManager")
+	} else {
+		contractmanagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/sellerconfig.json", "contractManager")
+	}
 	if err != nil {
 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 	}
@@ -83,10 +93,25 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("contract manager failed:%s", err))
 	}
-	err = cman.StartSeller()
+	if buyer {
+		err = cman.StartBuyer()
+	} else {
+		err = cman.StartSeller()
+	}
 	if err != nil {
 		panic(fmt.Sprintf("contract manager failed to start:%s", err))
 	}
+
+	//	ps.PubWait(msgbus.DestMsg, "destMsg01", msgbus.Dest{})
+	//	ps.Sub(msgbus.DestMsg, "destMsg01", ech)
+	//	ps.Set(msgbus.DestMsg, "destMsg01", dest)
+
+	//	ps.Get(msgbus.DestMsg, "destMsg01", ech)
+	//	ps.Get(msgbus.DestMsg, "", ech)
+
+	//	ps.Set(msgbus.DestMsg, "destMsg01", dest)
+
+	//	time.Sleep(5 * time.Second)
 
 	<-done
 	logging.Cleanup()
