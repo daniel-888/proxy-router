@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/implementation"
@@ -355,23 +354,22 @@ func updateContractMsgMiningInfo(contractMsg *msgbus.Contract, miningPoolInfo Mi
 	contractMsg.Port = miningPoolInfo.Port
 }
 
-func defineThresholdParams(configFilePath string) ThresholdParams {
-	var tParams ThresholdParams
-	configParams, err := configurationmanager.LoadConfiguration(configFilePath, "contractManager")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tParams.MinShareAmtPerMin = int(configParams["minShareAmtPerMin"].(float64))
-	tParams.MinShareAvgPerHour = int(configParams["minShareAvgPerHour"].(float64))
-	tParams.ShareDropTolerance = int(configParams["shareDropTolerance"].(float64))
-
-	return tParams
-}
-
 func hashrateContractMonitor(addr msgbus.ContractID, hrLogs chan types.Log, hrSub ethereum.Subscription, cm *ContractManager, availableSellerContractsMap map[msgbus.ContractID]bool, 
 	activeSellerContractsMap map[msgbus.ContractID]bool, runningSellerContractsMap map[msgbus.ContractID]bool, completeSellerContractsMap map[msgbus.ContractID]bool, sellerMSG msgbus.Seller) {
 	runningContractAddr := make(chan msgbus.ContractID, 10)
+
+	// check if contract is already in the running state and needs to be monitored for closeout
+	event, err := cm.ps.GetWait(msgbus.ContractMsg, msgbus.IDString(addr))
+	if err != nil {
+		panic(fmt.Sprintf("Getting Hashrate Contract Failed: %s", err))
+	}
+	if event.Err != nil {
+		panic(fmt.Sprintf("Getting Hashrate Contract Failed: %s", event.Err))
+	}
+	hashrateContractMsg := event.Data.(msgbus.Contract)
+	if hashrateContractMsg.State == msgbus.ContRunningState {
+		runningContractAddr<-addr
+	}
 
 	// create event signatures to parse out which event was being emitted from hashrate contract
 	contractPurchasedSig := []byte("contractPurchased(address)")
@@ -434,15 +432,8 @@ func hashrateContractMonitor(addr msgbus.ContractID, hrLogs chan types.Log, hrSu
 					sellerMSG.ActiveContracts = activeSellerContractsMap
 					sellerMSG.RunningContracts = runningSellerContractsMap
 					cm.ps.SetWait(msgbus.SellerMsg, msgbus.IDString(sellerMSG.ID), sellerMSG)
-					event, err := cm.ps.GetWait(msgbus.ContractMsg, msgbus.IDString(addr))
-					if err != nil {
-						panic(fmt.Sprintf("Getting Purchased Contract Failed: %s", err))
-					}
-					if event.Err != nil {
-						panic(fmt.Sprintf("Getting Purchased Contract Failed: %s", event.Err))
-					}
-					contractMsg := event.Data.(msgbus.Contract)
-					contractMsg.State = msgbus.ContRunningState
+					contractValues := readHashrateContract(cm.rpcClient, common.HexToAddress(string(addr)))
+					contractMsg := createContractMsg(common.HexToAddress(string(addr)), contractValues, true)
 					cm.ps.SetWait(msgbus.ContractMsg, msgbus.IDString(addr), contractMsg)
 					runningContractAddr <- addr
 
@@ -472,14 +463,41 @@ func hashrateContractMonitor(addr msgbus.ContractID, hrLogs chan types.Log, hrSu
 			panic(fmt.Sprintf("Getting Running Contract Failed: %s", event.Err))
 		}
 		contractMsg := event.Data.(msgbus.Contract)
+
+		// run go routine for each running contract to check if contract length has passed and contract should be closed out
 		go func(contractMsg msgbus.Contract) {
-			contractLength := contractMsg.Length
-			time.Sleep(time.Second * time.Duration(contractLength))
-			// if contract was not already closed early, close out here
-			contractValues := readHashrateContract(cm.rpcClient, common.HexToAddress(string(address)))
-			if contractValues.State == RunningState {
-				setContractCloseOut(cm.rpcClient, cm.account, cm.privateKey, common.HexToAddress(string(contractMsg.ID)))
+			contractFinishedTimestamp := contractMsg.StartingBlockTimestamp + contractMsg.Length
+			
+			// subscribe to latest block headers
+			headers := make(chan *types.Header)
+			sub, err := cm.rpcClient.SubscribeNewHead(context.Background(), headers)
+			if err != nil {
+				log.Fatal(err)
 			}
+
+			loop:
+			for {
+				select {
+				case err := <-sub.Err():
+				  log.Fatal(err)
+				case header := <-headers:
+					// get latest block from header
+				  	block, err := cm.rpcClient.BlockByHash(context.Background(), header.Hash())
+					if err != nil {
+					log.Fatal(err)
+					}
+				
+					// check if contract length has passed
+					if block.Time() >= uint64(contractFinishedTimestamp) {
+						// if contract was not already closed early, close out here
+						contractValues := readHashrateContract(cm.rpcClient, common.HexToAddress(string(address)))
+						if contractValues.State == RunningState {
+							setContractCloseOut(cm.rpcClient, cm.account, cm.privateKey, common.HexToAddress(string(contractMsg.ID)))
+						}
+						break loop
+						}
+					}
+			  }
 		}(contractMsg)
 	}
 }
@@ -491,21 +509,27 @@ func closeOutMonitor(client *ethclient.Client,
 	fromAddress common.Address,
 	privateKeyString string,
 	contractAddress common.Address, 
-	minerID msgbus.IDString,
-	contractMsg msgbus.Contract,
 	ps *msgbus.PubSub) bool	{
+	totalHashRate := 0
+	event,_ := ps.GetWait(msgbus.MinerMsg, "")
+	miners := event.Data.(msgbus.IDIndex)
 
-	event,_ := ps.GetWait(msgbus.MinerMsg, minerID)
-	minerInfo := event.Data.(msgbus.Miner)
+	// check for miners in the online state and add up total hashrate being delivered to node
+	for i := range miners {
+		event,_ = ps.GetWait(msgbus.MinerMsg, miners[i])
+		miner := event.Data.(msgbus.Miner)
+		if miner.State == msgbus.OnlineState {
+			totalHashRate += miner.CurrentHashRate
+		}
+	}
 
-	currentHashRate := minerInfo.CurrentHashRate
-	if currentHashRate < contractMsg.Speed {
+	if totalHashRate == 0 {
 		log.Printf("Closing out contract %s for not meeting hashrate requirements\n", contractAddress.Hex())
 		setContractCloseOut(client,fromAddress,privateKeyString,contractAddress)
 		return true
 	}
 
-	log.Println("Contract hashrate is being fulfilled")
+	log.Printf("Hashrate promised by Hashrate Contract Address: %s is being fulfilled", contractAddress.Hex())
 
 	time.Sleep(time.Millisecond*5000)
 	return false
@@ -523,13 +547,32 @@ func (cm *ContractManager) StartSeller() error {
 	sellerContracts := readSellerContracts(cm.rpcClient,cm.ledgerAddress,cm.walletAddress)
 	fmt.Println("Existing Seller Contracts: ", sellerContracts)
 	for i := range sellerContracts {
-		availableSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = true
-		activeSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
-		runningSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
-		completeSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
 		contractValues = append(contractValues, readHashrateContract(cm.rpcClient,sellerContracts[i]))
 		contractMsgs = append(contractMsgs, createContractMsg(sellerContracts[i], contractValues[i], true))
 		cm.ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contractMsgs[i].ID), contractMsgs[i])
+	
+		switch contractValues[i].State {
+		case AvailableState:
+			availableSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = true
+			activeSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
+			runningSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
+			completeSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
+		case ActiveState:
+			availableSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
+			activeSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = true
+			runningSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
+			completeSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
+		case RunningState:
+			availableSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
+			activeSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
+			runningSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = true
+			completeSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
+		case CompleteState:
+			availableSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
+			activeSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
+			runningSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = false
+			completeSellerContractsMap[msgbus.ContractID(sellerContracts[i].Hex())] = true
+		}
 	}
 
 	sellerMSG := msgbus.Seller {
@@ -646,7 +689,7 @@ func (cm *ContractManager) StartBuyer() error {
 
 	cm.ps.PubWait(msgbus.BuyerMsg, msgbus.IDString(buyerMSG.ID), buyerMSG)
 
-	// monitor hashrate coming from miner associated with running contracts found at startup
+	// monitor hashrate being delivered in comparison to promised hashrate in existing running contracts 
 	for i := range runningContracts {
 		// get contract msg
 		event1, err := cm.ps.GetWait(msgbus.ContractMsg, msgbus.IDString(runningContracts[i].Hex()))
@@ -658,20 +701,9 @@ func (cm *ContractManager) StartBuyer() error {
 		}
 		contractMsg := event1.Data.(msgbus.Contract)
 
-		// get miner based on ip address on contract
-		miningPoolInfo := readMiningPoolInformation(cm.rpcClient, runningContracts[i])
-		event2, err := cm.ps.SearchIPWait(msgbus.MinerMsg, miningPoolInfo.IpAddress)
-		if err != nil {
-			panic(fmt.Sprintf("Search for miner with IP Address %s Failed: %s", miningPoolInfo.IpAddress, err))
-		}
-		if event2.Err != nil {
-			panic(fmt.Sprintf("Search for miner with IP Address %s Failed: %s", miningPoolInfo.IpAddress, err))
-		}
-		minerID := event2.Data.(msgbus.IDIndex)
-
 		go func() {
 			for {
-				isClosed := closeOutMonitor(cm.rpcClient, cm.account, cm.privateKey, common.HexToAddress(string(contractMsg.ID)), minerID[0], contractMsg, cm.ps)
+				isClosed := closeOutMonitor(cm.rpcClient, cm.account, cm.privateKey, common.HexToAddress(string(contractMsg.ID)), cm.ps)
 				contractValues := readHashrateContract(cm.rpcClient, common.HexToAddress(string(contractMsg.ID)))
 				if contractValues.State == CompleteState || isClosed {
 					runningBuyerContractsMap[contractMsg.ID] = false
@@ -778,7 +810,7 @@ func (cm *ContractManager) StartBuyer() error {
 		}
 	}()
 
-	// routine to monitor hashrate coming from miner associated with new running contracts
+	// routine to monitor hashrate being delivered in comparison to promised hashrate in contract 
 	go func() {
 		for {
 			address := <-runningContractAddr
@@ -792,20 +824,9 @@ func (cm *ContractManager) StartBuyer() error {
 			}
 			contractMsg := event1.Data.(msgbus.Contract)
 
-			// get miner based on ip address on contract
-			miningPoolInfo := readMiningPoolInformation(cm.rpcClient, common.HexToAddress(string(address)))
-			event2, err := cm.ps.SearchIPWait(msgbus.MinerMsg, miningPoolInfo.IpAddress)
-			if err != nil {
-				panic(fmt.Sprintf("Search for miner with IP Address %s Failed: %s", miningPoolInfo.IpAddress, err))
-			}
-			if event2.Err != nil {
-				panic(fmt.Sprintf("Search for miner with IP Address %s Failed: %s", miningPoolInfo.IpAddress, err))
-			}
-			minerID := event2.Data.(msgbus.IDIndex)
-
 			go func() {
 				for {
-					isClosed := closeOutMonitor(cm.rpcClient, cm.account, cm.privateKey, common.HexToAddress(string(contractMsg.ID)), minerID[0], contractMsg, cm.ps)
+					isClosed := closeOutMonitor(cm.rpcClient, cm.account, cm.privateKey, common.HexToAddress(string(contractMsg.ID)), cm.ps)
 					contractValues := readHashrateContract(cm.rpcClient, common.HexToAddress(string(contractMsg.ID)))
 					if contractValues.State == CompleteState || isClosed {
 						runningBuyerContractsMap[contractMsg.ID] = false

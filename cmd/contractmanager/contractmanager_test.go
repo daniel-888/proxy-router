@@ -564,29 +564,12 @@ func TestHashrateMonitoring(t *testing.T) {
 	<-stop
 	close(contractAddr)
 	close(stopCF)
-	close(stopWF)
-
-	// read mining pool info from purchased contracts
-	miningPool1Info := readMiningPoolInformation(ts.rpcClient, hashrateContractAddresses[0])
-	miningPool2Info := readMiningPoolInformation(ts.rpcClient, hashrateContractAddresses[1])
-
-	// find Miner associated with IP Address set in contract purchase
-	e1, err := ps.SearchIPWait(msgbus.MinerMsg, miningPool1Info.IpAddress)
-	if err != nil {
-		log.Fatal(err)
-	}
-	e2, err := ps.SearchIPWait(msgbus.MinerMsg, miningPool2Info.IpAddress)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	searchedMiner1 := e1.Data.(msgbus.IDIndex)
-	searchedMiner2 := e2.Data.(msgbus.IDIndex)
+	close(stopWF)	
 	
-	if !closeOutMonitor(ts.rpcClient,ts.contractManagerAccount,ts.contractManagerPrivateKey,hashrateContractAddresses[0],searchedMiner1[0],contractMsgs[0],ps) {
+	if !closeOutMonitor(ts.rpcClient,ts.contractManagerAccount,ts.contractManagerPrivateKey,hashrateContractAddresses[0],ps) {
 		t.Errorf("Closeout monitor incorrectly closed out contract")
 	}	
-	if closeOutMonitor(ts.rpcClient,ts.contractManagerAccount,ts.contractManagerPrivateKey,hashrateContractAddresses[1],searchedMiner2[0],contractMsgs[1],ps) {
+	if closeOutMonitor(ts.rpcClient,ts.contractManagerAccount,ts.contractManagerPrivateKey,hashrateContractAddresses[1],ps) {
 		t.Errorf("Closeout monitor did not closeout contract that was not fulfilling requirements")
 	}
 }
@@ -754,11 +737,13 @@ func TestBuyerRoutine(t *testing.T) {
 		ID:		msgbus.MinerID("MinerID01"),
 		IP: 	"IpAddress1",	
 		CurrentHashRate:	30,
+		State: msgbus.OnlineState,
 	}
 	miner2 := msgbus.Miner {
 		ID:		msgbus.MinerID("MinerID02"),
 		IP: 	"IpAddress2",
 		CurrentHashRate:	20,
+		State: msgbus.OnlineState,
 	}
 	ps.Pub(msgbus.MinerMsg,msgbus.IDString(miner1.ID),miner1)
 	ps.Pub(msgbus.MinerMsg,msgbus.IDString(miner2.ID),miner2)
@@ -808,6 +793,7 @@ func TestBuyerRoutine(t *testing.T) {
 		ID:		msgbus.MinerID("MinerID03"),
 		IP: 	"IpAddress3",
 		CurrentHashRate:	30,
+		State: msgbus.OnlineState,
 	}
 	ps.Pub(msgbus.MinerMsg,msgbus.IDString(miner3.ID),miner3)
 
@@ -849,7 +835,7 @@ func TestCreateHashrateContract(t *testing.T) {
 
 func TestPurchaseHashrateContract(t *testing.T) {
 	ps := msgbus.New(10)
-	contractmanagerConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/sellerconfig.json", "contractManager")
+	contractmanagerConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/buyerconfig.json", "contractManager")
 	if err != nil {
 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 	}
@@ -865,7 +851,7 @@ func TestPurchaseHashrateContract(t *testing.T) {
 
 func TestFundHashrateContract(t *testing.T) {
 	ps := msgbus.New(10)
-	contractmanagerConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/sellerconfig.json", "contractManager")
+	contractmanagerConfig, err := configurationmanager.LoadConfiguration("../configurationmanager/buyerconfig.json", "contractManager")
 	if err != nil {
 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 	}
