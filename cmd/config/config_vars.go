@@ -20,6 +20,9 @@ const (
 	ConfigConfigDownloadPath         ConfigConst = "ConfigConfigDownloadPath"
 	ConfigLogFilePath                ConfigConst = "ConfigLogFilePath"
 	ConfigLogLevel                   ConfigConst = "ConfigLogLevel"
+	DisableConnection                ConfigConst = "DisableConnection"
+	DisableContract                  ConfigConst = "DisableContract"
+	DisableSchedule                  ConfigConst = "DisableSchedule"
 )
 
 // Config Structure
@@ -91,7 +94,7 @@ var ConfigMap = map[ConfigConst]configitem{
 	ConfigContractManagerAcct: {
 		flagname:   "contractmanager",
 		flagusage:  "Contract Manager Account ID",
-		envname:    "CONTRACTMANAGER",
+		envname:    "CONTRACTMANAGERID",
 		configname: "contract.manager",
 		defval:     "",
 		configval:  nil,
@@ -132,7 +135,7 @@ var ConfigMap = map[ConfigConst]configitem{
 	ConfigConfigFilePath: {
 		flagname:  "configfile",
 		flagusage: "Configuration File Path",
-		envname:   "CONFIGFILE",
+		envname:   "CONFIGFILEPATH",
 		defval:    "lumerinconfig.json",
 		configval: nil,
 		envval:    nil,
@@ -141,7 +144,7 @@ var ConfigMap = map[ConfigConst]configitem{
 	ConfigConfigDownloadPath: {
 		flagname:  "configdownload",
 		flagusage: "Configuration Download Path",
-		envname:   "CONFIGDOWNLOAD",
+		envname:   "CONFIGDOWNLOADURL",
 		defval:    "",
 		configval: nil,
 		envval:    nil,
@@ -161,6 +164,33 @@ var ConfigMap = map[ConfigConst]configitem{
 		flagusage: "Log File Path",
 		envname:   "LOGFILEPATH",
 		defval:    "lumerin.log",
+		configval: nil,
+		envval:    nil,
+		flagval:   nil,
+	},
+	DisableConnection: {
+		flagname:  "disableconnection",
+		flagusage: "Disable the connection manager",
+		envname:   "DISABLECONNECTION",
+		defval:    "false",
+		configval: nil,
+		envval:    nil,
+		flagval:   nil,
+	},
+	DisableContract: {
+		flagname:  "disablecontract",
+		flagusage: "Disable the contract manager",
+		envname:   "DISABLECONTRACT",
+		defval:    "false",
+		configval: nil,
+		envval:    nil,
+		flagval:   nil,
+	},
+	DisableSchedule: {
+		flagname:  "disableschedule",
+		flagusage: "Disable the schedule manager",
+		envname:   "DISABLESCHEDULE",
+		defval:    "false",
 		configval: nil,
 		envval:    nil,
 		flagval:   nil,

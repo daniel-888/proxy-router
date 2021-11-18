@@ -1570,7 +1570,7 @@ func (c *connection) dispatchLoop() {
 //
 // Need context pointer to close out when the system is shutting down
 //------------------------------------------
-func (cm *ConnectionManager) Start() error {
+func (cm *ConnectionManager) Start() (err error) {
 
 	ip, err := config.ConfigGetVal(config.ConfigConnectionListenIP)
 	if err != nil {
@@ -1593,7 +1593,7 @@ func (cm *ConnectionManager) Start() error {
 
 	fmt.Printf("Connection Manager Started\n")
 
-	return nil
+	return err
 }
 
 //------------------------------------------
