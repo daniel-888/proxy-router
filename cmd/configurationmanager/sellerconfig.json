@@ -2,8 +2,15 @@
     "walletData": {
         "walletAddress": ""
     },
-    "accountingManager": {},
-    "configurationManager": {},
+    
+    "accountingManager": {
+
+    },
+
+    "configurationManager": {
+
+    },
+
     "connectionManager": {
         "sourceHost": "",
         "sourcePort": "",
@@ -12,7 +19,11 @@
         "defaultPoolPort": "",
         "defaultPoolProto": ""
     },
-    "connectionScheduler": {},
+
+    "connectionScheduler": {
+
+    },
+
     "contractManager": {
         "nodeWalletAddress": "0x76B2c085bCDB9F44D513C01946F4a0aD9AB588cf",
         "contractManagerAccount": "0x76B2c085bCDB9F44D513C01946F4a0aD9AB588cf",
@@ -26,15 +37,28 @@
         "proxyAddress": "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3",
         "minShareAmtPerMin": 10,
         "minShareAvgPerHour": 10,
-        "shareDropTolerance": 10
+	    "shareDropTolerance": 10
     },
-    "externalAPI": {},
-    "localValidator": {},
+
+    "externalAPI": {
+
+    },
+
+    "localValidator": {
+
+    },
+
     "logging": {
         "level": 4,
         "filePath": "/var/log/lumerin.log",
-        "testFilePath": "/var/log/test/lumerin.log"
+        "testFilePath": "/var/log/test/lumerin.log"    
     },
-    "msgbus": {},
-    "walletManager": {}
+
+    "msgbus": {
+
+    },
+
+    "walletManager": {
+
+    }
 }
