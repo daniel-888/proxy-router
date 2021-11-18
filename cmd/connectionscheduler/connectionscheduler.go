@@ -129,27 +129,22 @@ func (cs *ConnectionScheduler) newContractHandler(ch msgbus.EventChan) {
 
 			if currentContract.State != event.Data.(msgbus.Contract).State {
 				switch event.Data.(msgbus.Contract).State {
-				case msgbus.ContActiveState:
-					panic(fmt.Sprintf(lumerinlib.FileLine()+" Should never be here: %v", event))
-
 				case msgbus.ContAvailableState:
-					if currentContract.State != msgbus.ContActiveState {
-						panic(fmt.Sprintf("ERROR: invalid state transition: from: %s to %s\n", cs.Contracts[id].State, event.Data.(msgbus.Contract).State))
-					}
+					fmt.Sprintf(lumerinlib.FileLine()+" Found Available Contract: %v", event)
+
+				case msgbus.ContActiveState:
+					fmt.Sprintf(lumerinlib.FileLine()+" Found Active Contract: %v", event)
 
 				case msgbus.ContRunningState:
-					if currentContract.State != msgbus.ContAvailableState {
-						panic(fmt.Sprintf("ERROR: invalid state transition: from: %s to %s\n", cs.Contracts[id].State, event.Data.(msgbus.Contract).State))
+					if currentContract.State != msgbus.ContRunningState {
+						cs.ContractRunning(id)
 					}
-
-					cs.ContractRunning(id)
 
 					// Set Contract to running, and rework all of the miners
 				case msgbus.ContCompleteState:
-					if currentContract.State != msgbus.ContRunningState {
-						panic(fmt.Sprintf("ERROR: invalid state transition: from: %s to %s\n", cs.Contracts[id].State, event.Data.(msgbus.Contract).State))
+					if currentContract.State != msgbus.ContCompleteState {
+						cs.ContractComplete(id)
 					}
-					cs.ContractComplete(id)
 
 					// Set Contract to Complete, and reset all the miners
 				default:
