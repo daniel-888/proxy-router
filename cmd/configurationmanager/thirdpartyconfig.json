@@ -12,6 +12,7 @@
     },
 
     "connectionManager": {
+        "defaultPooUrl": "",
         "defaultPoolHost": "",
         "defaultPoolPort": "",
         "defaultPoolProto": ""

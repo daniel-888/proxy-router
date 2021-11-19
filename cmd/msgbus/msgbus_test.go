@@ -15,9 +15,7 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 	dest := Dest{
 		ID:       DestID(DEFAULT_DEST_ID),
-		NetProto: DestNetProto("tcp"),
-		NetHost:  DestNetHost("127.0.0.1"),
-		NetPort:  DestNetPort("3334"),
+		NetUrl:   DestNetUrl("stratum+tcp://127.0.0.1:3334/"),
 	}
 	seller := Seller{
 		ID:                     "SellerID01",
