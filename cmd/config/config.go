@@ -33,28 +33,22 @@ func init() {
 	for i, v := range ConfigMap {
 		if v.flagname != "" {
 			v.flagval = flag.String(v.flagname, "", v.flagusage)
-			fmt.Printf("Val:'%s' set to:'%s', default:'%s'\n", v.flagname, *v.flagval, v.defval)
 			ConfigMap[i] = v
 		}
 	}
 
-	Init()
+	flag.Parse()
 
 	//
 	// Read in environmental variables
 	//
-	for _, v := range ConfigMap {
-		i := os.Getenv(v.envname)
-		if i != "" {
-			v.envval = &i
+	for i, v := range ConfigMap {
+		j := os.Getenv(v.envname)
+		if j != "" {
+			v.envval = &j
+			ConfigMap[i] = v
 		}
 	}
-
-}
-
-func Init() {
-
-	flag.Parse()
 
 }
 

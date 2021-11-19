@@ -466,6 +466,7 @@ func (c *connection) updateConnectionState(s connectionStates) {
 	// If connectionID is not defined yet, there is no msgbus entry to update
 	if c.connectionID == "" {
 		c.connectionState = s
+		fmt.Printf(lumerinlib.FileLine() + "Warning: no megbus entry to update\n")
 		return
 	}
 
@@ -549,7 +550,7 @@ func (c *connection) getOrCreateMinerByName(name string) (ret msgbus.MinerID, er
 
 	if len(searchEvent.Data.(msgbus.IDIndex)) == 0 {
 
-		// No miner found, so create one
+		// No miner record found, so create one
 
 		minerStruct.ID = msgbus.MinerID(msgbus.GetRandomIDString())
 		minerStruct.Name = name
@@ -566,6 +567,21 @@ func (c *connection) getOrCreateMinerByName(name string) (ret msgbus.MinerID, er
 			return ret, pubEvent.Err
 		}
 
+		ech := c.ps.NewEventChan()
+		e, err := c.ps.SubWait(
+			msgbus.MinerMsg,
+			msgbus.IDString(minerStruct.ID),
+			ech,
+		)
+		if err != nil {
+			return ret, err
+		}
+		if e.Err != nil {
+			return ret, e.Err
+		}
+
+		go c.goMonitorMinerRecord(ech)
+
 		ret = minerStruct.ID
 		return ret, nil
 
@@ -575,6 +591,26 @@ func (c *connection) getOrCreateMinerByName(name string) (ret msgbus.MinerID, er
 
 		return msgbus.MinerID((searchEvent.Data.(msgbus.IDIndex))[0]), nil
 
+	}
+
+}
+
+func (c *connection) goMonitorMinerRecord(ech msgbus.EventChan) {
+
+	for minerevent := range ech {
+
+		// Need to chech if things have changed or not
+
+		switch minerevent.EventType {
+		case msgbus.SubscribedEvent:
+			// Ignore
+		case msgbus.UpdateEvent:
+			c.updateConnectionState(stateRouteChange)
+
+		default:
+			panic(fmt.Sprint(lumerinlib.FileLine()+"Error:%v", minerevent))
+
+		}
 	}
 
 }
@@ -615,7 +651,8 @@ func (c *connection) handleSrcRequest() {
 			panic(fmt.Sprintf(lumerinlib.FileLine()+" getOrCreateMinerByName failed: %s", err))
 		}
 		c.minerID = minerID
-		c.connectionState = stateAuthStep1
+		// c.connectionState = stateAuthStep1
+		c.updateConnectionState(stateAuthStep1)
 
 		// destID, err := c.getMinerDestID()
 		// if err != nil {
@@ -644,7 +681,8 @@ func (c *connection) handleSrcRequest() {
 		if c.connectionState != stateSubscribeStep0 {
 			panic(fmt.Sprintf("Subscribing in state %s", c.connectionState))
 		}
-		c.connectionState = stateSubscribeStep1
+		// c.connectionState = stateSubscribeStep1
+		c.updateConnectionState(stateSubscribeStep1)
 
 	default:
 		panic(fmt.Sprintf("Method not handled: %s", method))
@@ -835,6 +873,7 @@ func (c *connection) handleStateNew() {
 	if err != nil {
 		fmt.Printf(lumerinlib.FileLine() + "setupSocket() returned error\n")
 		// This thing is basically stillborn
+		// c.updateConnectionState(stateShutdown)
 		c.connectionState = stateShutdown
 	}
 
@@ -910,7 +949,8 @@ func (c *connection) handleStateRouting() {
 	destid, err := c.getMinerDestID()
 	if err != nil {
 		fmt.Printf(lumerinlib.FileLine()+"getMinerDestID() returned error:%s\n", err)
-		c.connectionState = stateShutdown
+		//c.connectionState = stateShutdown
+		c.updateConnectionState(stateShutdown)
 	}
 
 	var dest msgbus.Dest
@@ -923,11 +963,15 @@ func (c *connection) handleStateRouting() {
 		event, err := c.ps.GetWait(msgbus.DestMsg, msgbus.IDString(destid))
 		if err != nil {
 			fmt.Printf(lumerinlib.FileLine()+"GetWait() returned error:%s\n", err)
-			c.connectionState = stateShutdown
+			// c.connectionState = stateShutdown
+			c.updateConnectionState(stateShutdown)
+			return
 		}
 		if event.Err != nil {
 			fmt.Printf(lumerinlib.FileLine()+"GetWait() Event returned error:%s\n", event.Err)
-			c.connectionState = stateShutdown
+			// c.connectionState = stateShutdown
+			c.updateConnectionState(stateShutdown)
+			return
 		}
 
 		dest = event.Data.(msgbus.Dest)
@@ -957,12 +1001,14 @@ func (c *connection) handleStateConnecting() {
 	event, err := c.ps.GetWait(msgbus.DestMsg, msgbus.IDString(c.destID))
 	if err != nil {
 		fmt.Printf(lumerinlib.FileLine() + "GetWait() returned error\n")
-		c.connectionState = stateShutdown
+		c.updateConnectionState(stateShutdown)
+		// c.connectionState = stateShutdown
 		return
 	}
 	if event.Err != nil {
 		fmt.Printf(lumerinlib.FileLine() + "GetWait() Event returned error\n")
-		c.connectionState = stateShutdown
+		c.updateConnectionState(stateShutdown)
+		// c.connectionState = stateShutdown
 		return
 	}
 
@@ -1570,7 +1616,7 @@ func (c *connection) dispatchLoop() {
 //
 // Need context pointer to close out when the system is shutting down
 //------------------------------------------
-func (cm *ConnectionManager) Start() error {
+func (cm *ConnectionManager) Start() (err error) {
 
 	ip, err := config.ConfigGetVal(config.ConfigConnectionListenIP)
 	if err != nil {
@@ -1593,7 +1639,7 @@ func (cm *ConnectionManager) Start() error {
 
 	fmt.Printf("Connection Manager Started\n")
 
-	return nil
+	return err
 }
 
 //------------------------------------------

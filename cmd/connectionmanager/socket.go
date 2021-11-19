@@ -77,9 +77,9 @@ func (s *socketconn) setupSocket() (err error) {
 //---------------------------------------------
 func (s *socketconn) close() {
 
-	if s.stopReader != nil {
-		close(s.stopReader)
-	}
+	// if s.stopReader != nil {
+	// 	close(s.stopReader)
+	// }
 
 	s.bufReader = nil
 	s.bufWriter = nil
