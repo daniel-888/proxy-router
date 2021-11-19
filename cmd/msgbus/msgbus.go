@@ -57,10 +57,10 @@ const (
 )
 
 const (
-	ContAvailableState 	ContractState = "AvailableState"
-	ContActiveState		ContractState = "ActiveState"
-	ContRunningState	ContractState = "RunningState"
-	ContCompleteState	ContractState = "CompleteState"
+	ContAvailableState ContractState = "AvailableState"
+	ContActiveState    ContractState = "ActiveState"
+	ContRunningState   ContractState = "RunningState"
+	ContCompleteState  ContractState = "CompleteState"
 )
 
 const (
@@ -139,33 +139,33 @@ type Seller struct {
 	TotalAvailableHashRate int
 	UnusedHashRate         int
 	AvailableContracts     map[ContractID]bool
-	ActiveContracts		   map[ContractID]bool
+	ActiveContracts        map[ContractID]bool
 	RunningContracts       map[ContractID]bool
 	CompleteContracts      map[ContractID]bool
 }
 
 type Buyer struct {
-	ID                     BuyerID
-	DefaultDest            DestID
-	ActiveContracts		   map[ContractID]bool
-	RunningContracts       map[ContractID]bool
-	CompleteContracts      map[ContractID]bool
+	ID                BuyerID
+	DefaultDest       DestID
+	ActiveContracts   map[ContractID]bool
+	RunningContracts  map[ContractID]bool
+	CompleteContracts map[ContractID]bool
 }
 
 type Contract struct {
-	IsSeller				bool
-	ID               		ContractID
-	State            		ContractState
-	Buyer            		BuyerID
-	Price			 		int
-	Limit			 		int
-	Speed			 		int
-	Length        	 		int
-	ValidationFee    		int
-	StartingBlockTimestamp	int
-	IpAddress				string
-	Port					string
-	Username				string
+	ID                     ContractID
+	IsSeller               bool
+	State                  ContractState
+	Buyer                  BuyerID
+	Price                  int
+	Limit                  int
+	Speed                  int
+	Length                 int
+	ValidationFee          int
+	StartingBlockTimestamp int
+	IpAddress              string
+	Port                   string
+	Username               string
 }
 
 //
@@ -1044,7 +1044,7 @@ func (reg *registry) pub(c *cmd) {
 	}
 
 	// If no error, copy the event to everyone interested
-	if event.Err != nil {
+	if event.Err == nil {
 		for ech, _ := range reg.notify[c.msg] {
 			//sendEvent(ech, event)
 			event.send(ech)
@@ -1153,7 +1153,7 @@ func (reg *registry) set(c *cmd) {
 		if _, ok := reg.data[c.msg][c.ID].sub.eventchan[ech]; ok {
 			event.send(ech)
 		} else {
-			panic("eventchannel was not ok in set()")
+			panic(fmt.Sprintf(lumerinlib.FileLine() + "Error eventchannel not ok"))
 		}
 	}
 }
