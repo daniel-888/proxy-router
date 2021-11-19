@@ -153,8 +153,8 @@ type Buyer struct {
 }
 
 type Contract struct {
-	IsSeller               bool
 	ID                     ContractID
+	IsSeller               bool
 	State                  ContractState
 	Buyer                  BuyerID
 	Price                  int
@@ -1153,7 +1153,7 @@ func (reg *registry) set(c *cmd) {
 		if _, ok := reg.data[c.msg][c.ID].sub.eventchan[ech]; ok {
 			event.send(ech)
 		} else {
-			panic("eventchannel was not ok in set()")
+			panic(fmt.Sprintf(lumerinlib.FileLine() + "Error eventchannel not ok"))
 		}
 	}
 }

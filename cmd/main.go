@@ -6,6 +6,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
+	"gitlab.com/TitanInd/lumerin/cmd/testmod"
 
 	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionmanager"
@@ -154,6 +155,9 @@ func main() {
 	//	time.Sleep(5 * time.Second)
 
 	// Need a better mechanism for running context
+
+	// testmod.MinersTouchAll(ps)
+
 	<-done
 
 	return
