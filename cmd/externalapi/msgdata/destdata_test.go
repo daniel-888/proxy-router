@@ -8,9 +8,7 @@ import (
 func TestAddDest(t *testing.T) {
 	dest := DestJSON{
 		ID:			"Test",
-		NetHost:	"Test",
-		NetPort: 	"Test",
-		NetProto:	"Test",
+		NetUrl: 	"Test",
 	}
 	
 	destRepo := NewDest()
@@ -25,9 +23,7 @@ func TestGetAllDests(t *testing.T) {
 	var dest [10]DestJSON
 	for i := 0; i < 10; i++ {
 		dest[i].ID = "Test" + fmt.Sprint(i)
-		dest[i].NetHost = "Test"
-		dest[i].NetPort = "Test"
-		dest[i].NetProto = "Test"
+		dest[i].NetUrl = "Test"
 	}
 	
 	destRepo := NewDest()
@@ -45,9 +41,7 @@ func TestGetDest(t *testing.T) {
 	var dest [10]DestJSON
 	for i := 0; i < 10; i++ {
 		dest[i].ID = "Test" + fmt.Sprint(i)
-		dest[i].NetHost = "Test"
-		dest[i].NetPort = "Test"
-		dest[i].NetProto = "Test"
+		dest[i].NetUrl = "Test"
 	}
 	
 	destRepo := NewDest()
@@ -69,9 +63,7 @@ func TestUpdateDest(t *testing.T) {
 	var dest [10]DestJSON
 	for i := 0; i < 10; i++ {
 		dest[i].ID = "Test" + fmt.Sprint(i)
-		dest[i].NetHost = "Test"
-		dest[i].NetPort = "Test"
-		dest[i].NetProto = "Test"
+		dest[i].NetUrl = "Test"
 	}
 	
 	destRepo := NewDest()
@@ -81,9 +73,7 @@ func TestUpdateDest(t *testing.T) {
 
 	destUpdates := DestJSON{
 		ID:			"",
-		NetHost:	"Updated",
-		NetPort:	"",
-		NetProto:	"",
+		NetUrl:		"Updated",
 	}
 	
 	var results [10]DestJSON
@@ -94,7 +84,7 @@ func TestUpdateDest(t *testing.T) {
 		if errors[i] != nil {
 			t.Errorf("UpdateDest function returned error for this ID: " + results[i].ID)
 		}
-		if results[i].NetHost != "Updated" {
+		if results[i].NetUrl != "Updated" {
 			t.Errorf("UpdateDest function did not update Dest Struct")
 		}
 		if results[i].ID != dest[i].ID {
@@ -107,9 +97,7 @@ func TestDeleteDest(t *testing.T) {
 	var dest [10]DestJSON
 	for i := 0; i < 10; i++ {
 		dest[i].ID = "Test" + fmt.Sprint(i)
-		dest[i].NetHost = "Test"
-		dest[i].NetPort = "Test"
-		dest[i].NetProto = "Test"
+		dest[i].NetUrl = "Test"
 	}
 	
 	destRepo := NewDest()

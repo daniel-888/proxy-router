@@ -71,10 +71,8 @@ func main() {
 	//
 
 	dest := msgbus.Dest{
-		ID:       msgbus.DestID(msgbus.DEFAULT_DEST_ID),
-		NetProto: msgbus.DestNetProto("tcp"),
-		NetHost:  msgbus.DestNetHost("127.0.0.1"),
-		NetPort:  msgbus.DestNetPort("33334"),
+		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
+		NetUrl: msgbus.DestNetUrl("stratum+tcp://127.0.0.1:33334/"),
 	}
 
 	event, err := ps.PubWait(msgbus.DestMsg, msgbus.IDString(msgbus.DEFAULT_DEST_ID), dest)

@@ -27,7 +27,6 @@ import (
 type ContractManager struct {
 	ps                  *msgbus.PubSub
 	rpcClient           *ethclient.Client
-	walletAddress       common.Address
 	cloneFactoryAddress common.Address
 	webFacingAddress    common.Address
 	ledgerAddress       common.Address
@@ -54,12 +53,6 @@ type HashrateContractValues struct {
 	Seller                 common.Address
 }
 
-type MiningPoolInformation struct {
-	IpAddress string
-	Port      string
-	Username  string
-}
-
 type ThresholdParams struct {
 	MinShareAmtPerMin  int
 	MinShareAvgPerHour int
@@ -68,19 +61,18 @@ type ThresholdParams struct {
 
 func New(ps *msgbus.PubSub, cmConfig map[string]interface{}) (cm *ContractManager, err error) {
 	var client *ethclient.Client
-	client, err = setUpClient(cmConfig["rpcClientAddress"].(string), common.HexToAddress(cmConfig["contractManagerAccount"].(string)))
+	client, err = setUpClient(cmConfig["rpcClientAddress"].(string), common.HexToAddress(cmConfig["nodeEthereumAddress"].(string)))
 	if err != nil {
 		log.Fatal(err)
 	}
 	cm = &ContractManager{
 		ps:                  ps,
-		walletAddress:       common.HexToAddress(cmConfig["nodeWalletAddress"].(string)),
 		rpcClient:           client,
 		cloneFactoryAddress: common.HexToAddress(cmConfig["cloneFactoryAddress"].(string)),
 		webFacingAddress:    common.HexToAddress(cmConfig["webFacingAddress"].(string)),
 		ledgerAddress:       common.HexToAddress(cmConfig["ledgerAddress"].(string)),
-		account:             common.HexToAddress(cmConfig["contractManagerAccount"].(string)),
-		privateKey:          cmConfig["contractManagerPrivateKey"].(string),
+		account:             common.HexToAddress(cmConfig["nodeEthereumAddress"].(string)),
+		privateKey:          cmConfig["nodeEthereumPrivateKey"].(string),
 	}
 	return cm, err
 }
@@ -255,27 +247,27 @@ func readBuyerContracts(client *ethclient.Client, contractAddress common.Address
 /*
 	TODO: Mining pool info will be encrypted moving forward so decryption logic will need to be implemented
 */
-func readMiningPoolInformation(client *ethclient.Client, contractAddress common.Address) MiningPoolInformation {
+func readDestUrl(client *ethclient.Client, contractAddress common.Address) string {
 	instance, err := implementation.NewImplementation(contractAddress, client)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Getting mining pool info from contract %s\n\n", contractAddress)
+	fmt.Printf("Getting Dest url from contract %s\n\n", contractAddress)
 
-	poolData, err := instance.EncryptedPoolData(nil)
+	destUrl, err := instance.EncryptedPoolData(nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	poolDataSplit := strings.Split(poolData, "|")
+	// poolDataSplit := strings.Split(poolData, "|")
 
-	miningPoolInfo := MiningPoolInformation{
-		IpAddress: poolDataSplit[0],
-		Port:      poolDataSplit[1],
-		Username:  poolDataSplit[2],
-	}
+	// miningPoolInfo := MiningPoolInformation{
+	// 	IpAddress: poolDataSplit[0],
+	// 	Port:      poolDataSplit[1],
+	// 	Username:  poolDataSplit[2],
+	// }
 
-	return miningPoolInfo
+	return destUrl
 }
 
 func setContractCloseOut(client *ethclient.Client,
@@ -348,10 +340,8 @@ func createContractMsg(contractAddress common.Address, contractValues HashrateCo
 	return contractMsg
 }
 
-func updateContractMsgMiningInfo(contractMsg *msgbus.Contract, miningPoolInfo MiningPoolInformation) {
-	contractMsg.IpAddress = miningPoolInfo.IpAddress
-	contractMsg.Username = miningPoolInfo.Username
-	contractMsg.Port = miningPoolInfo.Port
+func updateContractMsgDest(contractMsg *msgbus.Contract, dest msgbus.DestID) {
+	contractMsg.Dest = dest
 }
 
 func hashrateContractMonitor(addr msgbus.ContractID, hrLogs chan types.Log, hrSub ethereum.Subscription, cm *ContractManager, availableSellerContractsMap map[msgbus.ContractID]bool,
@@ -419,8 +409,13 @@ func hashrateContractMonitor(addr msgbus.ContractID, hrLogs chan types.Log, hrSu
 					contractMsg := event.Data.(msgbus.Contract)
 					contractMsg.State = msgbus.ContActiveState
 					contractMsg.Buyer = msgbus.BuyerID(purchasedEvent.Buyer.Hex())
-					miningPoolInfo := readMiningPoolInformation(cm.rpcClient, common.HexToAddress(string(addr)))
-					updateContractMsgMiningInfo(&contractMsg, miningPoolInfo)
+					destUrl := readDestUrl(cm.rpcClient, common.HexToAddress(string(addr)))
+					destMsg := msgbus.Dest{
+						ID:     msgbus.DestID(msgbus.GetRandomIDString()),
+						NetUrl: msgbus.DestNetUrl(destUrl),
+					}
+					cm.ps.PubWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
+					updateContractMsgDest(&contractMsg, destMsg.ID)
 					cm.ps.SetWait(msgbus.ContractMsg, msgbus.IDString(addr), contractMsg)
 
 				case contractFundedSigHash.Hex():
@@ -544,7 +539,7 @@ func (cm *ContractManager) StartSeller() error {
 	var contractValues []HashrateContractValues
 	var contractMsgs []msgbus.Contract
 
-	sellerContracts := readSellerContracts(cm.rpcClient, cm.ledgerAddress, cm.walletAddress)
+	sellerContracts := readSellerContracts(cm.rpcClient, cm.ledgerAddress, cm.account)
 	fmt.Println("Existing Seller Contracts: ", sellerContracts)
 	for i := range sellerContracts {
 		contractValues = append(contractValues, readHashrateContract(cm.rpcClient, sellerContracts[i]))
@@ -576,7 +571,7 @@ func (cm *ContractManager) StartSeller() error {
 	}
 
 	sellerMSG := msgbus.Seller{
-		ID:                 msgbus.SellerID(cm.walletAddress.Hex()),
+		ID:                 msgbus.SellerID(cm.account.Hex()),
 		AvailableContracts: availableSellerContractsMap,
 		ActiveContracts:    activeSellerContractsMap,
 		RunningContracts:   activeSellerContractsMap,
@@ -605,7 +600,7 @@ func (cm *ContractManager) StartSeller() error {
 				if err != nil {
 					log.Fatal(err)
 				}
-				if hashrateContractSeller == cm.walletAddress {
+				if hashrateContractSeller == cm.account {
 					availableSellerContractsMap[msgbus.ContractID(address.Hex())] = true
 					activeSellerContractsMap[msgbus.ContractID(address.Hex())] = false
 					runningSellerContractsMap[msgbus.ContractID(address.Hex())] = false
@@ -656,7 +651,7 @@ func (cm *ContractManager) StartBuyer() error {
 	var contractMsgs []msgbus.Contract
 	var runningContracts []common.Address
 
-	buyerContracts := readBuyerContracts(cm.rpcClient, cm.ledgerAddress, cm.walletAddress)
+	buyerContracts := readBuyerContracts(cm.rpcClient, cm.ledgerAddress, cm.account)
 	fmt.Println("Existing Buyer Contracts: ", buyerContracts)
 	for i := range buyerContracts {
 		contractValues = append(contractValues, readHashrateContract(cm.rpcClient, buyerContracts[i]))
@@ -681,7 +676,7 @@ func (cm *ContractManager) StartBuyer() error {
 	}
 
 	buyerMSG := msgbus.Buyer{
-		ID:                msgbus.BuyerID(cm.walletAddress.Hex()),
+		ID:                msgbus.BuyerID(cm.account.Hex()),
 		ActiveContracts:   activeBuyerContractsMap,
 		RunningContracts:  runningBuyerContractsMap,
 		CompleteContracts: completeBuyerContractsMap,
@@ -745,11 +740,16 @@ func (cm *ContractManager) StartBuyer() error {
 				contractAddress := purchasedEvent.Contract
 				fmt.Printf("Address of purchased Hashrate Contract : %s\n\n", contractAddress.Hex())
 				contractValues := readHashrateContract(cm.rpcClient, contractAddress)
-				if contractValues.Buyer == cm.walletAddress {
+				if contractValues.Buyer == cm.account {
 					fmt.Printf("Address of purchased Hashrate Contract : %s\n\n", contractAddress.Hex())
 					contractMsg := createContractMsg(contractAddress, contractValues, false)
-					miningPoolInfo := readMiningPoolInformation(cm.rpcClient, contractAddress)
-					updateContractMsgMiningInfo(&contractMsg, miningPoolInfo)
+					destUrl := readDestUrl(cm.rpcClient, common.HexToAddress(string(contractAddress.Hex())))
+					destMsg := msgbus.Dest{
+						ID:     msgbus.DestID(msgbus.GetRandomIDString()),
+						NetUrl: msgbus.DestNetUrl(destUrl),
+					}
+					cm.ps.PubWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
+					updateContractMsgDest(&contractMsg, destMsg.ID)
 					cm.ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contractMsg.ID), contractMsg)
 
 					activeBuyerContractsMap[msgbus.ContractID(contractAddress.Hex())] = true

@@ -107,9 +107,7 @@ func LoadMsgBusFromConfig() (*msgbus.PubSub, msgbus.EventChan) {
 
     dest := msgbus.Dest{
         ID:         "DestID01",
-        NetHost:    msgbus.DestNetHost(configMap["defaultPoolHost"].(string)),   
-	    NetPort:    msgbus.DestNetPort(configMap["defaultPoolPort"].(string)),
-	    NetProto:   msgbus.DestNetProto(configMap["defaultPoolProto"].(string)),
+        NetUrl:    msgbus.DestNetUrl(configMap["defaultPoolUrl"].(string)),   
     }
 
     seller := msgbus.Seller{

@@ -3,6 +3,7 @@ package connectionmanager
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/config"
@@ -10,11 +11,11 @@ import (
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
-const (
-	defaultMinerHost  msgbus.DestNetHost  = "localhost"
-	defaultMinerPort  msgbus.DestNetPort  = "3334"
-	defaultMinerProto msgbus.DestNetProto = "tcp"
-)
+//const (
+//	defaultMinerHost  msgbus.DestNetHost  = "localhost"
+//	defaultMinerPort  msgbus.DestNetPort  = "3334"
+//	defaultMinerProto msgbus.DestNetProto = "tcp"
+//)
 
 type connectionStates string
 type socketconnType string
@@ -300,18 +301,19 @@ func (c *connection) getDefaultDest() (dest msgbus.Dest) {
 	event, err := c.ps.GetWait(msgbus.DestMsg, msgbus.IDString(msgbus.DEFAULT_DEST_ID))
 	dest = event.Data.(msgbus.Dest)
 	if err != nil || event.Err != nil {
-		fmt.Printf("Default Destination not in message bus %s, %s\n", err, event.Err)
+		panic(fmt.Sprintf("Default Destination not in message bus %s, %s\n", err, event.Err))
+		// fmt.Printf("Default Destination not in message bus %s, %s\n", err, event.Err)
 
-		dest = msgbus.Dest{
-			ID:       msgbus.DEFAULT_DEST_ID,
-			NetProto: defaultMinerProto,
-			NetHost:  defaultMinerHost,
-			NetPort:  defaultMinerPort,
-		}
-		event, err := c.ps.PubWait(msgbus.DestMsg, msgbus.IDString(msgbus.DEFAULT_DEST_ID), dest)
-		if err != nil || event.Err != nil {
-			panic(fmt.Sprintf("Unable to add Default Destination not in message bus %s, %s\n", err, event.Err))
-		}
+		// dest = msgbus.Dest{
+		// 	ID:       msgbus.DEFAULT_DEST_ID,
+		// 	NetProto: defaultMinerProto,
+		// 	NetHost:  defaultMinerHost,
+		// 	NetPort:  defaultMinerPort,
+		// }
+		// event, err := c.ps.PubWait(msgbus.DestMsg, msgbus.IDString(msgbus.DEFAULT_DEST_ID), dest)
+		// if err != nil || event.Err != nil {
+		// 	panic(fmt.Sprintf("Unable to add Default Destination not in message bus %s, %s\n", err, event.Err))
+		// }
 
 		// Fall back to hard coded values pointing to localhost:3334
 	}
@@ -1013,9 +1015,23 @@ func (c *connection) handleStateConnecting() {
 		return
 	}
 
-	proto := event.Data.(msgbus.Dest).NetProto
-	host := event.Data.(msgbus.Dest).NetHost
-	port := event.Data.(msgbus.Dest).NetPort
+	// proto := event.Data.(msgbus.Dest).NetProto
+	// host := event.Data.(msgbus.Dest).NetHost
+	// port := event.Data.(msgbus.Dest).NetPort
+
+	neturl := event.Data.(msgbus.Dest).NetUrl
+	u, err := url.Parse(string(neturl))
+	if err != nil {
+		panic(fmt.Sprintf(lumerinlib.FileLine()+"url: %s, err %s\n", neturl, err))
+	}
+
+	// proto := u.Scheme
+	proto := "tcp" // Hardcoding for now...
+	host, port, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		panic(fmt.Sprintf(lumerinlib.FileLine()+"host: %s, err %s\n", u.Host, err))
+	}
+
 	// Open connection
 	fmt.Printf(lumerinlib.Funcname()+" Open Connection to: %s:%s\n", host, port)
 	err = c.dstConn.dial(string(proto), string(host), string(port))

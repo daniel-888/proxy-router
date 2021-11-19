@@ -188,25 +188,31 @@ func (cs *ConnectionScheduler) ContractRunning(id msgbus.ContractID) {
 		panic(fmt.Sprint(lumerinlib.FileLine()+"Error:%v", contract))
 	}
 
-	ip := contract.Data.(msgbus.Contract).IpAddress
-	port := contract.Data.(msgbus.Contract).Port
-	destid := msgbus.GetRandomIDString()
+	// ip := contract.Data.(msgbus.Contract).IpAddress
+	// port := contract.Data.(msgbus.Contract).Port
+	destid := contract.Data.(msgbus.Contract).Dest
+
+	if destid == "" {
+		panic(fmt.Sprint(lumerinlib.FileLine() + " Error DestID is empty"))
+	}
 
 	// Need Search function for Dest
 
-	dest := msgbus.Dest{
-		ID:       msgbus.DestID(destid),
-		NetProto: msgbus.DestNetProto("tcp"),
-		NetHost:  msgbus.DestNetHost(ip),
-		NetPort:  msgbus.DestNetPort(port),
-	}
-	destevent, err := cs.ps.PubWait(msgbus.DestMsg, msgbus.IDString(destid), dest)
-	if err != nil {
-		panic(fmt.Sprintf("Adding Dest Failed: %s\n", err))
-	}
-	if destevent.Err != nil {
-		panic(fmt.Sprintf("Adding Dest Failed: %s\n", destevent.Err))
-	}
+	// dest := msgbus.Dest{
+	// 	ID:       msgbus.DestID(destid),
+	// 	NetUrl: ,
+	// NetProto: msgbus.DestNetProto("tcp"),
+	// NetHost:  msgbus.DestNetHost(ip),
+	// NetPort:  msgbus.DestNetPort(port),
+	// }
+	//
+	//destevent, err := cs.ps.PubWait(msgbus.DestMsg, msgbus.IDString(destid), dest)
+	//if err != nil {
+	//	panic(fmt.Sprintf("Adding Dest Failed: %s\n", err))
+	//}
+	//if destevent.Err != nil {
+	//	panic(fmt.Sprintf("Adding Dest Failed: %s\n", destevent.Err))
+	//}
 
 	// Find all of the online miners point them to new target
 	event, err := cs.ps.GetWait(msgbus.MinerMsg, "")
