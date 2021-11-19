@@ -942,7 +942,7 @@ func (ps *PubSub) start() {
 loop:
 	for cmdptr := range ps.cmdChan {
 
-		fmt.Printf("New Command %+v\n", *cmdptr)
+		fmt.Printf("MSGBUS: %+v\n", *cmdptr)
 
 		if cmdptr.op == opNop {
 			// cmdptr.err = nil

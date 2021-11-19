@@ -40,7 +40,8 @@ func newSocketConn(sct socketconnType) (sc socketconn) {
 		msgRequest:  make([]*request, 0, msgBufInitSize),
 		msgResponce: make([]*responce, 0, msgBufInitSize),
 		msgNotice:   make([]*notice, 0, msgBufInitSize),
-		stopReader:  make(chan bool),
+		// stopReader:  make(chan bool),
+		stopReader: nil,
 	}
 
 	return sc
@@ -77,9 +78,9 @@ func (s *socketconn) setupSocket() (err error) {
 //---------------------------------------------
 func (s *socketconn) close() {
 
-	// if s.stopReader != nil {
-	// 	close(s.stopReader)
-	// }
+	if s.stopReader != nil {
+		s.stopReader <- true
+	}
 
 	s.bufReader = nil
 	s.bufWriter = nil
@@ -219,7 +220,7 @@ func (s *socketconn) clearMsg() {
 	s.msgRequest = nil
 	s.msgResponce = nil
 	s.msgNotice = nil
-	panic("")
+	panic(fmt.Sprintf(lumerinlib.FileLine() + "\n"))
 }
 
 //---------------------------------------------
@@ -228,46 +229,54 @@ func (s *socketconn) clearMsg() {
 func (s *socketconn) runSocketReader() {
 
 	if s.name == "" {
-		panic("")
+		panic(fmt.Sprintf(lumerinlib.FileLine() + " Error no socketconn name\n"))
 	}
 
-	fmt.Printf("Running %s SocketReader\n", s.name)
-
-	fmt.Printf("runSocketReader() Preparing %s Socket for reading\n", s.name)
+	fmt.Printf(lumerinlib.Funcname()+" Preparing %s Socket for reading\n", s.name)
 
 	if s.netConn == nil {
 		panic(fmt.Sprintf(lumerinlib.FileLine()+"%s: netConn == nil\n", s.name))
 	}
 
+	s.stopReader = make(chan bool, 0)
+
 	go func(s *socketconn) {
 
-		fmt.Printf("runSocketReader() %s Socket\n", s.name)
+		fmt.Printf(lumerinlib.Funcname()+" %s Socket\n", s.name)
 
 		defer func() {
-			fmt.Printf("Closing %s Socket\n", s.name)
+			fmt.Printf(lumerinlib.Funcname()+" Closing %s Socket\n", s.name)
 			s.netConn.Close()
+			close(s.stopReader)
 		}()
 
 	loop:
 		for {
+			switch {
+			case <-s.stopReader:
+				fmt.Printf(lumerinlib.Funcname()+" got stopReader for: %s\n", s.name)
+				break loop
+			default:
+			}
 
-			//switch {
-			//case <-s.stopReader:
-			//	break loop
-			//default:
-			//}
-
-			fmt.Printf("%s Socket Scan()...\n", s.name)
+			fmt.Printf(lumerinlib.Funcname()+" Scoket Scan %s\n", s.name)
 
 			if !s.bufScanner.Scan() {
 				err := s.bufScanner.Err()
 
 				if err == nil {
-					fmt.Printf(lumerinlib.FileLine()+"%s Socket Closed TCP connection\n", s.name)
+					fmt.Printf(lumerinlib.FileLine()+" %s Socket Closed TCP connection\n", s.name)
 				} else {
-					fmt.Printf(lumerinlib.FileLine()+"Error recieved on %s TCP connection: %s\n", s.name, err)
+					fmt.Printf(lumerinlib.FileLine()+" Error recieved on %s TCP connection: %s\n", s.name, err)
 				}
 
+				break loop
+			}
+
+			err := s.bufScanner.Err()
+
+			if err != nil {
+				fmt.Printf(lumerinlib.FileLine()+" Error recieved on %s TCP connection: %s\n", s.name, err)
 				break loop
 			}
 
@@ -281,7 +290,7 @@ func (s *socketconn) runSocketReader() {
 			}
 		}
 
-		fmt.Printf("Exiting %s Socket Scan()...\n", s.name)
+		fmt.Printf(lumerinlib.Funcname()+" Exiting %s Socket Scan()...\n", s.name)
 
 	}(s)
 

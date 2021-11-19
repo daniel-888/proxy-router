@@ -74,7 +74,7 @@ func main() {
 		ID:       msgbus.DestID(msgbus.DEFAULT_DEST_ID),
 		NetProto: msgbus.DestNetProto("tcp"),
 		NetHost:  msgbus.DestNetHost("127.0.0.1"),
-		NetPort:  msgbus.DestNetPort("3334"),
+		NetPort:  msgbus.DestNetPort("33334"),
 	}
 
 	event, err := ps.PubWait(msgbus.DestMsg, msgbus.IDString(msgbus.DEFAULT_DEST_ID), dest)
@@ -156,7 +156,9 @@ func main() {
 
 	// Need a better mechanism for running context
 
-	// testmod.MinersTouchAll(ps)
+	if false {
+		testmod.MinersTouchAll(ps)
+	}
 
 	<-done
 
