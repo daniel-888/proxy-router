@@ -29,9 +29,11 @@
     },
 
     "connectionManager": {
+        "sourceUrl": "",
         "sourceHost": "",
         "sourcePort": "",
         "sourceProto": "",
+        "defaultPooUrl": "",
         "defaultPoolHost": "",
         "defaultPoolPort": "",
         "defaultPoolProto": ""

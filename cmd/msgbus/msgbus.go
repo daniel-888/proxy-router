@@ -117,14 +117,10 @@ type registryData struct {
 	data interface{}
 }
 
-type DestNetProto string
-type DestNetHost string
-type DestNetPort string
+type DestNetUrl string
 type Dest struct {
 	ID       DestID
-	NetHost  DestNetHost
-	NetPort  DestNetPort
-	NetProto DestNetProto
+	NetUrl 	 DestNetUrl
 }
 
 type ConfigInfo struct {
@@ -163,6 +159,7 @@ type Contract struct {
 	Length        	 		int
 	ValidationFee    		int
 	StartingBlockTimestamp	int
+	Dest					DestID
 	IpAddress				string
 	Port					string
 	Username				string

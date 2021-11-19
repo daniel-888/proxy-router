@@ -9,9 +9,7 @@ import (
 // Struct of Dest parameters in JSON
 type DestJSON struct {
 	ID			string	`json:"id"`
-	NetHost		string	`json:"netHost"`
-	NetPort		string	`json:"netPort"`
-	NetProto	string	`json:"netProto"`
+	NetUrl 		string	`json:"netUrl"`
 }
 
 //Struct that stores slice of all JSON Dest structs in Repo
@@ -51,9 +49,7 @@ func (r *DestRepo) AddDestFromMsgBus(dest msgbus.Dest) {
 	var destJSON DestJSON
 	
 	destJSON.ID = string(dest.ID)
-	destJSON.NetHost = string(dest.NetHost)
-	destJSON.NetPort = string(dest.NetPort)
-	destJSON.NetProto = string(dest.NetProto)
+	destJSON.NetUrl = string(dest.NetUrl)
 	
 	r.DestJSONs = append(r.DestJSONs, destJSON)
 }
@@ -62,9 +58,7 @@ func (r *DestRepo) AddDestFromMsgBus(dest msgbus.Dest) {
 func (r *DestRepo) UpdateDest(id string, newDest DestJSON) error {
 	for i,d := range r.DestJSONs {
 		if d.ID == id {
-			if newDest.NetHost != "" {r.DestJSONs[i].NetHost = newDest.NetHost}
-			if newDest.NetPort != "" {r.DestJSONs[i].NetPort = newDest.NetPort}
-			if newDest.NetProto != "" {r.DestJSONs[i].NetProto = newDest.NetProto}
+			if newDest.NetUrl != "" {r.DestJSONs[i].NetUrl = newDest.NetUrl}
 
 			return nil
 		}
@@ -86,9 +80,7 @@ func (r *DestRepo) DeleteDest(id string) error {
 
 func ConvertDestJSONtoDestMSG(dest DestJSON, msg msgbus.Dest) msgbus.Dest {
 	msg.ID = msgbus.DestID(dest.ID)
-	msg.NetHost = msgbus.DestNetHost(dest.NetHost)
-	msg.NetPort = msgbus.DestNetPort(dest.NetPort)
-	msg.NetProto = msgbus.DestNetProto(dest.NetProto)
+	msg.NetUrl = msgbus.DestNetUrl(dest.NetUrl)
 
 	return msg	
 }
