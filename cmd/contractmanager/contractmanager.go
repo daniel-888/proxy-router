@@ -392,6 +392,7 @@ func hashrateContractMonitor(addr msgbus.ContractID, hrLogs chan types.Log, hrSu
 
 	// routine monitoring and acting upon events emmited by hashrate contract
 	go func() {
+		newValidator := validator.Validator //validator at the parent scope of the goroutine
 		for {
 			select {
 			case err := <-hrSub.Err():
@@ -439,7 +440,8 @@ func hashrateContractMonitor(addr msgbus.ContractID, hrLogs chan types.Log, hrSu
 					contractMsg := createContractMsg(common.HexToAddress(string(addr)), contractValues, true)
 					cm.ps.SetWait(msgbus.ContractMsg, msgbus.IDString(addr), contractMsg)
 					runningContractAddr <- addr
-					newValidator := validator.MakeNewValidator()
+					//creating a new validation instance which will last the lifetime of the parent goroutine
+					newValidator = validator.MakeNewValidator()
 					//message from the default mining pool that provides the block header information
 
 				case contractClosedSigHash.Hex():
