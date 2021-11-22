@@ -19,11 +19,11 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 
-	"gitlab.com/TitanInd/lumerin/localvalidator/validator"
 
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/implementation"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/ledger"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/webfacing"
+	"gitlab.com/TitanInd/lumerin/cmd/localvalidator/validator" //this is where a new validator is pulled in
 )
 
 type ContractManager struct {
