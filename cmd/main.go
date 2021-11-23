@@ -116,25 +116,26 @@ func main() {
 	//Fire up contract manager
 	//
 	if disablecontract == "false" {
-		var contractmanagerConfig map[string]interface{}
+		var contractManagerConfig map[string]interface{}
 
 		if buyer {
-			contractmanagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/buyerconfig.json", "contractManager")
+			contractManagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/buyerconfig.json", "contractManager")
 		} else {
-			contractmanagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/sellerconfig.json", "contractManager")
+			contractManagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/sellerconfig.json", "contractManager")
 		}
 		if err != nil {
 			panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 		}
 
-		cman, err := contractmanager.New(ps, contractmanagerConfig)
 		if err != nil {
 			panic(fmt.Sprintf("contract manager failed:%s", err))
 		}
 		if buyer {
-			err = cman.StartBuyer()
+			var buyerCM contractmanager.BuyerContractManager
+			err = contractmanager.Run(&buyerCM, ps, contractManagerConfig)
 		} else {
-			err = cman.StartSeller()
+			var sellerCM contractmanager.SellerContractManager
+			err = contractmanager.Run(&sellerCM, ps, contractManagerConfig)
 		}
 		if err != nil {
 			panic(fmt.Sprintf("contract manager failed to start:%s", err))
