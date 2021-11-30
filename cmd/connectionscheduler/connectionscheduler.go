@@ -15,37 +15,6 @@ type ConnectionScheduler struct {
 //------------------------------------------
 //
 //------------------------------------------
-// func (cs *ConnectionScheduler) delContract(channel []msgbus.EventChan, c msgbus.EventChan) (result []msgbus.EventChan) {
-//
-//	result = channel
-//
-//	for i, echan := range channel {
-//		if c == echan {
-//			length := len(channel)
-//			if length == 1 {
-//				result = channel[:0]
-//			} else if i == length {
-//				result = channel[:length-1]
-//			} else {
-//				result[i] = channel[length-1]
-//				result = channel[:length-1]
-//			}
-//		}
-//	}
-//	return result
-//}
-
-//------------------------------------------
-//
-//------------------------------------------
-//func (cs *ConnectionScheduler) addContract(channel []msgbus.EventChan, c msgbus.EventChan) (result []msgbus.EventChan) {
-//	result = append(channel, c)
-//	return result
-//}
-
-//------------------------------------------
-//
-//------------------------------------------
 func New(ps *msgbus.PubSub) (cs *ConnectionScheduler, err error) {
 	cs = &ConnectionScheduler{
 		ps: ps,
@@ -58,7 +27,7 @@ func New(ps *msgbus.PubSub) (cs *ConnectionScheduler, err error) {
 //------------------------------------------
 func (cs *ConnectionScheduler) Start() (err error) {
 
-	fmt.Printf(" Connection Scheduler Starting\n")
+	fmt.Printf("Connection Scheduler Starting\n")
 
 	cs.Contracts = make(map[msgbus.ContractID]msgbus.Contract)
 
@@ -69,45 +38,54 @@ func (cs *ConnectionScheduler) Start() (err error) {
 		return err
 	}
 
-	go cs.newContractHandler(contractEventChan)
+	go cs.goContractHandler(contractEventChan)
 
 	fmt.Printf("Connection Scheduler Started\n")
 
 	return err
 }
 
-//------------------------------------------
+//------------------------------------------------------------------------
 //
-//------------------------------------------
-func (cs *ConnectionScheduler) newContractHandler(ch msgbus.EventChan) {
+// Monitors new contract publish events, and then subscribes to the contracts
+// Then monitors the update events on the contracts, and handles state changes
+//
+//------------------------------------------------------------------------
+func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 
 	for event := range ch {
 
 		id := msgbus.ContractID(event.ID)
 
 		switch event.EventType {
+		//
+		// Subscribe Event
+		//
 		case msgbus.SubscribedEvent:
 			fmt.Printf("Contract subscribed:%v\n", event)
-			continue
 
+			//
+			// Publish Event
+			//
 		case msgbus.PublishEvent:
 			// Is this a new contract?
 
-			fmt.Printf(lumerinlib.FileLine()+" got PublishEvent: %v\n", event)
+			fmt.Printf(lumerinlib.Funcname()+" got PublishEvent: %v\n", event)
 
 			if _, ok := cs.Contracts[id]; !ok {
 				cs.Contracts[id] = event.Data.(msgbus.Contract)
 
 				//
-				// If the cntract is a buyer, contractscheduler can ignore it.
+				// If the contract is a buyer, contractscheduler can ignore it.
+				// Use the existing channel to monitor
 				//
 				if cs.Contracts[id].IsSeller {
 					e1, err := cs.ps.SubWait(msgbus.ContractMsg, event.ID, ch)
 					if err != nil {
-						panic(fmt.Sprintf("SubWait failed: %s\n", err))
+						panic(fmt.Sprintf(lumerinlib.FileLine()+" SubWait failed: %s\n", err))
 					}
 					if e1.EventType != msgbus.SubscribedEvent {
-						panic("Wrong event type")
+						panic(fmt.Sprintf(lumerinlib.FileLine()+" Wrong event type %v\n", e1))
 					}
 				}
 
@@ -115,6 +93,9 @@ func (cs *ConnectionScheduler) newContractHandler(ch msgbus.EventChan) {
 				panic(fmt.Sprintf(lumerinlib.FileLine()+" got PubEvent, but already had the ID: %v\n", event))
 			}
 
+			//
+			// Delete/Unsubscribe Event
+			//
 		case msgbus.DeleteEvent:
 			fallthrough
 		case msgbus.UnsubscribedEvent:
@@ -126,6 +107,9 @@ func (cs *ConnectionScheduler) newContractHandler(ch msgbus.EventChan) {
 				panic(fmt.Sprintf(lumerinlib.FileLine()+" got UnsubscribeEvent, but dont have the ID: %v\n", event))
 			}
 
+			//
+			// Update Event
+			//
 		case msgbus.UpdateEvent:
 			if _, ok := cs.Contracts[id]; !ok {
 				panic(fmt.Sprintf(lumerinlib.FileLine()+" got contract ID does not exist: %v\n", event))
@@ -167,6 +151,9 @@ func (cs *ConnectionScheduler) newContractHandler(ch msgbus.EventChan) {
 
 			}
 
+			//
+			// Rut Row...
+			//
 		default:
 			panic(fmt.Sprintf(lumerinlib.FileLine()+" got Event: %v\n", event))
 		}
@@ -177,6 +164,9 @@ func (cs *ConnectionScheduler) newContractHandler(ch msgbus.EventChan) {
 
 }
 
+//------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------
 func (cs *ConnectionScheduler) ContractRunning(id msgbus.ContractID) {
 
 	fmt.Printf(lumerinlib.FileLine()+" Contract Running: %s\n", id)
@@ -188,65 +178,30 @@ func (cs *ConnectionScheduler) ContractRunning(id msgbus.ContractID) {
 		panic(fmt.Sprint(lumerinlib.FileLine()+"Error:%v", contract))
 	}
 
-	// ip := contract.Data.(msgbus.Contract).IpAddress
-	// port := contract.Data.(msgbus.Contract).Port
 	destid := contract.Data.(msgbus.Contract).Dest
 
 	if destid == "" {
 		panic(fmt.Sprint(lumerinlib.FileLine() + " Error DestID is empty"))
 	}
 
-	// Need Search function for Dest
-
-	// dest := msgbus.Dest{
-	// 	ID:       msgbus.DestID(destid),
-	// 	NetUrl: ,
-	// NetProto: msgbus.DestNetProto("tcp"),
-	// NetHost:  msgbus.DestNetHost(ip),
-	// NetPort:  msgbus.DestNetPort(port),
-	// }
-	//
-	//destevent, err := cs.ps.PubWait(msgbus.DestMsg, msgbus.IDString(destid), dest)
-	//if err != nil {
-	//	panic(fmt.Sprintf("Adding Dest Failed: %s\n", err))
-	//}
-	//if destevent.Err != nil {
-	//	panic(fmt.Sprintf("Adding Dest Failed: %s\n", destevent.Err))
-	//}
-
 	// Find all of the online miners point them to new target
-	event, err := cs.ps.GetWait(msgbus.MinerMsg, "")
+	miners, err := cs.ps.MinerGetAllWait()
+
 	if err != nil {
 		panic(fmt.Sprintf(lumerinlib.FileLine()+" Error:%s\n", err))
 	}
 
-	if event.EventType != msgbus.GetIndexEvent {
-		panic(fmt.Sprint(lumerinlib.FileLine()+"Error:%v\n", event))
-	}
-
-	if 0 == len(event.Data.(msgbus.IDIndex)) {
-		fmt.Printf(lumerinlib.FileLine() + " No miners are online\n")
-
-	} else {
-		for _, i := range event.Data.(msgbus.IDIndex) {
-			minerevent, err := cs.ps.GetWait(msgbus.MinerMsg, i)
-			if err != nil {
-				panic(fmt.Sprint(lumerinlib.FileLine()+"Error:%v\n", minerevent))
-			}
-
-			minerdata := minerevent.Data.(msgbus.Miner)
-			minerdata.Dest = msgbus.DestID(destid)
-
-			setevent, err := cs.ps.SetWait(msgbus.MinerMsg, i, minerdata)
-			if err != nil {
-				panic(fmt.Sprint(lumerinlib.FileLine()+"Error:%v\n", setevent))
-			}
-
+	for _, v := range miners {
+		err := cs.ps.MinerSetDestWait(v, destid)
+		if err != nil {
+			panic(fmt.Sprintf(lumerinlib.FileLine()+" Error:%s\n", err))
 		}
 	}
-
 }
 
+//------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------
 func (cs *ConnectionScheduler) ContractComplete(id msgbus.ContractID) {
 
 	fmt.Printf(lumerinlib.FileLine()+" Contract Complete: %s\n", id)

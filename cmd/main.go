@@ -33,6 +33,11 @@ func main() {
 	// Need something better...
 	done := make(chan int)
 
+	configFilePath, err := config.ConfigGetVal(config.ConfigConfigFilePath)
+	if err != nil {
+		panic(fmt.Sprintf("Getting Contract Config JSON failed: %s\n", err))
+	}
+
 	buyerstr, err := config.ConfigGetVal(config.BuyerNode)
 	if err != nil {
 		panic(fmt.Sprintf("Getting Buynernode val failed: %s\n", err))
@@ -118,11 +123,7 @@ func main() {
 	if disablecontract == "false" {
 		var contractmanagerConfig map[string]interface{}
 
-		if buyer {
-			contractmanagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/buyerconfig.json", "contractManager")
-		} else {
-			contractmanagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/sellerconfig.json", "contractManager")
-		}
+		contractmanagerConfig, err = configurationmanager.LoadConfiguration(configFilePath, "contractManager")
 		if err != nil {
 			panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 		}
