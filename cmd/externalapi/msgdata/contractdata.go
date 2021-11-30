@@ -113,9 +113,7 @@ func ConvertContractJSONtoContractMSG(contract ContractJSON, msg msgbus.Contract
 	return msg	
 }
 
-func ConvertContractMSGtoContractJSON(msg msgbus.Contract) ContractJSON {
-	var contract ContractJSON
-
+func ConvertContractMSGtoContractJSON(msg msgbus.Contract) (contract ContractJSON) {
 	contract.ID = string(msg.ID)
 	contract.State = string(msg.State)
 	contract.Buyer = string(msg.Buyer)

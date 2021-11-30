@@ -74,39 +74,40 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 		StartDate: 				time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC),
 	}
 
-	configRepo, connectionRepo, contractRepo, destRepo, minerRepo, sellerRepo := InitializeJSONRepos()
+	var api APIRepos
+	api.InitializeJSONRepos()
 
 	go func(ech msgbus.EventChan) {
 		for e := range ech {
 			switch e.Msg {
 			case msgbus.ConfigMsg:
-				configRepo.AddConfigInfoFromMsgBus(config)
-				if configRepo.ConfigInfoJSONs[0].ID != "ConfigID01" {
+				api.Config.AddConfigInfoFromMsgBus(config)
+				if api.Config.ConfigInfoJSONs[0].ID != "ConfigID01" {
 					t.Errorf("Failed to add Config to Repo")
 				} 
 			case msgbus.DestMsg:
-				destRepo.AddDestFromMsgBus(dest)
-				if destRepo.DestJSONs[0].ID != "DestID01" {
+				api.Dest.AddDestFromMsgBus(dest)
+				if api.Dest.DestJSONs[0].ID != "DestID01" {
 					t.Errorf("Failed to add Dest to Repo")
 				} 
 			case msgbus.SellerMsg:
-				sellerRepo.AddSellerFromMsgBus(seller)
-				if sellerRepo.SellerJSONs[0].ID != "SellerID01" {
+				api.Seller.AddSellerFromMsgBus(seller)
+				if api.Seller.SellerJSONs[0].ID != "SellerID01" {
 					t.Errorf("Failed to add Seller to Repo")
 				} 
 			case msgbus.ContractMsg:
-				contractRepo.AddContractFromMsgBus(contract)
-				if contractRepo.ContractJSONs[0].ID != "ContractID01" {
+				api.Contract.AddContractFromMsgBus(contract)
+				if api.Contract.ContractJSONs[0].ID != "ContractID01" {
 					t.Errorf("Failed to add Contract to Repo")
 				} 
 			case msgbus.MinerMsg:
-				minerRepo.AddMinerFromMsgBus(miner)
-				if minerRepo.MinerJSONs[0].ID != "MinerID01" {
+				api.Miner.AddMinerFromMsgBus(miner)
+				if api.Miner.MinerJSONs[0].ID != "MinerID01" {
 					t.Errorf("Failed to add Miner to Repo")
 				} 
 			case msgbus.ConnectionMsg:
-				connectionRepo.AddConnectionFromMsgBus(connection)
-				if connectionRepo.ConnectionJSONs[0].ID != "ConnectionID01" {
+				api.Connection.AddConnectionFromMsgBus(connection)
+				if api.Connection.ConnectionJSONs[0].ID != "ConnectionID01" {
 					t.Errorf("Failed to add Connection to Repo")
 				} 
 			default:
@@ -177,14 +178,15 @@ func TestMockPOSTAddedToMsgBus(t *testing.T) {
 	ech := make(msgbus.EventChan)
 	ps := msgbus.New(1)
 
-	configRepo, connectionRepo, contractRepo, destRepo, minerRepo, sellerRepo := InitializeJSONRepos()
+	var api APIRepos
+	api.InitializeJSONRepos()
 
-	configRepo.AddConfigInfo(configJSON)
-	connectionRepo.AddConnection(connectionJSON)
-	contractRepo.AddContract(contractJSON)
-	destRepo.AddDest(destJSON)
-	minerRepo.AddMiner(minerJSON)
-	sellerRepo.AddSeller(sellerJSON)
+	api.Config.AddConfigInfo(configJSON)
+	api.Connection.AddConnection(connectionJSON)
+	api.Contract.AddContract(contractJSON)
+	api.Dest.AddDest(destJSON)
+	api.Miner.AddMiner(minerJSON)
+	api.Seller.AddSeller(sellerJSON)
 
 	var ConfigMSG msgbus.ConfigInfo
 	var ConnectionMSG msgbus.Connection
@@ -193,12 +195,12 @@ func TestMockPOSTAddedToMsgBus(t *testing.T) {
 	var MinerMSG msgbus.Miner
 	var SellerMSG msgbus.Seller
 
-	configMSG := msgdata.ConvertConfigInfoJSONtoConfigInfoMSG(configRepo.ConfigInfoJSONs[0], ConfigMSG)
-	connectionMSG := msgdata.ConvertConnectionJSONtoConnectionMSG(connectionRepo.ConnectionJSONs[0], ConnectionMSG)
-	contractMSG := msgdata.ConvertContractJSONtoContractMSG(contractRepo.ContractJSONs[0], ContractMSG)
-	destMSG := msgdata.ConvertDestJSONtoDestMSG(destRepo.DestJSONs[0], DestMSG)
-	minerMSG := msgdata.ConvertMinerJSONtoMinerMSG(minerRepo.MinerJSONs[0], MinerMSG)
-	sellerMSG := msgdata.ConvertSellerJSONtoSellerMSG(sellerRepo.SellerJSONs[0], SellerMSG)
+	configMSG := msgdata.ConvertConfigInfoJSONtoConfigInfoMSG(api.Config.ConfigInfoJSONs[0], ConfigMSG)
+	connectionMSG := msgdata.ConvertConnectionJSONtoConnectionMSG(api.Connection.ConnectionJSONs[0], ConnectionMSG)
+	contractMSG := msgdata.ConvertContractJSONtoContractMSG(api.Contract.ContractJSONs[0], ContractMSG)
+	destMSG := msgdata.ConvertDestJSONtoDestMSG(api.Dest.DestJSONs[0], DestMSG)
+	minerMSG := msgdata.ConvertMinerJSONtoMinerMSG(api.Miner.MinerJSONs[0], MinerMSG)
+	sellerMSG := msgdata.ConvertSellerJSONtoSellerMSG(api.Seller.SellerJSONs[0], SellerMSG)
 	
 	go func(ech msgbus.EventChan) {
 		for e := range ech {

@@ -8,88 +8,93 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 )
 
-func InitializeJSONRepos() (*msgdata.ConfigInfoRepo, 
-							*msgdata.ConnectionRepo, 
-							*msgdata.ContractRepo, 
-							*msgdata.DestRepo, 
-							*msgdata.MinerRepo, 
-							*msgdata.SellerRepo) {
-
-	config := msgdata.NewConfigInfo()
-	connection := msgdata.NewConnection()
-	contract := msgdata.NewContract()
-	dest := msgdata.NewDest()
-	miner := msgdata.NewMiner()
-	seller := msgdata.NewSeller()
-
-	return config, connection, contract, dest, miner, seller
+type APIRepos struct {
+	Config		*msgdata.ConfigInfoRepo 
+	Connection 	*msgdata.ConnectionRepo 
+	Contract	*msgdata.ContractRepo 
+	Dest		*msgdata.DestRepo 
+	Miner		*msgdata.MinerRepo 
+	Seller		*msgdata.SellerRepo
+	Buyer		*msgdata.BuyerRepo
 }
 
-func RunAPI(config *msgdata.ConfigInfoRepo,
-			connection *msgdata.ConnectionRepo,
-			contract *msgdata.ContractRepo,
-			dest *msgdata.DestRepo,
-			miner *msgdata.MinerRepo,
-			seller *msgdata.SellerRepo) {
-	
+func (api *APIRepos) InitializeJSONRepos() {
+	api.Config = msgdata.NewConfigInfo()
+	api.Connection = msgdata.NewConnection()
+	api.Contract = msgdata.NewContract()
+	api.Dest = msgdata.NewDest()
+	api.Miner = msgdata.NewMiner()
+	api.Seller = msgdata.NewSeller()
+	api.Buyer = msgdata.NewBuyer()
+}
+
+func (api *APIRepos) RunAPI() {
 	r := gin.Default()
 
 	configRoutes := r.Group("/config")
 	{
-		configRoutes.GET("/", handlers.ConfigsGET(config))
-		configRoutes.GET("/:id", handlers.ConfigGET(config))
-		configRoutes.POST("/", handlers.ConfigPOST(config))
-		configRoutes.PUT("/:id", handlers.ConfigPUT(config))
-		configRoutes.DELETE("/:id", handlers.ConfigDELETE(config))
+		configRoutes.GET("/", handlers.ConfigsGET(api.Config))
+		configRoutes.GET("/:id", handlers.ConfigGET(api.Config))
+		configRoutes.POST("/", handlers.ConfigPOST(api.Config))
+		configRoutes.PUT("/:id", handlers.ConfigPUT(api.Config))
+		configRoutes.DELETE("/:id", handlers.ConfigDELETE(api.Config))
 	}
 
 	connectionRoutes := r.Group("/connection")
 	{
-		connectionRoutes.GET("/", handlers.ConnectionsGET(connection))
-		connectionRoutes.GET("/:id", handlers.ConnectionGET(connection))
-		connectionRoutes.POST("/", handlers.ConnectionPOST(connection))
-		connectionRoutes.PUT("/:id", handlers.ConnectionPUT(connection))
-		connectionRoutes.DELETE("/:id", handlers.ConnectionDELETE(connection))
+		connectionRoutes.GET("/", handlers.ConnectionsGET(api.Connection))
+		connectionRoutes.GET("/:id", handlers.ConnectionGET(api.Connection))
+		connectionRoutes.POST("/", handlers.ConnectionPOST(api.Connection))
+		connectionRoutes.PUT("/:id", handlers.ConnectionPUT(api.Connection))
+		connectionRoutes.DELETE("/:id", handlers.ConnectionDELETE(api.Connection))
 	}
 
 	contractRoutes := r.Group("/contract")
 	{
-		contractRoutes.GET("/", handlers.ContractsGET(contract))
-		contractRoutes.GET("/:id", handlers.ContractGET(contract))
-		contractRoutes.POST("/", handlers.ContractPOST(contract))
-		contractRoutes.PUT("/:id", handlers.ContractPUT(contract))
-		contractRoutes.DELETE("/:id", handlers.ContractDELETE(contract))
+		contractRoutes.GET("/", handlers.ContractsGET(api.Contract))
+		contractRoutes.GET("/:id", handlers.ContractGET(api.Contract))
+		contractRoutes.POST("/", handlers.ContractPOST(api.Contract))
+		contractRoutes.PUT("/:id", handlers.ContractPUT(api.Contract))
+		contractRoutes.DELETE("/:id", handlers.ContractDELETE(api.Contract))
 	}
 
 	destRoutes := r.Group("/dest")
 	{
-		destRoutes.GET("/", handlers.DestsGET(dest))
-		destRoutes.GET("/:id", handlers.DestGET(dest))
-		destRoutes.POST("/", handlers.DestPOST(dest))
-		destRoutes.PUT("/:id", handlers.DestPUT(dest))
-		destRoutes.DELETE("/:id", handlers.DestDELETE(dest))
+		destRoutes.GET("/", handlers.DestsGET(api.Dest))
+		destRoutes.GET("/:id", handlers.DestGET(api.Dest))
+		destRoutes.POST("/", handlers.DestPOST(api.Dest))
+		destRoutes.PUT("/:id", handlers.DestPUT(api.Dest))
+		destRoutes.DELETE("/:id", handlers.DestDELETE(api.Dest))
 	}
 
 	minerRoutes := r.Group("/miner")
 	{
-		minerRoutes.GET("/", handlers.MinersGET(miner))
-		minerRoutes.GET("/:id", handlers.MinerGET(miner))
-		minerRoutes.POST("/", handlers.MinerPOST(miner))
-		minerRoutes.PUT("/:id", handlers.MinerPUT(miner))
-		minerRoutes.DELETE("/:id", handlers.MinerDELETE(miner))
+		minerRoutes.GET("/", handlers.MinersGET(api.Miner))
+		minerRoutes.GET("/:id", handlers.MinerGET(api.Miner))
+		minerRoutes.POST("/", handlers.MinerPOST(api.Miner))
+		minerRoutes.PUT("/:id", handlers.MinerPUT(api.Miner))
+		minerRoutes.DELETE("/:id", handlers.MinerDELETE(api.Miner))
 	}
 
 	sellerRoutes := r.Group("/seller")
 	{
-		sellerRoutes.GET("/", handlers.SellersGET(seller))
-		sellerRoutes.GET("/:id", handlers.SellerGET(seller))
-		sellerRoutes.POST("/", handlers.SellerPOST(seller))
-		sellerRoutes.PUT("/:id", handlers.SellerPUT(seller))
-		sellerRoutes.DELETE("/:id", handlers.SellerDELETE(seller))
+		sellerRoutes.GET("/", handlers.SellersGET(api.Seller))
+		sellerRoutes.GET("/:id", handlers.SellerGET(api.Seller))
+		sellerRoutes.POST("/", handlers.SellerPOST(api.Seller))
+		sellerRoutes.PUT("/:id", handlers.SellerPUT(api.Seller))
+		sellerRoutes.DELETE("/:id", handlers.SellerDELETE(api.Seller))
+	}
+
+	buyerRoutes := r.Group("/buyer")
+	{
+		buyerRoutes.GET("/", handlers.BuyersGET(api.Buyer))
+		buyerRoutes.GET("/:id", handlers.BuyerGET(api.Buyer))
+		buyerRoutes.POST("/", handlers.BuyerPOST(api.Buyer))
+		buyerRoutes.PUT("/:id", handlers.BuyerPUT(api.Buyer))
+		buyerRoutes.DELETE("/:id", handlers.BuyerDELETE(api.Buyer))
 	}
 
 	if err := r.Run(); err != nil {
 		log.Fatal(err.Error())
 	}
-	
 }

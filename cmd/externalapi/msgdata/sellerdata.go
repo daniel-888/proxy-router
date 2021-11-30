@@ -105,3 +105,16 @@ func ConvertSellerJSONtoSellerMSG(seller SellerJSON, msg msgbus.Seller) msgbus.S
 
 	return msg	
 }
+
+func ConvertSellerMSGtoSellerJSON(msg msgbus.Seller) (seller SellerJSON) {
+	seller.ID = string(msg.ID)
+	seller.DefaultDest = string(msg.DefaultDest)
+	seller.TotalAvailableHashRate = msg.TotalAvailableHashRate
+	seller.UnusedHashRate = msg.UnusedHashRate
+	seller.AvailableContracts = msg.AvailableContracts
+	seller.ActiveContracts = msg.ActiveContracts
+	seller.RunningContracts = msg.RunningContracts
+	seller.CompleteContracts = msg.CompleteContracts
+
+	return seller	
+}

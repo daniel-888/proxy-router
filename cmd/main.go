@@ -6,7 +6,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
-	"gitlab.com/TitanInd/lumerin/cmd/testmod"
+	//"gitlab.com/TitanInd/lumerin/cmd/testmod"
 
 	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionmanager"
@@ -119,9 +119,9 @@ func main() {
 		var contractManagerConfig map[string]interface{}
 
 		if buyer {
-			contractManagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/buyerconfig.json", "contractManager")
+			contractManagerConfig, err = configurationmanager.LoadConfiguration("/Users/ryanbajollari/go/src/lumerin/cmd/configurationmanager/buyerconfig.json", "contractManager")
 		} else {
-			contractManagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/sellerconfig.json", "contractManager")
+			contractManagerConfig, err = configurationmanager.LoadConfiguration("/Users/ryanbajollari/go/src/lumerin/cmd/configurationmanager/sellerconfig.json", "contractManager")
 		}
 		if err != nil {
 			panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
@@ -155,9 +155,9 @@ func main() {
 
 	// Need a better mechanism for running context
 
-	if false {
-		testmod.MinersTouchAll(ps)
-	}
+	// if false {
+	// 	testmod.MinersTouchAll(ps)
+	// }
 
 	<-done
 

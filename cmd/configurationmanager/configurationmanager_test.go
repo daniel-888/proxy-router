@@ -51,13 +51,14 @@ func TestLoadConfigToAPIandMsgBus(t *testing.T) {
 	seller.AvailableContracts = availableContractsMap
 	seller.ActiveContracts = activeContractsMap
 
-	configRepo,_,_,_,_,sellerRepo := externalapi.InitializeJSONRepos()
-	configRepo.AddConfigInfo(config)
+	var api externalapi.APIRepos
+	api.InitializeJSONRepos()
+	api.Config.AddConfigInfo(config)
 	var ConfigMSG msgbus.ConfigInfo
-	configMSG := msgdata.ConvertConfigInfoJSONtoConfigInfoMSG(configRepo.ConfigInfoJSONs[0], ConfigMSG)
-	sellerRepo.AddSeller(seller)
+	configMSG := msgdata.ConvertConfigInfoJSONtoConfigInfoMSG(api.Config.ConfigInfoJSONs[0], ConfigMSG)
+	api.Seller.AddSeller(seller)
 	var SellerMSG msgbus.Seller
-	sellerMSG := msgdata.ConvertSellerJSONtoSellerMSG(sellerRepo.SellerJSONs[0], SellerMSG)
+	sellerMSG := msgdata.ConvertSellerJSONtoSellerMSG(api.Seller.SellerJSONs[0], SellerMSG)
 
 	go func(ech msgbus.EventChan) {
 		for e := range ech {

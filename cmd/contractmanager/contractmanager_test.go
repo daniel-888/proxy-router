@@ -2,6 +2,7 @@ package contractmanager
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -9,12 +10,15 @@ import (
 	"testing"
 	"time"
 
+	//"encoding/hex"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rlp"
 
 	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi"
@@ -313,7 +317,8 @@ func TestLoadMsgBusAndAPIRepo(t *testing.T) {
 	ts := BeforeEach()
 	ech := make(msgbus.EventChan)
 	ps := msgbus.New(1)
-	_, _, contractRepo, _, _, _ := externalapi.InitializeJSONRepos()
+	var api externalapi.APIRepos
+	api.InitializeJSONRepos()
 	var contractMsgs [5]msgbus.Contract
 	var hashrateContractAddresses [5]common.Address
 	contractAddr := make(chan common.Address, 5)
@@ -379,11 +384,11 @@ func TestLoadMsgBusAndAPIRepo(t *testing.T) {
 			ps.Get(msgbus.ContractMsg, msgbus.IDString(contractMsgs[i].ID), ech)
 
 			// push read in contract values into API repo
-			contractRepo.AddContractFromMsgBus(contractMsgs[i])
+			api.Contract.AddContractFromMsgBus(contractMsgs[i])
 
 			// confirm contract values were pushed to API
-			fmt.Printf("API Contract Repo: %+v\n\n", contractRepo.ContractJSONs[i])
-			if len(contractRepo.ContractJSONs) != i+1 {
+			fmt.Printf("API Contract Repo: %+v\n\n", api.Contract.ContractJSONs[i])
+			if len(api.Contract.ContractJSONs) != i+1 {
 				t.Errorf("Contract struct not added")
 			}
 			i++
@@ -449,8 +454,8 @@ func TestLoadMsgBusAndAPIRepo(t *testing.T) {
 	ps.Get(msgbus.ContractMsg, msgbus.IDString(purchasedContractMsg.ID), ech)
 
 	contractJSON := msgdata.ConvertContractMSGtoContractJSON(purchasedContractMsg)
-	contractRepo.UpdateContract(contractRepo.ContractJSONs[0].ID, contractJSON)
-	fmt.Printf("API Contract Repo: %+v\n\n", contractRepo.ContractJSONs[0])
+	api.Contract.UpdateContract(api.Contract.ContractJSONs[0].ID, contractJSON)
+	fmt.Printf("API Contract Repo: %+v\n\n", api.Contract.ContractJSONs[0])
 }
 
 func TestCreateUnsignedTransaction(t *testing.T) {
@@ -488,6 +493,11 @@ func TestCreateUnsignedTransaction(t *testing.T) {
 		log.Fatal(err)
 	}
 
+	chainID, err := ts.rpcClient.NetworkID(context.Background())
+    if err != nil {
+        log.Fatal(err)
+    }
+
 	bytesData, err := hashrateContractABI.Pack("setContractCloseOut")
 	if err != nil {
 		log.Fatal(err)
@@ -502,20 +512,56 @@ func TestCreateUnsignedTransaction(t *testing.T) {
 
 	unsignedTx := types.NewTransaction(nonce, hashrateContractAddress, nil, gasLimit, gasPrice, bytesData)
 	fmt.Printf("Unsigned Transaction: %+v\n", unsignedTx)
-	fmt.Println("Unsigned Transaction Hash: ", unsignedTx.Hash())
-
-	//Sign transaction
+	
 	privateKey, err := crypto.HexToECDSA(ts.nodeEthereumPrivateKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	signedTx, err := types.SignTx(unsignedTx, types.HomesteadSigner{}, privateKey)
+	signer := types.NewEIP155Signer(chainID)
+
+	unsignedTxHash := signer.Hash(unsignedTx)
+	fmt.Println("Unsigned Transaction Hash: ", unsignedTxHash)
+
+	sig, err := crypto.Sign(unsignedTxHash[:], privateKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = ts.rpcClient.SendTransaction(context.Background(), signedTx)
+	fmt.Println("Signature: ", sig)
+
+	/*
+		Create raw transaction hash from signed tx object
+	*/
+	signedTx,err := unsignedTx.WithSignature(signer, sig)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Signed Tx: ", signedTx)
+
+	rawTxBytes,err := signedTx.MarshalBinary()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Raw tx bytes: ", rawTxBytes)
+
+	rawTxHex := hex.EncodeToString(rawTxBytes)
+	fmt.Println("Raw tx hex: ", rawTxHex)
+
+	/*
+		Decode raw trasaction hash into tx object to send transaction
+	*/
+	decodedRawTxBytes,err := hex.DecodeString(rawTxHex)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Decoded raw tx bytes: ", decodedRawTxBytes)
+
+	tx := new(types.Transaction)
+	rlp.DecodeBytes(decodedRawTxBytes, &tx)
+	fmt.Println("Decoded Transaction: ", tx)
+
+	err = ts.rpcClient.SendTransaction(context.Background(), tx)
 	if err != nil {
 		log.Fatal(err)
 	}
