@@ -3,7 +3,6 @@ package msgbus
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
@@ -11,9 +10,6 @@ import (
 type operation string
 type EventType string
 type MsgType string
-type ContractState string
-type MinerState string
-type ConnectionState string
 type MsgBusError string
 
 const (
@@ -56,48 +52,6 @@ const (
 	LogMsg        MsgType = "LogMsg"
 )
 
-const (
-	ContAvailableState ContractState = "AvailableState"
-	ContActiveState    ContractState = "ActiveState"
-	ContRunningState   ContractState = "RunningState"
-	ContCompleteState  ContractState = "CompleteState"
-)
-
-const (
-	OnlineState  MinerState = "MinerOnlineState"
-	OfflineState MinerState = "MinerOfflineState"
-)
-
-const (
-	ConnNewState          ConnectionState = "NewState"
-	ConnSrcSubscribeState ConnectionState = "SrcSubscribeState"
-	ConnAuthState         ConnectionState = "AuthState"
-	ConnVerifyState       ConnectionState = "VerifyState"
-	ConnRoutingState      ConnectionState = "RoutingState"
-	ConnConnectingState   ConnectionState = "ConnectingState"
-	ConnConnectedState    ConnectionState = "ConnectedState"
-	ConnConnectErrState   ConnectionState = "ConnectErrState"
-	ConnMsgErrState       ConnectionState = "MsgErrState"
-	ConnRouteChangeState  ConnectionState = "RouteChangeState"
-	ConnDstCloseState     ConnectionState = "DstCloseState"
-	ConnSrcCloseState     ConnectionState = "SrcCloseState"
-	ConnShutdownState     ConnectionState = "ShutdownState"
-	ConnErrorState        ConnectionState = "ErrorState"
-	ConnClosedState       ConnectionState = "ClosedState"
-)
-
-// Need to figure out the IDString for this, for now it is just a string
-type IDString string
-type ConfigID IDString
-type DestID IDString
-type SellerID IDString
-type BuyerID IDString
-type ContractID IDString
-type MinerID IDString
-type ConnectionID IDString
-
-const DEFAULT_DEST_ID DestID = "DefaultDestID"
-
 type Event struct {
 	EventType EventType
 	Msg       MsgType
@@ -115,81 +69,6 @@ type Subscribers struct {
 type registryData struct {
 	sub  Subscribers
 	data interface{}
-}
-
-type DestNetUrl string
-type Dest struct {
-	ID     DestID
-	NetUrl DestNetUrl
-}
-
-type ConfigInfo struct {
-	ID          ConfigID
-	DefaultDest DestID
-	Seller      SellerID
-}
-
-type Seller struct {
-	ID                     SellerID
-	DefaultDest            DestID
-	TotalAvailableHashRate int
-	UnusedHashRate         int
-	AvailableContracts     map[ContractID]bool
-	ActiveContracts        map[ContractID]bool
-	RunningContracts       map[ContractID]bool
-	CompleteContracts      map[ContractID]bool
-}
-
-type Buyer struct {
-	ID                BuyerID
-	DefaultDest       DestID
-	ActiveContracts   map[ContractID]bool
-	RunningContracts  map[ContractID]bool
-	CompleteContracts map[ContractID]bool
-}
-
-type Contract struct {
-	IsSeller               bool
-	ID                     ContractID
-	State                  ContractState
-	Buyer                  BuyerID
-	Price                  int
-	Limit                  int
-	Speed                  int
-	Length                 int
-	ValidationFee          int
-	StartingBlockTimestamp int
-	Dest                   DestID
-	// IpAddress				string
-	// Port					string
-	// Username string
-}
-
-//
-// Created & Updated by Connection Manager
-//
-type Miner struct {
-	ID                      MinerID
-	Name                    string
-	IP                      string
-	MAC                     string
-	State                   MinerState
-	Seller                  SellerID
-	Dest                    DestID // Updated by Connection Scheduler
-	InitialMeasuredHashRate int
-	CurrentHashRate         int
-}
-
-//
-// Created & Updated by Connection Manager
-//
-type Connection struct {
-	ID        ConnectionID
-	Miner     MinerID
-	Dest      DestID
-	State     ConnectionState
-	TotalHash int
-	StartDate time.Time
 }
 
 type IDIndex []IDString
