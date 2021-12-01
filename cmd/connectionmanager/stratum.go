@@ -246,11 +246,12 @@ func getStratumMsg(msg []byte) (ret interface{}, err error) {
 
 //------------------------------------------------------
 //
+// {"id":2,"method":"mining.authorize","params":["testrig.worker1",""]}
 //------------------------------------------------------
 func (r *request) getAuthName() (name string, err error) {
 
 	if r.Method != string(CLIENT_MINING_AUTHORIZE) {
-		return "", fmt.Errorf("wrong method")
+		return "", fmt.Errorf("wrong method, expetected mining.authorize")
 	}
 
 	fmt.Printf(" type:%T", r.Params)
