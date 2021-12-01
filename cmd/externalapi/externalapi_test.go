@@ -16,9 +16,7 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 
 	dest := msgbus.Dest{
 		ID:   		"DestID01",
-		NetHost:   	"127.0.0.1",
-		NetPort: 	"80",
-		NetProto:   "tcp",
+		NetUrl: 	"stratum+tcp://127.0.0.1:3334/",	
 	}
 	config := msgbus.ConfigInfo{
 		ID:          "ConfigID01",

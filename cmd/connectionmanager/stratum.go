@@ -246,11 +246,12 @@ func getStratumMsg(msg []byte) (ret interface{}, err error) {
 
 //------------------------------------------------------
 //
+// {"id":2,"method":"mining.authorize","params":["testrig.worker1",""]}
 //------------------------------------------------------
 func (r *request) getAuthName() (name string, err error) {
 
 	if r.Method != string(CLIENT_MINING_AUTHORIZE) {
-		return "", fmt.Errorf("wrong method")
+		return "", fmt.Errorf("wrong method, expetected mining.authorize")
 	}
 
 	fmt.Printf(" type:%T", r.Params)
@@ -259,6 +260,27 @@ func (r *request) getAuthName() (name string, err error) {
 	// name = r.Params.([]string)[0]
 
 	return name, err
+}
+
+//------------------------------------------------------
+//
+// {"id":2,"method":"mining.authorize","params":["testrig.worker1",""]}
+//------------------------------------------------------
+func (r *request) getSubmit() (userName string, jobId string, ExtraNonce2 string, nTime string, nonce string, err error) {
+
+	if r.Method != string(CLIENT_MINING_SUBMIT) {
+		return "", "","","","", fmt.Errorf("wrong method, expetected mining.submit")
+	}
+
+	fmt.Printf(" type:%T", r.Params)
+
+	userName = r.Params[0]
+	jobId = r.Params[1]
+	ExtraNonce2 = r.Params[2]
+	nTime = r.Params[3]
+	nonce = r.Params[4]
+
+	return userName, jobId, ExtraNonce2, nTime, nonce, err
 }
 
 //------------------------------------------------------
