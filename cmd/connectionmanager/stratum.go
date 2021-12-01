@@ -263,8 +263,7 @@ func (r *request) getAuthName() (name string, err error) {
 }
 
 //------------------------------------------------------
-//
-// {"id":2,"method":"mining.authorize","params":["testrig.worker1",""]}
+// extracts the mining.submit information being sent from the miner to the pool
 //------------------------------------------------------
 func (r *request) getSubmit() (userName string, jobId string, ExtraNonce2 string, nTime string, nonce string, err error) {
 
@@ -284,8 +283,48 @@ func (r *request) getSubmit() (userName string, jobId string, ExtraNonce2 string
 }
 
 //------------------------------------------------------
+// extracts the mining.notify information from the pool to the miner
+// returns a []byte to be used in parent function to construct a block header
+//------------------------------------------------------
+func (n *notice) getNotify() (msg []byte, err error) {
+
+	if n.Method != string(CLIENT_MINING_SUBMIT) {
+		return []byte(""), fmt.Errorf("wrong method, expetected mining.submit")
+	}
+
+	fmt.Printf(" type:%T", n.Params)
+
+	/*
+	code to obtain msg info and convert into a string
+	*/
+
+	return []byte(""), err
+}
+
+//------------------------------------------------------
+// extracts the mining.set_difficulty information from the pool to the miner
+// returns a string which can be used to update the validators target difficulty
+//------------------------------------------------------
+func (n *notice) getDifficulty() (msg string, err error) {
+
+	if n.Method != string(SERVER_MINING_SET_DIFFICULTY) {
+		return "", fmt.Errorf("wrong method, expetected mining.submit")
+	}
+
+	fmt.Printf(" type:%T", n.Params)
+
+	/*
+	difficulty = n.Params[0]
+	code to obtain the difficulty and return as a string
+	*/
+
+	return "", err
+}
+
+//------------------------------------------------------
 //
 //------------------------------------------------------
+
 func (r *request) createRequestMsg() (msg []byte, err error) {
 
 	err = nil
