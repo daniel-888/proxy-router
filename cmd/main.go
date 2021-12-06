@@ -75,9 +75,13 @@ func main() {
 	// Setup Default Dest
 	//
 
+	defaultpooladdr, err := config.ConfigGetVal(config.DefaultPoolAddr)
+	if err != nil {
+		panic(fmt.Sprintf("Getting Default Pool Address/URL: %s\n", err))
+	}
 	dest := msgbus.Dest{
 		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
-		NetUrl: msgbus.DestNetUrl("stratum+tcp://127.0.0.1:33334/"),
+		NetUrl: msgbus.DestNetUrl(defaultpooladdr),
 	}
 
 	event, err := ps.PubWait(msgbus.DestMsg, msgbus.IDString(msgbus.DEFAULT_DEST_ID), dest)
@@ -123,15 +127,7 @@ func main() {
 	if disablecontract == "false" {
 		var contractManagerConfig map[string]interface{}
 
-<<<<<<< HEAD
-		contractmanagerConfig, err = configurationmanager.LoadConfiguration(configFilePath, "contractManager")
-=======
-		if buyer {
-			contractManagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/buyerconfig.json", "contractManager")
-		} else {
-			contractManagerConfig, err = configurationmanager.LoadConfiguration("/home/sean/Titan/src/lumerin/cmd/configurationmanager/sellerconfig.json", "contractManager")
-		}
->>>>>>> origin/dev-ryan
+		contractManagerConfig, err = configurationmanager.LoadConfiguration(configFilePath, "contractManager")
 		if err != nil {
 			panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 		}

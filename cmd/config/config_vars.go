@@ -20,6 +20,7 @@ const (
 	ConfigConfigDownloadPath         ConfigConst = "ConfigConfigDownloadPath"
 	ConfigLogFilePath                ConfigConst = "ConfigLogFilePath"
 	ConfigLogLevel                   ConfigConst = "ConfigLogLevel"
+	DefaultPoolAddr                  ConfigConst = "DefaultPoolAddr"
 	DisableConnection                ConfigConst = "DisableConnection"
 	DisableContract                  ConfigConst = "DisableContract"
 	DisableSchedule                  ConfigConst = "DisableSchedule"
@@ -121,7 +122,6 @@ var ConfigMap = map[ConfigConst]configitem{
 		envval:     nil,
 		flagval:    nil,
 	},
-
 	ConfigContractShareDropTolerance: {
 		flagname:   "",
 		flagusage:  "",
@@ -164,6 +164,15 @@ var ConfigMap = map[ConfigConst]configitem{
 		flagusage: "Log File Path",
 		envname:   "LOGFILEPATH",
 		defval:    "lumerin.log",
+		configval: nil,
+		envval:    nil,
+		flagval:   nil,
+	},
+	DefaultPoolAddr: {
+		flagname:  "defaultpooladdr",
+		flagusage: "Default Pool URL",
+		envname:   "DefaultPoolAddr",
+		defval:    "stratum+tcp://127.0.0.1:33334/",
 		configval: nil,
 		envval:    nil,
 		flagval:   nil,

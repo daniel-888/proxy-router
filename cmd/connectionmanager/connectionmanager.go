@@ -1268,14 +1268,15 @@ func (c *connection) handleStateConnected() {
 			}
 		}
 
-		if c.connectionState == stateConnected {
-			err := c.waitDstMsg()
-			if err != nil {
-				fmt.Printf(lumerinlib.FileLine() + "waitDstMsg() returned error\n")
-				c.connectionState = stateError
-				return
-			}
-		}
+		// Whats this for again?
+		//if c.connectionState == stateConnected {
+		//	err := c.waitDstMsg()
+		//	if err != nil {
+		//		fmt.Printf(lumerinlib.FileLine() + "waitDstMsg() returned error\n")
+		//		c.connectionState = stateError
+		//		return
+		//	}
+		//}
 	}
 
 }
