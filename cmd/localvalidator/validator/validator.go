@@ -17,7 +17,7 @@ import (
 	"example.com/message"
 	"example.com/utils"
 	"example.com/validationInstance"
-	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -48,7 +48,14 @@ func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff
 				newM.Message = message.ConvertMessageToString(result)
 				messages <- newM //sends the message.HashResult struct into the channel
 			} else if m.MessageType == "getHashCompleted" {
-				fmt.Printf("%d", myValidator.HashesAnalyzed) //print number of hashes done
+				//print number of hashes done
+				result := message.HashCount{}
+				result.HashCount = strconv.FormatUint(uint64(myValidator.HashesAnalyzed), 10)
+				newM := m
+				newM.Message = message.ConvertMessageToString(result)
+				messages <- newM
+				//create a response object where the result is the hashes analyzed
+
 			} else if m.MessageType == "blockHeaderUpdate" {
 				bh := blockHeader.ConvertToBlockHeader(m.Message)
 				myValidator.UpdateBlockHeader(bh)

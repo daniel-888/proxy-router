@@ -38,6 +38,10 @@ type HashResult struct { //string will be true or false
 	IsCorrect string
 }
 
+type HashCount struct { //string will be an integer
+	HashCount string
+}
+
 //function to take any given message struct and convert it into a string
 func ConvertMessageToString(i interface{}) string {
 	v := reflect.ValueOf(i)
@@ -68,6 +72,13 @@ func ReceiveHashingRequest(m string) HashingInstance {
 //to the current block
 func ReceiveHashResult(m string) HashResult {
 	res := HashResult{}
+	json.Unmarshal([]byte(m), &res)
+	return res
+}
+
+//receives the number of hashes that have been counted
+func ReceiveHashCount(m string) HashCount {
+	res := HashCount{}
 	json.Unmarshal([]byte(m), &res)
 	return res
 }

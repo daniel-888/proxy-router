@@ -52,6 +52,15 @@ func createHashSubmissionMessage() message.Message {
 	return returnMessage
 }
 
+//create a message which asks the validator for the current hash count
+func createHashCounterRequestMessage() message.Message {
+	var returnMessage = message.Message{}
+	returnMessage.Address = "123"
+	returnMessage.MessageType = "getHashCompleted"
+	returnMessage.Message = ""
+	return returnMessage
+}
+
 //create a validator, send a hash, close validator
 func TestCreateValidator(t *testing.T) {
 	//creating a validator
@@ -77,7 +86,6 @@ func TestCreateValidatorValidateHashCloseValidator(t *testing.T) {
 	//sending a hash message to the validator
 	hashingMessage := createHashSubmissionMessage()
 	hashResult := validator.SendMessageToValidator(hashingMessage)
-
 	//should be a message where the Message is of type HashResult
 	if message.ReceiveHashResult(hashResult.Message).IsCorrect != "true" {
 		t.Errorf("incorrect hash: %v", message.ReceiveHashResult(hashResult.Message))
@@ -85,6 +93,30 @@ func TestCreateValidatorValidateHashCloseValidator(t *testing.T) {
 
 	//closing the validator
 	//still need a message to shut the validator down
+}
+
+//create a validator, send a hash, confirm hash results in true, close validator
+func TestSubmit2HashesVerifyCount(t *testing.T) {
+	//creating a validator
+	creationMessage := createTestValidator()
+	validator := MakeNewValidator()
+	validator.SendMessageToValidator(creationMessage)
+
+	//sending 2 mining.submit messages to validator
+	hashingMessage := createHashSubmissionMessage()
+	validator.SendMessageToValidator(hashingMessage)
+	validator.SendMessageToValidator(hashingMessage)
+
+	//creating hash request message
+	hashRequestMessage := createHashCounterRequestMessage()
+
+	//obtaining the hash verify response
+	//resultingHashes := validator.SendMessageToValidator(hashRequestMessage)
+	hashCount := validator.SendMessageToValidator(hashRequestMessage)
+	resultingHashCount := message.ReceiveHashCount(hashCount.Message).HashCount
+	if resultingHashCount != "2" {
+		t.Errorf("incorrect hashcount: %v", resultingHashCount)
+	}
 }
 
 /*
