@@ -289,7 +289,7 @@ func (r *request) getSubmit() (userName string, jobId string, ExtraNonce2 string
 func (n *notice) getNotify() (msg []byte, err error) {
 
 	if n.Method != string(CLIENT_MINING_SUBMIT) {
-		return []byte(""), fmt.Errorf("wrong method, expetected mining.submit")
+		return []byte(""), fmt.Errorf("wrong method, expetected mining.notify")
 	}
 
 	fmt.Printf(" type:%T", n.Params)
@@ -308,7 +308,7 @@ func (n *notice) getNotify() (msg []byte, err error) {
 func (n *notice) getDifficulty() (msg string, err error) {
 
 	if n.Method != string(SERVER_MINING_SET_DIFFICULTY) {
-		return "", fmt.Errorf("wrong method, expetected mining.submit")
+		return "", fmt.Errorf("wrong method, expetected mining.set_difficulty")
 	}
 
 	fmt.Printf(" type:%T", n.Params)
