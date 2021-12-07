@@ -77,9 +77,9 @@ type stratumMsg struct {
 // Used to build outgoing JSON message
 //
 type request struct {
-	ID     int      `json:"id"`
-	Method string   `json:"method"`
-	Params []string `json:"params"`
+	ID     int           `json:"id"`
+	Method string        `json:"method"`
+	Params []interface{} `json:"params"`
 }
 
 // notice ID is always null
@@ -209,14 +209,50 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 			r := &request{
 				ID:     msg.ID.(int),
 				Method: msg.Method.(string),
-				Params: make([]string, 0),
+				Params: make([]interface{}, 0),
 			}
-			for _, v := range msg.Params.([]interface{}) {
-				r.Params = append(r.Params, v.(string))
+
+			switch msg.Method.(string) {
+			case string(SERVER_MINING_NOTIFY):
+				r.Params = msg.Params.([]interface{})
+
+				//for _, v := range msg.Params.([]interface{}) {
+				//	switch v.(type) {
+				//	case string:
+				//		r.Params = append(r.Params, v.(string))
+				//	case []interface{}:
+				//		z := make([]string, 1)
+				//		for _, u := range v.([]string) {
+				//			z = append(z, u)
+				//		}
+				//		r.Params = append(r.Params, z)
+				//	default:
+				//		panic(fmt.Sprintf(lumerinlib.FileLine()+" Error bad type:%T\n", v))
+				//	}
+				//}
+
+			case string(SERVER_MINING_SET_DIFFICULTY):
+				for _, v := range msg.Params.([]interface{}) {
+					switch v.(type) {
+					case string:
+						r.Params = append(r.Params, v.(string))
+					case float32:
+						r.Params = append(r.Params, fmt.Sprintf("%f", v.(float32)))
+					case float64:
+						r.Params = append(r.Params, fmt.Sprintf("%f", v.(float64)))
+					default:
+						panic(fmt.Sprintf(lumerinlib.FileLine()+" Error bad type:%T\n", v))
+					}
+				}
+
+			default:
+
+				for _, v := range msg.Params.([]interface{}) {
+					r.Params = append(r.Params, v.(interface{}))
+				}
 			}
 
 			ret = r
-
 		}
 
 	} else {
@@ -256,8 +292,8 @@ func (r *request) getAuthName() (name string, err error) {
 
 	fmt.Printf(" type:%T", r.Params)
 
-	name = r.Params[0]
-	// name = r.Params.([]string)[0]
+	// name = r.Params[0]
+	name = r.Params[0].(string)
 
 	return name, err
 }
