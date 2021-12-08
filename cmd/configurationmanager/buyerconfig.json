@@ -16,8 +16,8 @@
     },
     "connectionScheduler": {},
     "contractManager": {
-        "nodeEthereumAddress": "0x0FDcC9fF7D6F5f79c4e80e797916713a2d05A9cA",
-        "nodeEthereumPrivateKey": "5a25d76802639b7df2f8b9c0339e67662db8a5e81368288dde5bcef0bf606de9",
+        "nodeEthereumAddress": "0xE625d94ba0D9ACF8dc03a608B28C3dcc47e061A4",
+        "nodeEthereumPrivateKey": "9941bb18732dfdfb7b92343afda3f8ec2dd0208fe5fc471df0f49db72749ea76",
         "rpcClientAddress": "wss://ropsten.infura.io/ws/v3/4b68229d56fe496e899f07c3d41cb08a",
         "cloneFactoryAddress": "0x32ef573e7B4AbE68146FCb43F1159D2CAd910426",
         "webFacingAddress": "0x9BC541E50b8f49B62341401D0Ffa2845c05b304d",

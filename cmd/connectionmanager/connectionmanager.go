@@ -908,7 +908,9 @@ func (c *connection) handleStateRouting() {
 	//
 	// Close any existing connection
 	//
-	c.dstConn.close()
+	if c.isDstSocketClosed() {
+		c.dstConn.close()
+	}
 
 	// Is there a MinerID
 	// Get current miner DestID

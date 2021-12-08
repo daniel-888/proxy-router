@@ -331,8 +331,20 @@ func (seller *SellerContractManager) watchHashrateContract(addr msgbus.ContractI
 					seller.msg.ActiveContracts[addr] = false
 					seller.msg.RunningContracts[addr] = true
 					seller.ps.SetWait(msgbus.SellerMsg, msgbus.IDString(seller.msg.ID), seller.msg)
-					contractValues := readHashrateContract(seller.rpcClient, common.HexToAddress(string(addr)))
-					contractMsg := createContractMsg(common.HexToAddress(string(addr)), contractValues, true)
+
+					event, err := seller.ps.GetWait(msgbus.ContractMsg, msgbus.IDString(addr))
+					if err != nil {
+						panic(fmt.Sprintf("Getting Purchased Contract Failed: %s", err))
+					}
+					if event.Err != nil {
+						panic(fmt.Sprintf("Getting Purchased Contract Failed: %s", event.Err))
+					}
+					contractMsg := event.Data.(msgbus.Contract)
+					contractMsg.State = msgbus.ContRunningState
+
+
+					// contractValues := readHashrateContract(seller.rpcClient, common.HexToAddress(string(addr)))
+					// contractMsg := createContractMsg(common.HexToAddress(string(addr)), contractValues, true)
 					seller.ps.SetWait(msgbus.ContractMsg, msgbus.IDString(addr), contractMsg)
 
 				case contractClosedSigHash.Hex():
@@ -392,10 +404,10 @@ func (seller *SellerContractManager) closeOutMonitor(contractMsg msgbus.Contract
 			// check if contract length has passed
 			if block.Time() >= uint64(contractFinishedTimestamp) {
 				// if contract was not already closed early, close out here
-				contractValues := readHashrateContract(seller.rpcClient, common.HexToAddress(string(contractMsg.ID)))
-				if contractValues.State == RunningState {
-					setContractCloseOut(seller.rpcClient, seller.account, seller.privateKey, common.HexToAddress(string(contractMsg.ID)))
-				}
+				// contractValues := readHashrateContract(seller.rpcClient, common.HexToAddress(string(contractMsg.ID)))
+				//if contractValues.State == RunningState {
+				//	setContractCloseOut(seller.rpcClient, seller.account, seller.privateKey, common.HexToAddress(string(contractMsg.ID)))
+				//}
 				break loop
 			}
 		}

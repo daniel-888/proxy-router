@@ -251,9 +251,9 @@ func goSocketReader(s *socketconn) {
 
 	fmt.Printf(lumerinlib.Funcname()+" %s Socket\n", s.name)
 
-	if s.stopReader != nil {
-		panic(fmt.Sprintf(lumerinlib.FileLine()+" stopReader not nill: %s\n", s.name))
-	}
+	// if s.stopReader != nil {
+	//	panic(fmt.Sprintf(lumerinlib.FileLine()+" stopReader not nill: %s\n", s.name))
+	// }
 
 	s.stopReader = make(chan bool, 0)
 
