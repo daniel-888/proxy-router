@@ -123,15 +123,7 @@ func main() {
 	if disablecontract == "false" {
 		var contractManagerConfig map[string]interface{}
 
-<<<<<<< HEAD
-		contractmanagerConfig, err = configurationmanager.LoadConfiguration(configFilePath, "contractManager")
-=======
-		if buyer {
-			contractManagerConfig, err = configurationmanager.LoadConfiguration("/Users/ryanbajollari/go/src/lumerin/cmd/configurationmanager/buyerconfig.json", "contractManager")
-		} else {
-			contractManagerConfig, err = configurationmanager.LoadConfiguration("/Users/ryanbajollari/go/src/lumerin/cmd/configurationmanager/sellerconfig.json", "contractManager")
-		}
->>>>>>> origin/dev-ryan
+		contractManagerConfig, err = configurationmanager.LoadConfiguration(configFilePath, "contractManager")
 		if err != nil {
 			panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 		}

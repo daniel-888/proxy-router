@@ -18,6 +18,8 @@ import (
 
 func LoadConfiguration(file string, pkg string) (map[string]interface{}, error) {
 	var data map[string]interface{}
+    fmt.Println(os.Getwd())
+    os.Chdir("/Users/ryanbajollari/go/src/lumerin")
 	configFile, err := os.Open(file)
 	if err != nil {
 		return data, err
