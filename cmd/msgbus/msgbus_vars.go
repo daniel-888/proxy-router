@@ -5,9 +5,7 @@ type MinerState string
 
 const (
 	ContAvailableState ContractState = "AvailableState"
-	ContActiveState    ContractState = "ActiveState"
 	ContRunningState   ContractState = "RunningState"
-	ContCompleteState  ContractState = "CompleteState"
 )
 
 // Need to figure out the IDString for this, for now it is just a string
@@ -29,18 +27,13 @@ type Seller struct {
 	DefaultDest            DestID
 	TotalAvailableHashRate int
 	UnusedHashRate         int
-	AvailableContracts     map[ContractID]bool
-	ActiveContracts        map[ContractID]bool
-	RunningContracts       map[ContractID]bool
-	CompleteContracts      map[ContractID]bool
+	Contracts       	   map[ContractID]ContractState
 }
 
 type Buyer struct {
 	ID                BuyerID
 	DefaultDest       DestID
-	ActiveContracts   map[ContractID]bool
-	RunningContracts  map[ContractID]bool
-	CompleteContracts map[ContractID]bool
+	Contracts         map[ContractID]ContractState
 }
 
 type Contract struct {
@@ -52,7 +45,6 @@ type Contract struct {
 	Limit                  int
 	Speed                  int
 	Length                 int
-	ValidationFee          int
 	StartingBlockTimestamp int
 	Dest                   DestID
 }

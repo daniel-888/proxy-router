@@ -15,7 +15,6 @@ func TestAddContract(t *testing.T) {
 		Speed: 			100,
 		Length: 		100,
 		Port: 			100,
-		ValidationFee:	100,
 		StartingBlockTimestamp: 100,
 	}
 	
@@ -38,7 +37,6 @@ func TestGetAllContracts(t *testing.T) {
 		contract[i].Speed = 100
 		contract[i].Length = 100
 		contract[i].Port = 100
-		contract[i].ValidationFee = 100
 		contract[i].StartingBlockTimestamp = 100
 	}
 	
@@ -64,7 +62,6 @@ func TestGetContract(t *testing.T) {
 		contract[i].Speed = 100
 		contract[i].Length = 100
 		contract[i].Port = 100
-		contract[i].ValidationFee = 100
 		contract[i].StartingBlockTimestamp = 100
 	}
 	
@@ -94,7 +91,6 @@ func TestUpdateContract(t *testing.T) {
 		contract[i].Speed = 100
 		contract[i].Length = 100
 		contract[i].Port = 100
-		contract[i].ValidationFee = 100
 		contract[i].StartingBlockTimestamp = 100
 	}
 	
@@ -112,7 +108,6 @@ func TestUpdateContract(t *testing.T) {
 		Speed: 			0,
 		Length: 		0,
 		Port: 			0,
-		ValidationFee:	0,
 		StartingBlockTimestamp: 100,
 	}
 	
@@ -144,7 +139,6 @@ func TestDeleteContract(t *testing.T) {
 		contract[i].Speed = 100
 		contract[i].Length = 100
 		contract[i].Port = 100
-		contract[i].ValidationFee = 100
 		contract[i].StartingBlockTimestamp = 100
 	}
 	

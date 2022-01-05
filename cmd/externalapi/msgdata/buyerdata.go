@@ -8,11 +8,9 @@ import (
 
 //Struct of Buyer parameters in JSON 
 type BuyerJSON struct {
-	ID                     	string 						`json:"id"`
-	DefaultDest          	string 						`json:"destID"`
-	ActiveContracts			map[msgbus.ContractID]bool	`json:"activeContracts"`
-	RunningContracts		map[msgbus.ContractID]bool	`json:"runningContracts"`
-	CompleteContracts		map[msgbus.ContractID]bool	`json:"completeContracts"`
+	ID          string 										`json:"id"`
+	DefaultDest string 										`json:"destID"`
+	Contracts	map[msgbus.ContractID]msgbus.ContractState	`json:"contracts"`
 }
 
 //Struct that stores slice of all JSON Buyer structs in Repo
@@ -51,9 +49,7 @@ func (r *BuyerRepo) AddBuyerFromMsgBus(buyer msgbus.Buyer) {
 
 	buyerJSON.ID = string(buyer.ID)
 	buyerJSON.DefaultDest = string(buyer.DefaultDest)
-	buyerJSON.ActiveContracts = buyer.ActiveContracts
-	buyerJSON.RunningContracts = buyer.RunningContracts
-	buyerJSON.CompleteContracts = buyer.CompleteContracts
+	buyerJSON.Contracts = buyer.Contracts
 	
 	r.BuyerJSONs = append(r.BuyerJSONs, buyerJSON)
 }
@@ -63,9 +59,7 @@ func (r *BuyerRepo) UpdateBuyer(id string, newBuyer BuyerJSON) error {
 	for i,d := range r.BuyerJSONs {
 		if d.ID == id {
 			if newBuyer.DefaultDest != "" {r.BuyerJSONs[i].DefaultDest = newBuyer.DefaultDest}
-			if newBuyer.ActiveContracts != nil {r.BuyerJSONs[i].ActiveContracts = newBuyer.ActiveContracts}
-			if newBuyer.RunningContracts != nil {r.BuyerJSONs[i].RunningContracts = newBuyer.RunningContracts}
-			if newBuyer.CompleteContracts != nil {r.BuyerJSONs[i].CompleteContracts = newBuyer.CompleteContracts}
+			if newBuyer.Contracts != nil {r.BuyerJSONs[i].Contracts = newBuyer.Contracts}
 			return nil
 		}
 	}
@@ -87,9 +81,7 @@ func (r *BuyerRepo) DeleteBuyer(id string) error {
 func ConvertBuyerJSONtoBuyerMSG(buyer BuyerJSON, msg msgbus.Buyer) msgbus.Buyer {
 	msg.ID = msgbus.BuyerID(buyer.ID)
 	msg.DefaultDest = msgbus.DestID(buyer.DefaultDest)
-	msg.ActiveContracts = buyer.ActiveContracts
-	msg.RunningContracts = buyer.RunningContracts
-	msg.CompleteContracts = buyer.CompleteContracts
+	msg.Contracts = buyer.Contracts
 
 	return msg	
 }
@@ -97,9 +89,7 @@ func ConvertBuyerJSONtoBuyerMSG(buyer BuyerJSON, msg msgbus.Buyer) msgbus.Buyer 
 func ConvertBuyerMSGtoBuyerJSON(msg msgbus.Buyer) (buyer BuyerJSON) {
 	buyer.ID = string(msg.ID)
 	buyer.DefaultDest = string(msg.DefaultDest)
-	buyer.ActiveContracts = msg.ActiveContracts
-	buyer.RunningContracts = msg.RunningContracts
-	buyer.CompleteContracts = msg.CompleteContracts
+	buyer.Contracts = msg.Contracts
 
 	return buyer	
 }

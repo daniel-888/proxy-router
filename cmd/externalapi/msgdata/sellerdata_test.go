@@ -14,21 +14,11 @@ func TestAddSeller(t *testing.T) {
 		TotalAvailableHashRate: 100,
 		UnusedHashRate:         100,
 	}
-	seller.AvailableContracts = map[msgbus.ContractID]bool{
-		"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
-        "0x89921E8D51D22252D64EA34340A4161696887271": false,
-        "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
-	}
-	seller.CompleteContracts = map[msgbus.ContractID]bool{
-		"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": true,
-        "0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": false,
-        "0x397729E80F77BA09D930FE24E8D1FC74372E86D3": true,
+	seller.Contracts = map[msgbus.ContractID]msgbus.ContractState{
+		"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": msgbus.ContRunningState,
+        "0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": msgbus.ContAvailableState,
+        "0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
 	}   
-    seller.ActiveContracts = map[msgbus.ContractID]bool{
-		"0x9F252E1EC723AF6D96A36B4EB2B75A262291497C": true,
-        "0xBB2EAAAAA9B08EC320FC984D7D19E28835DD94DD": false,
-        "0x407E8A225658FEE384859874952E2BBC11E98B5C": true,
-	}
 
 	sellerRepo := NewSeller()
 	sellerRepo.AddSeller(seller)
@@ -45,21 +35,11 @@ func TestGetAllSellers(t *testing.T) {
 		seller[i].DefaultDest = "Test"
 		seller[i].TotalAvailableHashRate = 100
 		seller[i].UnusedHashRate = 100
-		seller[i].AvailableContracts = map[msgbus.ContractID]bool{
-			"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
-			"0x89921E8D51D22252D64EA34340A4161696887271": false,
-			"0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
-		}
-		seller[i].CompleteContracts = map[msgbus.ContractID]bool{
-			"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": true,
-			"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": false,
-			"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": true,
-		}   
-		seller[i].ActiveContracts = map[msgbus.ContractID]bool{
-			"0x9F252E1EC723AF6D96A36B4EB2B75A262291497C": true,
-			"0xBB2EAAAAA9B08EC320FC984D7D19E28835DD94DD": false,
-			"0x407E8A225658FEE384859874952E2BBC11E98B5C": true,
-		}
+		seller[i].Contracts = map[msgbus.ContractID]msgbus.ContractState{
+			"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": msgbus.ContRunningState,
+			"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": msgbus.ContAvailableState,
+			"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
+		}  
 	}
 	
 	sellerRepo := NewSeller()
@@ -80,21 +60,11 @@ func TestGetSeller(t *testing.T) {
 		seller[i].DefaultDest = "Test"
 		seller[i].TotalAvailableHashRate = 100
 		seller[i].UnusedHashRate = 100
-		seller[i].AvailableContracts = map[msgbus.ContractID]bool{
-			"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
-			"0x89921E8D51D22252D64EA34340A4161696887271": false,
-			"0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
-		}
-		seller[i].CompleteContracts = map[msgbus.ContractID]bool{
-			"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": true,
-			"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": false,
-			"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": true,
-		}   
-		seller[i].ActiveContracts = map[msgbus.ContractID]bool{
-			"0x9F252E1EC723AF6D96A36B4EB2B75A262291497C": true,
-			"0xBB2EAAAAA9B08EC320FC984D7D19E28835DD94DD": false,
-			"0x407E8A225658FEE384859874952E2BBC11E98B5C": true,
-		}
+		seller[i].Contracts = map[msgbus.ContractID]msgbus.ContractState{
+			"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": msgbus.ContRunningState,
+			"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": msgbus.ContAvailableState,
+			"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
+		}  
 	}
 	
 	sellerRepo := NewSeller()
@@ -119,21 +89,11 @@ func TestUpdateSeller(t *testing.T) {
 		seller[i].DefaultDest = "Test"
 		seller[i].TotalAvailableHashRate = 100
 		seller[i].UnusedHashRate = 100
-		seller[i].AvailableContracts = map[msgbus.ContractID]bool{
-			"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
-			"0x89921E8D51D22252D64EA34340A4161696887271": false,
-			"0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
-		}
-		seller[i].CompleteContracts = map[msgbus.ContractID]bool{
-			"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": true,
-			"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": false,
-			"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": true,
-		}   
-		seller[i].ActiveContracts = map[msgbus.ContractID]bool{
-			"0x9F252E1EC723AF6D96A36B4EB2B75A262291497C": true,
-			"0xBB2EAAAAA9B08EC320FC984D7D19E28835DD94DD": false,
-			"0x407E8A225658FEE384859874952E2BBC11E98B5C": true,
-		}
+		seller[i].Contracts = map[msgbus.ContractID]msgbus.ContractState{
+			"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": msgbus.ContRunningState,
+			"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": msgbus.ContAvailableState,
+			"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
+		}  
 	}
 	
 	sellerRepo := NewSeller()
@@ -147,9 +107,7 @@ func TestUpdateSeller(t *testing.T) {
 		TotalAvailableHashRate: 10001,
 		UnusedHashRate:         0,
 	}
-	sellerUpdates.AvailableContracts = map[msgbus.ContractID]bool{}
-	sellerUpdates.CompleteContracts = map[msgbus.ContractID]bool{}   
-    sellerUpdates.ActiveContracts = map[msgbus.ContractID]bool{}
+	sellerUpdates.Contracts = map[msgbus.ContractID]msgbus.ContractState{}
 	
 	var results [10]SellerJSON
 	var errors [10]error
@@ -175,21 +133,11 @@ func TestDeleteSeller(t *testing.T) {
 		seller[i].DefaultDest = "Test"
 		seller[i].TotalAvailableHashRate = 100
 		seller[i].UnusedHashRate = 100
-		seller[i].AvailableContracts = map[msgbus.ContractID]bool{
-			"0x85A256C5688D012263D5A79EE37E84FC35EC4524": true,
-			"0x89921E8D51D22252D64EA34340A4161696887271": false,
-			"0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3": true,
-		}
-		seller[i].CompleteContracts = map[msgbus.ContractID]bool{
-			"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": true,
-			"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": false,
-			"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": true,
-		}   
-		seller[i].ActiveContracts = map[msgbus.ContractID]bool{
-			"0x9F252E1EC723AF6D96A36B4EB2B75A262291497C": true,
-			"0xBB2EAAAAA9B08EC320FC984D7D19E28835DD94DD": false,
-			"0x407E8A225658FEE384859874952E2BBC11E98B5C": true,
-		}
+		seller[i].Contracts = map[msgbus.ContractID]msgbus.ContractState{
+			"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": msgbus.ContRunningState,
+			"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": msgbus.ContAvailableState,
+			"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
+		}  
 	}
 	
 	sellerRepo := NewSeller()

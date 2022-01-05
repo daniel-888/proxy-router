@@ -127,10 +127,7 @@ func main() {
 		if err != nil {
 			panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 		}
-
-		if err != nil {
-			panic(fmt.Sprintf("contract manager failed:%s", err))
-		}
+		
 		if buyer {
 			var buyerCM contractmanager.BuyerContractManager
 			err = contractmanager.Run(&buyerCM, ps, contractManagerConfig)
@@ -139,7 +136,7 @@ func main() {
 			err = contractmanager.Run(&sellerCM, ps, contractManagerConfig)
 		}
 		if err != nil {
-			panic(fmt.Sprintf("contract manager failed to start:%s", err))
+			panic(fmt.Sprintf("contract manager failed to run:%s", err))
 		}
 	}
 

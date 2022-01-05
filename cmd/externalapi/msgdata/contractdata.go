@@ -16,7 +16,6 @@ type ContractJSON struct {
 	Speed			 		int		`json:"speed"`
 	Length        	 		int		`json:"length"`
 	Port          	 		int		`json:"port"`
-	ValidationFee    		int		`json:"validationFee"`
 	StartingBlockTimestamp	int		`json:"startingBlockTimestamp"`
 }
 
@@ -61,7 +60,6 @@ func (r *ContractRepo) AddContractFromMsgBus(contract msgbus.Contract) {
 	contractJSON.Limit = contract.Limit
 	contractJSON.Speed = contract.Speed
 	contractJSON.Length = contract.Length
-	contractJSON.ValidationFee = contract.ValidationFee
 	contractJSON.StartingBlockTimestamp = contract.StartingBlockTimestamp
 	
 	r.ContractJSONs = append(r.ContractJSONs, contractJSON)
@@ -78,7 +76,6 @@ func (r *ContractRepo) UpdateContract(id string, newContract ContractJSON) error
 			if newContract.Speed != 0 {r.ContractJSONs[i].Speed = newContract.Speed}
 			if newContract.Length != 0 {r.ContractJSONs[i].Length = newContract.Length}
 			if newContract.Port != 0 {r.ContractJSONs[i].Port = newContract.Port}
-			if newContract.ValidationFee != 0 {r.ContractJSONs[i].ValidationFee = newContract.ValidationFee}
 			if newContract.StartingBlockTimestamp != 0 {r.ContractJSONs[i].StartingBlockTimestamp = newContract.StartingBlockTimestamp}
 
 			return nil
@@ -107,7 +104,6 @@ func ConvertContractJSONtoContractMSG(contract ContractJSON, msg msgbus.Contract
 	msg.Limit = contract.Limit
 	msg.Speed = contract.Speed
 	msg.Length = contract.Length
-	msg.ValidationFee = contract.ValidationFee
 	msg.StartingBlockTimestamp = contract.StartingBlockTimestamp
 
 	return msg	
@@ -121,7 +117,6 @@ func ConvertContractMSGtoContractJSON(msg msgbus.Contract) (contract ContractJSO
 	contract.Limit = msg.Limit
 	contract.Speed = msg.Speed
 	contract.Length = msg.Length
-	contract.ValidationFee = msg.ValidationFee
 	contract.StartingBlockTimestamp = msg.StartingBlockTimestamp
 
 	return contract	
