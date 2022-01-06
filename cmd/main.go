@@ -6,6 +6,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
+
 	//"gitlab.com/TitanInd/lumerin/cmd/testmod"
 
 	"gitlab.com/TitanInd/lumerin/cmd/config"
@@ -75,9 +76,13 @@ func main() {
 	// Setup Default Dest
 	//
 
+	defaultpooladdr, err := config.ConfigGetVal(config.DefaultPoolAddr)
+	if err != nil {
+		panic(fmt.Sprintf("Getting Default Pool Address/URL: %s\n", err))
+	}
 	dest := msgbus.Dest{
 		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
-		NetUrl: msgbus.DestNetUrl("stratum+tcp://127.0.0.1:33334/"),
+		NetUrl: msgbus.DestNetUrl(defaultpooladdr),
 	}
 
 	event, err := ps.PubWait(msgbus.DestMsg, msgbus.IDString(msgbus.DEFAULT_DEST_ID), dest)
@@ -127,7 +132,7 @@ func main() {
 		if err != nil {
 			panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 		}
-		
+
 		if buyer {
 			var buyerCM contractmanager.BuyerContractManager
 			err = contractmanager.Run(&buyerCM, ps, contractManagerConfig)
