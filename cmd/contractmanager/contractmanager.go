@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -43,8 +44,8 @@ type hashrateContractValues struct {
 }
 
 type nonce struct {
-	mutex	sync.Mutex
-	nonce	uint64
+	mutex sync.Mutex
+	nonce uint64
 }
 
 type ContractManager interface {
@@ -56,27 +57,27 @@ type ContractManager interface {
 }
 
 type BuyerContractManager struct {
-	ps                  	*msgbus.PubSub
-	rpcClient           	*ethclient.Client
-	cloneFactoryAddress    	common.Address
-	account             	common.Address
-	privateKey          	string
-	currentNonce			nonce
-	msg						msgbus.Buyer
-	api						externalapi.APIRepos
-	miners					map[msgbus.MinerID]msgbus.Miner
-}	
+	ps                  *msgbus.PubSub
+	rpcClient           *ethclient.Client
+	cloneFactoryAddress common.Address
+	account             common.Address
+	privateKey          string
+	currentNonce        nonce
+	msg                 msgbus.Buyer
+	api                 externalapi.APIRepos
+	miners              map[msgbus.MinerID]msgbus.Miner
+}
 
 type SellerContractManager struct {
-	ps                  	*msgbus.PubSub
-	rpcClient           	*ethclient.Client
-	cloneFactoryAddress 	common.Address
-	account             	common.Address
-	privateKey          	string
-	claimFunds				bool
-	currentNonce			nonce
-	msg						msgbus.Seller
-	api						externalapi.APIRepos
+	ps                  *msgbus.PubSub
+	rpcClient           *ethclient.Client
+	cloneFactoryAddress common.Address
+	account             common.Address
+	privateKey          string
+	claimFunds          bool
+	currentNonce        nonce
+	msg                 msgbus.Seller
+	api                 externalapi.APIRepos
 }
 
 func Run(contractManager ContractManager, ps *msgbus.PubSub, cmConfig map[string]interface{}) (err error) {
@@ -108,9 +109,9 @@ func (seller *SellerContractManager) init(ps *msgbus.PubSub, cmConfig map[string
 
 	contractsMap := make(map[msgbus.ContractID]msgbus.ContractState)
 
-	sellerMsg := msgbus.Seller {
-		ID: msgbus.SellerID(seller.account.Hex()),
-		Contracts: 	contractsMap,
+	sellerMsg := msgbus.Seller{
+		ID:        msgbus.SellerID(seller.account.Hex()),
+		Contracts: contractsMap,
 	}
 
 	seller.msg = sellerMsg
@@ -150,7 +151,7 @@ func (seller *SellerContractManager) start() (err error) {
 		if err != nil {
 			panic(fmt.Sprintf("Failed to subscribe to contract events on msgbus, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err))
 		}
-		for {	
+		for {
 			event := <-contractEventChan
 			if event.EventType == msgbus.PublishEvent {
 				newContract := event.Data.(msgbus.Contract)
@@ -168,7 +169,7 @@ func (seller *SellerContractManager) start() (err error) {
 	return err
 }
 
-func (seller *SellerContractManager) setupExistingContracts() (err error){
+func (seller *SellerContractManager) setupExistingContracts() (err error) {
 	var contractValues []hashrateContractValues
 	var contractMsgs []msgbus.Contract
 
@@ -262,7 +263,7 @@ func (seller *SellerContractManager) watchContractCreation(cfLogs chan types.Log
 				}
 				if hashrateContractSeller == seller.account {
 					fmt.Printf("Address of created Hashrate Contract: %s\n\n", address.Hex())
-	
+
 					createdContractValues, err := readHashrateContract(seller.rpcClient, address)
 					if err != nil {
 						panic(fmt.Sprintf("Reading hashrate contract failed, Fileline::%s, Error::%v", lumerinlib.FileLine(), err))
@@ -270,9 +271,9 @@ func (seller *SellerContractManager) watchContractCreation(cfLogs chan types.Log
 					createdContractMsg := createContractMsg(address, createdContractValues, true)
 					seller.ps.PubWait(msgbus.ContractMsg, msgbus.IDString(address.Hex()), createdContractMsg)
 					seller.api.Contract.AddContractFromMsgBus(createdContractMsg)
-	
+
 					seller.msg.Contracts[msgbus.ContractID(address.Hex())] = msgbus.ContAvailableState
-	
+
 					seller.ps.SetWait(msgbus.SellerMsg, msgbus.IDString(seller.msg.ID), seller.msg)
 					seller.api.Seller.UpdateSeller(string(seller.msg.ID), msgdata.ConvertSellerMSGtoSellerJSON(seller.msg))
 				}
@@ -320,7 +321,7 @@ func (seller *SellerContractManager) watchHashrateContract(addr msgbus.ContractI
 				case contractPurchasedSigHash.Hex():
 					buyer := common.HexToAddress(hLog.Topics[1].Hex())
 					fmt.Printf("%s purchased Hashrate Contract: %s\n\n", buyer.Hex(), addr)
-					
+
 					destUrl, err := readDestUrl(seller.rpcClient, common.HexToAddress(string(addr)), seller.privateKey)
 					if err != nil {
 						panic(fmt.Sprintf("Reading dest url failed, Fileline::%s, Error::%v", lumerinlib.FileLine(), err))
@@ -331,7 +332,7 @@ func (seller *SellerContractManager) watchHashrateContract(addr msgbus.ContractI
 					}
 					seller.ps.PubWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
 					seller.api.Dest.AddDestFromMsgBus(destMsg)
-				
+
 					event, err := seller.ps.GetWait(msgbus.ContractMsg, msgbus.IDString(addr))
 					if err != nil {
 						panic(fmt.Sprintf("Getting Purchased Contract Failed: %s", err))
@@ -377,7 +378,7 @@ func (seller *SellerContractManager) watchHashrateContract(addr msgbus.ContractI
 					destUrl, err := readDestUrl(seller.rpcClient, common.HexToAddress(string(addr)), seller.privateKey)
 					if err != nil {
 						panic(fmt.Sprintf("Reading dest url failed, Fileline::%s, Error::%v", lumerinlib.FileLine(), err))
-					}				
+					}
 					destMsg.NetUrl = msgbus.DestNetUrl(destUrl)
 					seller.ps.SetWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
 
@@ -396,7 +397,7 @@ func (seller *SellerContractManager) watchHashrateContract(addr msgbus.ContractI
 					contractMsg.Buyer = ""
 					seller.ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contractMsg.ID), contractMsg)
 					seller.api.Contract.UpdateContract(string(addr), msgdata.ConvertContractMSGtoContractJSON(contractMsg))
-					
+
 					seller.msg.Contracts[addr] = msgbus.ContAvailableState
 					seller.ps.SetWait(msgbus.SellerMsg, msgbus.IDString(seller.msg.ID), seller.msg)
 					seller.api.Seller.UpdateSeller(string(seller.msg.ID), msgdata.ConvertSellerMSGtoSellerJSON(seller.msg))
@@ -412,7 +413,7 @@ func (seller *SellerContractManager) watchHashrateContract(addr msgbus.ContractI
 						panic(fmt.Sprintf("Getting Purchased Contract Failed: %s", event.Err))
 					}
 					contractMsg := event.Data.(msgbus.Contract)
-				
+
 					updatedContractValues, err := readHashrateContract(seller.rpcClient, common.HexToAddress(string(addr)))
 					if err != nil {
 						panic(fmt.Sprintf("Reading hashrate contract failed, Fileline::%s, Error::%v", lumerinlib.FileLine(), err))
@@ -438,7 +439,7 @@ func (seller *SellerContractManager) watchHashrateContract(addr msgbus.ContractI
 				// run routine for each running contract to check if contract length has passed and contract should be closed out
 				go seller.closeOutMonitor(runningContractMsg)
 			}
-		}		
+		}
 	}
 }
 
@@ -454,7 +455,7 @@ func (seller *SellerContractManager) closeOutMonitor(contractMsg msgbus.Contract
 	defer close(headers)
 	defer sub.Unsubscribe()
 
-	loop:
+loop:
 	for {
 		select {
 		case err := <-sub.Err():
@@ -512,9 +513,9 @@ func (buyer *BuyerContractManager) init(ps *msgbus.PubSub, cmConfig map[string]i
 
 	contractsMap := make(map[msgbus.ContractID]msgbus.ContractState)
 
-	buyerMsg := msgbus.Buyer {
-		ID: msgbus.BuyerID(buyer.account.Hex()),
-		Contracts: 	contractsMap,
+	buyerMsg := msgbus.Buyer{
+		ID:        msgbus.BuyerID(buyer.account.Hex()),
+		Contracts: contractsMap,
 	}
 
 	buyer.msg = buyerMsg
@@ -579,7 +580,7 @@ func (buyer *BuyerContractManager) start() (err error) {
 		if err != nil {
 			panic(fmt.Sprintf("Failed to subscribe to contract events on msgbus, Fileline::%s, Error::%s\n", lumerinlib.FileLine(), err))
 		}
-		for {	
+		for {
 			event := <-contractEventChan
 			if event.EventType == msgbus.PublishEvent {
 				newContract := event.Data.(msgbus.Contract)
@@ -667,13 +668,13 @@ func (buyer *BuyerContractManager) watchContractPurchase(cfLogs chan types.Log, 
 	// create event signature to parse out purchase event
 	clonefactoryContractPurchasedSig := []byte("clonefactoryContractPurchased(address)")
 	clonefactoryContractPurchasedSigHash := crypto.Keccak256Hash(clonefactoryContractPurchasedSig)
-	
+
 	for {
 		select {
 		case err := <-cfSub.Err():
 			panic(fmt.Sprintf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err))
 		case cfLog := <-cfLogs:
-			if cfLog.Topics[0].Hex() ==  clonefactoryContractPurchasedSigHash.Hex() {
+			if cfLog.Topics[0].Hex() == clonefactoryContractPurchasedSigHash.Hex() {
 				address := common.HexToAddress(cfLog.Topics[1].Hex())
 				// check if contract was purchased by buyer
 				hashrateContractInstance, err := implementation.NewImplementation(address, buyer.rpcClient)
@@ -686,7 +687,7 @@ func (buyer *BuyerContractManager) watchContractPurchase(cfLogs chan types.Log, 
 				}
 				if hashrateContractBuyer == buyer.account {
 					fmt.Printf("Address of purchased Hashrate Contract : %s\n\n", address.Hex())
-					
+
 					destUrl, err := readDestUrl(buyer.rpcClient, common.HexToAddress(string(address.Hex())), buyer.privateKey)
 					if err != nil {
 						panic(fmt.Sprintf("Reading dest url failed, Fileline::%s, Error::%v", lumerinlib.FileLine(), err))
@@ -733,6 +734,7 @@ func (buyer *BuyerContractManager) watchHashrateContract(addr msgbus.ContractID,
 	hashrateContractMsg := event.Data.(msgbus.Contract)
 	if hashrateContractMsg.State == msgbus.ContRunningState {
 		// check hashrate is being fulfilled for all running contracts
+		time.Sleep(time.Second * 10)
 		buyer.checkHashRate(common.HexToAddress(string(hashrateContractMsg.ID)))
 	}
 
@@ -751,7 +753,7 @@ func (buyer *BuyerContractManager) watchHashrateContract(addr msgbus.ContractID,
 			case err := <-hrSub.Err():
 				log.Fatal(err)
 			case hLog := <-hrLogs:
-				switch hLog.Topics[0].Hex() {					
+				switch hLog.Topics[0].Hex() {
 				case contractClosedSigHash.Hex():
 					fmt.Printf("Hashrate Contract %s Closed \n\n", addr)
 
@@ -779,7 +781,7 @@ func (buyer *BuyerContractManager) watchHashrateContract(addr msgbus.ContractID,
 						panic(fmt.Sprintf("Getting Purchased Contract Failed: %s", event.Err))
 					}
 					contractMsg := event.Data.(msgbus.Contract)
-				
+
 					updatedContractValues, err := readHashrateContract(buyer.rpcClient, common.HexToAddress(string(addr)))
 					if err != nil {
 						panic(fmt.Sprintf("Reading hashrate contract failed, Fileline::%s, Error::%v", lumerinlib.FileLine(), err))
@@ -808,10 +810,10 @@ func (buyer *BuyerContractManager) watchHashrateContract(addr msgbus.ContractID,
 					}
 					destMsg := event.Data.(msgbus.Dest)
 
-					destUrl, err := readDestUrl(buyer.rpcClient, common.HexToAddress(string(addr)), buyer.privateKey)	
+					destUrl, err := readDestUrl(buyer.rpcClient, common.HexToAddress(string(addr)), buyer.privateKey)
 					if err != nil {
 						panic(fmt.Sprintf("Reading dest url failed, Fileline::%s, Error::%v", lumerinlib.FileLine(), err))
-					}				
+					}
 					destMsg.NetUrl = msgbus.DestNetUrl(destUrl)
 					buyer.ps.SetWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
 				}
@@ -833,13 +835,13 @@ func (buyer *BuyerContractManager) watchHashrateContract(addr msgbus.ContractID,
 				// check hashrate is being fulfilled for all running contracts
 				buyer.checkHashRate(common.HexToAddress(string(runningContractMsg.ID)))
 			}
-		}		
+		}
 	}
 }
 
 func (buyer *BuyerContractManager) minerMonitor(ch msgbus.EventChan) {
 	minerCh := buyer.ps.NewEventChan()
-	// subscribe channel to existing miners 
+	// subscribe channel to existing miners
 	for miner := range buyer.miners {
 		e1, err := buyer.ps.SubWait(msgbus.MinerMsg, msgbus.IDString(miner), minerCh)
 		if err != nil {
@@ -849,27 +851,27 @@ func (buyer *BuyerContractManager) minerMonitor(ch msgbus.EventChan) {
 			panic(fmt.Sprintf("Wrong event type %v\n", e1))
 		}
 	}
-	
+
 	// routine for listening to updates on miner channel
 	go func() {
 		for {
 			event := <-minerCh
 			id := msgbus.MinerID(event.ID)
-	
-			switch event.EventType {	
-				//
-				// Update Event
-				//
+
+			switch event.EventType {
+			//
+			// Update Event
+			//
 			case msgbus.UpdateEvent:
 				fmt.Printf("Miner Update Event:%v\n", event)
-	
+
 				if _, ok := buyer.miners[id]; !ok {
 					panic(fmt.Sprintf("Got Miner ID does not exist: %v\n", event))
 				}
-	
+
 				// Update the current miner data
 				buyer.miners[id] = event.Data.(msgbus.Miner)
-				
+
 				// check hashrate is being fulfilled for all running contracts
 				for addr := range buyer.msg.Contracts {
 					buyer.checkHashRate(common.HexToAddress(string(addr)))
@@ -905,15 +907,15 @@ func (buyer *BuyerContractManager) minerMonitor(ch msgbus.EventChan) {
 
 		switch event.EventType {
 
-			//
-			// Publish Event
-			//
+		//
+		// Publish Event
+		//
 		case msgbus.PublishEvent:
 			fmt.Printf("Got PublishEvent: %v\n", event)
 
 			if _, ok := buyer.miners[id]; !ok {
 				buyer.miners[id] = event.Data.(msgbus.Miner)
-				
+
 				// check hashrate is being fulfilled for all running contracts
 				for addr := range buyer.msg.Contracts {
 					buyer.checkHashRate(common.HexToAddress(string(addr)))
@@ -945,7 +947,7 @@ func (buyer *BuyerContractManager) checkHashRate(addr common.Address) bool {
 			totalHashRate += buyer.miners[i].CurrentHashRate
 		}
 	}
-	
+
 	fmt.Println("Total Hashrate: ", totalHashRate)
 	if totalHashRate == 0 {
 		log.Printf("Closing out contract %s for not meeting hashrate requirements\n", addr.Hex())
@@ -1004,7 +1006,7 @@ func subscribeToContractEvents(client *ethclient.Client, contractAddress common.
 
 func readHashrateContract(client *ethclient.Client, contractAddress common.Address) (hashrateContractValues, error) {
 	var contractValues hashrateContractValues
-	
+
 	instance, err := implementation.NewImplementation(contractAddress, client)
 	if err != nil {
 		log.Printf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
@@ -1086,23 +1088,23 @@ func readDestUrl(client *ethclient.Client, contractAddress common.Address, priva
 	}
 
 	/*
-	Decryption Logic:
+		Decryption Logic:
 
-	destUrlBytes := []byte(encryptedDestUrl)
-	privateKey, err := crypto.HexToECDSA(privateKeyString)
-	if err != nil {
-		log.Printf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
-		return "", err
-	}
-	privateKeyECIES := ecies.ImportECDSA(privateKey)
-	decryptedDestUrlBytes, err := privateKeyECIES.Decrypt(destUrlBytes, nil, nil)
-	if err != nil {
-		log.Printf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
-		return "", err
-	}
-	decryptedDestUrl := string(decryptedDestUrlBytes)
+		destUrlBytes := []byte(encryptedDestUrl)
+		privateKey, err := crypto.HexToECDSA(privateKeyString)
+		if err != nil {
+			log.Printf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
+			return "", err
+		}
+		privateKeyECIES := ecies.ImportECDSA(privateKey)
+		decryptedDestUrlBytes, err := privateKeyECIES.Decrypt(destUrlBytes, nil, nil)
+		if err != nil {
+			log.Printf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
+			return "", err
+		}
+		decryptedDestUrl := string(decryptedDestUrlBytes)
 
-	return decryptedDestUrl, err
+		return decryptedDestUrl, err
 	*/
 
 	return encryptedDestUrl, err
@@ -1111,7 +1113,7 @@ func readDestUrl(client *ethclient.Client, contractAddress common.Address, priva
 func setContractCloseOut(client *ethclient.Client, fromAddress common.Address, privateKeyString string, contractAddress common.Address, wg *sync.WaitGroup, currentNonce *nonce, closeOutType uint) error {
 	defer wg.Done()
 	defer currentNonce.mutex.Unlock()
-	
+
 	currentNonce.mutex.Lock()
 
 	instance, err := implementation.NewImplementation(contractAddress, client)
