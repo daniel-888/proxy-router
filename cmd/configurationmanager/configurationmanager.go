@@ -2,6 +2,7 @@ package configurationmanager
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -11,15 +12,14 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"errors"
 
-    "gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 func LoadConfiguration(file string, pkg string) (map[string]interface{}, error) {
 	var data map[string]interface{}
-    fmt.Println(os.Getwd())
-    os.Chdir("/Users/ryanbajollari/go/src/lumerin")
+    homeDir,_ := os.UserHomeDir()
+    os.Chdir(homeDir + "/go/src/lumerin")
 	configFile, err := os.Open(file)
 	if err != nil {
 		return data, err

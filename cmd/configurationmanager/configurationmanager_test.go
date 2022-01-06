@@ -48,8 +48,6 @@ func TestLoadConfigToAPIandMsgBus(t *testing.T) {
 	}
 
 	seller.ID = cmConfig["seller"].(string)
-	seller.AvailableContracts = availableContractsMap
-	seller.ActiveContracts = activeContractsMap
 
 	var api externalapi.APIRepos
 	api.InitializeJSONRepos()

@@ -959,7 +959,8 @@ func TestDeployment(t *testing.T) {
 
 func TestCreateHashrateContract(t *testing.T) {
 	ps := msgbus.New(10)
-	contractManagerConfig, err := configurationmanager.LoadConfiguration("lumerinconfig.json", "contractManager")
+	var hashrateContractAddress common.Address
+	contractManagerConfig, err := configurationmanager.LoadConfiguration("ropstentestconfig.json", "contractManager")
 	if err != nil {
 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 	}
@@ -982,7 +983,7 @@ func TestCreateHashrateContract(t *testing.T) {
 				log.Fatal(err)
 			case cfLog := <-cfLogs:
 				if cfLog.Topics[0].Hex() == contractCreatedSigHash.Hex() {
-					hashrateContractAddress := common.HexToAddress(cfLog.Topics[1].Hex())
+					hashrateContractAddress = common.HexToAddress(cfLog.Topics[1].Hex())
 					fmt.Printf("Address of created Hashrate Contract: %s\n\n", hashrateContractAddress.Hex())
 				}
 			}
@@ -992,12 +993,17 @@ func TestCreateHashrateContract(t *testing.T) {
 	cloneFactoryAddress := common.HexToAddress(contractManagerConfig["cloneFactoryAddress"].(string))
 
 	CreateHashrateContract(cman.rpcClient, cman.account, cman.privateKey, cloneFactoryAddress, int(0), int(0), int(0), int(20), cman.account)
-	time.Sleep(time.Millisecond * 30000)
+	loop:
+	for {
+		if hashrateContractAddress != common.HexToAddress("0x0000000000000000000000000000000000000000") {
+			break loop
+		}
+	}
 }
 
 func TestPurchaseHashrateContract(t *testing.T) {
 	ps := msgbus.New(10)
-	contractManagerConfig, err := configurationmanager.LoadConfiguration("lumerinconfig.json", "contractManager")
+	contractManagerConfig, err := configurationmanager.LoadConfiguration("ropstentestconfig.json", "contractManager")
 	if err != nil {
 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 	}
@@ -1007,7 +1013,7 @@ func TestPurchaseHashrateContract(t *testing.T) {
 	if err != nil {
 		panic(fmt.Sprintf("contract manager failed:%s", err))
 	}
-	hashrateContractAddress := "0x853BEd8EE67871048fC16E6742fFaA7E01c16dCC"
+	hashrateContractAddress := "0x50a6c6c8eC06577A8258d5F86688d0045026e18e"
 
 	PurchaseHashrateContract(cman.rpcClient, cman.account, cman.privateKey, cman.cloneFactoryAddress, common.HexToAddress(hashrateContractAddress), cman.account, "stratum+tcp://127.0.0.1:3333/testrig")
 }

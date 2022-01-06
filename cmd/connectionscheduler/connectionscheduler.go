@@ -126,9 +126,6 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 				case msgbus.ContAvailableState:
 					fmt.Sprintf(lumerinlib.FileLine()+" Found Available Contract: %v\n", event)
 
-				case msgbus.ContActiveState:
-					fmt.Sprintf(lumerinlib.FileLine()+" Found Active Contract: %v\n", event)
-
 				case msgbus.ContRunningState:
 					fmt.Sprintf(lumerinlib.FileLine()+" Found Running Contract: %v\n", event)
 
@@ -137,14 +134,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 					}
 
 					// Set Contract to running, and rework all of the miners
-				case msgbus.ContCompleteState:
-					fmt.Sprintf(lumerinlib.FileLine()+" Found Complete Contract: %v\n", event)
 
-					if currentContract.State != msgbus.ContCompleteState {
-						cs.ContractComplete(id)
-					}
-
-					// Set Contract to Complete, and reset all the miners
 				default:
 					panic(fmt.Sprintf(lumerinlib.FileLine()+" got bad State: %v\n", event))
 				}
@@ -197,13 +187,4 @@ func (cs *ConnectionScheduler) ContractRunning(id msgbus.ContractID) {
 			panic(fmt.Sprintf(lumerinlib.FileLine()+" Error:%s\n", err))
 		}
 	}
-}
-
-//------------------------------------------------------------------------
-//
-//------------------------------------------------------------------------
-func (cs *ConnectionScheduler) ContractComplete(id msgbus.ContractID) {
-
-	fmt.Printf(lumerinlib.FileLine()+" Contract Complete: %s\n", id)
-
 }
