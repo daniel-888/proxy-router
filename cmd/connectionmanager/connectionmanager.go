@@ -509,6 +509,9 @@ func (c *connection) getOrCreateMinerByName(name string) (ret msgbus.MinerID, er
 		minerStruct.ID = msgbus.MinerID(msgbus.GetRandomIDString())
 		minerStruct.Name = name
 
+		// Fake the funk for the moment
+		minerStruct.CurrentHashRate = 1
+
 		pubEvent, err := c.ps.PubWait(
 			msgbus.MinerMsg,
 			msgbus.IDString(minerStruct.ID),
