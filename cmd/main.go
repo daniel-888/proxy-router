@@ -7,8 +7,6 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 
-	//"gitlab.com/TitanInd/lumerin/cmd/testmod"
-
 	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
@@ -161,6 +159,8 @@ func main() {
 	// if false {
 	// 	testmod.MinersTouchAll(ps)
 	// }
+
+	// testmod.CreateContract(ps)
 
 	<-done
 

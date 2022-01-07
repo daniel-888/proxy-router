@@ -1024,7 +1024,11 @@ func (reg *registry) set(c *cmd) {
 		event.send(c.eventch)
 	}
 
-	// Notify anyone listening
+	// Notify anyone listening for the message class
+	for nch, _ := range reg.notify[c.msg] {
+		event.send(nch)
+	}
+	// Notify anyone listening for the specific ID
 	for ech, _ := range reg.data[c.msg][c.ID].sub.eventchan {
 		if _, ok := reg.data[c.msg][c.ID].sub.eventchan[ech]; ok {
 			event.send(ech)

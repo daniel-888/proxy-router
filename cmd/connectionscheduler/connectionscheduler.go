@@ -62,7 +62,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 		// Subscribe Event
 		//
 		case msgbus.SubscribedEvent:
-			fmt.Printf("Contract subscribed:%v\n", event)
+			fmt.Printf(lumerinlib.Funcname()+" subscribed:%v\n", event)
 
 			//
 			// Publish Event
@@ -70,7 +70,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 		case msgbus.PublishEvent:
 			// Is this a new contract?
 
-			fmt.Printf(lumerinlib.Funcname()+" got PublishEvent: %v\n", event)
+			fmt.Printf(lumerinlib.Funcname()+" PublishEvent: %v\n", event)
 
 			if _, ok := cs.Contracts[id]; !ok {
 				cs.Contracts[id] = event.Data.(msgbus.Contract)
@@ -99,7 +99,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 		case msgbus.DeleteEvent:
 			fallthrough
 		case msgbus.UnsubscribedEvent:
-			fmt.Printf("Contract Delete/Unsubscribe Event:%v\n", event)
+			fmt.Printf(lumerinlib.Funcname()+" Contract Delete/Unsubscribe Event: %v\n", event)
 
 			if _, ok := cs.Contracts[id]; ok {
 				delete(cs.Contracts, id)
@@ -111,6 +111,9 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 			// Update Event
 			//
 		case msgbus.UpdateEvent:
+
+			fmt.Printf(lumerinlib.Funcname()+" UpdateEvent: %v\n", event)
+
 			if _, ok := cs.Contracts[id]; !ok {
 				panic(fmt.Sprintf(lumerinlib.FileLine()+" got contract ID does not exist: %v\n", event))
 			}
@@ -124,10 +127,10 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 			} else {
 				switch event.Data.(msgbus.Contract).State {
 				case msgbus.ContAvailableState:
-					fmt.Sprintf(lumerinlib.FileLine()+" Found Available Contract: %v\n", event)
+					fmt.Printf(lumerinlib.FileLine()+" Found Available Contract: %v\n", event)
 
 				case msgbus.ContRunningState:
-					fmt.Sprintf(lumerinlib.FileLine()+" Found Running Contract: %v\n", event)
+					fmt.Printf(lumerinlib.FileLine()+" Found Running Contract: %v\n", event)
 
 					if currentContract.State != msgbus.ContRunningState {
 						cs.ContractRunning(id)
