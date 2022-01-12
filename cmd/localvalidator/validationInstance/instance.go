@@ -41,32 +41,23 @@ func (v *Validator) closeOutContract() {
 	fmt.Println("web3 call to smart contract to initiate closeout procedure")
 }
 
-/*
-//take in the hex code of the bytes and return the 256 bit hex representation
-func calculateDifficulty(diff string) string {
-	b0 := diff[:2]
-	b1 := diff[2:4]
-	b2 := diff[4:6]
-	b3 := diff[6:]
-	i0, _ := strconv.ParseUint(b3, 16, 8)
-	i1, _ := strconv.ParseUint(fmt.Sprintf("%s%s%s", b2, b1, b0), 16, 24)
-	calc := i1 * math.Pow(2, (8*(i0-3)))
-	return fmt.Sprintf("%x", calc)
-
-}
-*/
-
 //receives a nonce and a hash, compares the two, and updates instance parameters
 //need to modify to check to see if the resulting hash is below the given difficulty level
-func (v *Validator) IncomingHash(nonce string, time string, hash string, difficulty string) message.HashResult {
+func (v *Validator) IncomingHash(ExtraNonce2 string, NOnce string, NTime string) message.HashResult {
 	/*
 		remove section to reflect changes to blockHeader package
 	*/
-	calcHash := v.BH.HashInput(nonce, time)
-	newHash := fmt.Sprintf("%x", calcHash)
-	fmt.Println(newHash)
 	var hashingResult bool //temp until revised logic put in place
-	if newHash == hash {
+	//function from blockheader to get current difficulty
+	currentDifficulty := 10
+	calcHash := v.BH.HashInput(NOnce, NTime) 
+	fmt.Printf("%v", ExtraNonce2) //temporarily here to get rid of compiler issue
+	/*CHRIMBUS returns the hash of the mining.submit message in big endian format. 
+	this will be changed to a boolean output which states if the resulting 
+	hash is lower than the pool difficulty.
+	*/
+	newHash := fmt.Sprintf("%x", calcHash)
+	if newHash <= currentDifficulty {
 		hashingResult = true
 	} else {
 		hashingResult = false
