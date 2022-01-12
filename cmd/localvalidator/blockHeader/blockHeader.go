@@ -6,7 +6,9 @@ import (
 	"example.com/chainhash"
 	"example.com/wire"
 	"fmt"
+	"math/big"
 	"strconv"
+	"blockchain"
 )
 
 type BlockHeader struct {
@@ -78,13 +80,7 @@ func (bh *BlockHeader) HashInput(nonce string, time string) [32]byte {
 	}
 	hash := newBlockHash.BlockHash() //little-endian
 
-	//converting the resulting hash to big-endian format
-	//CHRIMBUS this for loop should be deprecated, and instead have a 
-	//check to see if the resulting hash is lower than the pool difficulty
-	for i, j := 0, len(hash)-1; i < j; i, j = i+1, j-1 {
-		hash[i], hash[j] = hash[j], hash[i]
-	}
-	return hash
+	return hash //hash is returned in little endian format
 
 }
 
@@ -97,3 +93,12 @@ func (bh *BlockHeader) UpdateHeaderInformation(_version string, _previousBlockHa
 }
 
 //going to be getting the same message as described in stratum
+
+
+func HashToBigInt(hash [32]byte) *big.Int {
+	return blockchain.HashToBig(hash)
+}
+
+func TargetDifficultyFromBits(n uint32) *big.Int {
+	return blockchain.CalcWork(n)
+}

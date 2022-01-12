@@ -41,10 +41,8 @@ func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff
 			//message is of type message, with messageType and content values
 			m := <-messages
 			if m.MessageType == "validate" {
-				//expecting the message to contain the contents of a stratum v1 mining.submit message
 				//potentially bubble up result of function call
-				req := message.ReceiveHashingRequest(m.Message)
-				//req.Difficulty will probably need to be removed
+				req := message.ReceiveHashingRequest(m.Message) //expecting the message to contain the contents of a stratum v1 mining.submit message
 				result := myValidator.IncomingHash(req.ExtraNonce2, req.NOnce, req.NTime) //this function broadcasts a message
 				newM := m
 				newM.Message = message.ConvertMessageToString(result)

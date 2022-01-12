@@ -48,16 +48,14 @@ func (v *Validator) IncomingHash(ExtraNonce2 string, NOnce string, NTime string)
 		remove section to reflect changes to blockHeader package
 	*/
 	var hashingResult bool //temp until revised logic put in place
+
 	//function from blockheader to get current difficulty
-	currentDifficulty := 10
 	calcHash := v.BH.HashInput(NOnce, NTime) 
+
 	fmt.Printf("%v", ExtraNonce2) //temporarily here to get rid of compiler issue
-	/*CHRIMBUS returns the hash of the mining.submit message in big endian format. 
-	this will be changed to a boolean output which states if the resulting 
-	hash is lower than the pool difficulty.
-	*/
 	newHash := fmt.Sprintf("%x", calcHash)
-	if newHash <= currentDifficulty {
+	//conpares
+	if blockHeader.HashToBigInt(newHash) <= blockHeader.TargetDifficultyFromBits(v.BH.Bits) {
 		hashingResult = true
 	} else {
 		hashingResult = false
