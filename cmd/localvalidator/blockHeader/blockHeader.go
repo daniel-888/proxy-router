@@ -3,12 +3,12 @@ package blockHeader
 import (
 	"encoding/binary"
 	"encoding/json"
+	"example.com/blockchain"
 	"example.com/chainhash"
 	"example.com/wire"
 	"fmt"
 	"math/big"
 	"strconv"
-	"blockchain"
 )
 
 type BlockHeader struct {
@@ -28,11 +28,11 @@ func ConvertToBlockHeader(message string) BlockHeader {
 	var bi map[string]string             //create an empty map to put string variables into
 	json.Unmarshal([]byte(message), &bi) //unmarshal string and put into bi (block info) map
 	return BlockHeader{
-		Version:           bi["Version"], //little endian
+		Version:           bi["Version"],           //little endian
 		PreviousBlockHash: bi["PreviousBlockHash"], //little endian
-		MerkleRoot:        bi["MerkleRoot"], //little endian
-		Time:              bi["Time"], //little endian
-		Difficulty:        bi["Difficulty"], //little endian
+		MerkleRoot:        bi["MerkleRoot"],        //little endian
+		Time:              bi["Time"],              //little endian
+		Difficulty:        bi["Difficulty"],        //little endian
 	}
 
 }
@@ -74,9 +74,9 @@ func (bh *BlockHeader) HashInput(nonce string, time string) [32]byte {
 		Version:    int32(sVersion),
 		PrevBlock:  chainhash.NewHashFromStr(bh.PreviousBlockHash),
 		MerkleRoot: chainhash.NewHashFromStr(bh.MerkleRoot),
-		Timestamp: int32(sTime),
-		Bits:      uint32(sDifficulty),
-		Nonce:     uint32(sNonce),
+		Timestamp:  int32(sTime),
+		Bits:       uint32(sDifficulty),
+		Nonce:      uint32(sNonce),
 	}
 	hash := newBlockHash.BlockHash() //little-endian
 
@@ -93,7 +93,6 @@ func (bh *BlockHeader) UpdateHeaderInformation(_version string, _previousBlockHa
 }
 
 //going to be getting the same message as described in stratum
-
 
 func HashToBigInt(hash [32]byte) *big.Int {
 	return blockchain.HashToBig(hash)
