@@ -2,8 +2,10 @@ package msgdata
 
 import (
 	"errors"
+	"fmt"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
 // Struct of ConfigInfo parameters in JSON
@@ -16,11 +18,15 @@ type ConfigInfoJSON struct {
 //Struct that stores slice of all JSON ConfigInfo structs in Repo
 type ConfigInfoRepo struct {
 	ConfigInfoJSONs []ConfigInfoJSON
+	ps          	*msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON ConfigInfo structs
-func NewConfigInfo() *ConfigInfoRepo {
-	return &ConfigInfoRepo{}
+func NewConfigInfo(ps *msgbus.PubSub) *ConfigInfoRepo {
+	return &ConfigInfoRepo{
+		ConfigInfoJSONs:	[]ConfigInfoJSON{},
+		ps:					ps,
+	}
 }
 
 //Return all ConfigInfo Structs in Repo
@@ -44,10 +50,10 @@ func (r *ConfigInfoRepo) AddConfigInfo(conf ConfigInfoJSON) {
 }
 
 //Converts ConfigInfo struct from msgbus to JSON struct and adds it to Repo
-func (r *ConfigInfoRepo) AddConfigInfoFromMsgBus(conf msgbus.ConfigInfo) {
+func (r *ConfigInfoRepo) AddConfigInfoFromMsgBus(confID msgbus.ConfigID, conf msgbus.ConfigInfo) {
 	var confJSON ConfigInfoJSON
 	
-	confJSON.ID = string(conf.ID)
+	confJSON.ID = string(confID)
 	confJSON.DefaultDest = string(conf.DefaultDest)
 	confJSON.Seller = string(conf.Seller)
 	
@@ -79,10 +85,93 @@ func (r *ConfigInfoRepo) DeleteConfigInfo(id string) error {
 	return errors.New("ID not found")
 }
 
+//Subscribe to events for config msgs on msgbus to update API repos with data
+func (r *ConfigInfoRepo) SubscribeToConfigInfoMsgBus() {
+	configCh := r.ps.NewEventChan()
+	
+	// add existing configs to api repo
+	event, err := r.ps.GetWait(msgbus.ConfigMsg, "")
+	if err != nil {
+		panic(fmt.Sprintf("Getting Configs Failed: %s", err))
+	}
+	configs := event.Data.(msgbus.IDIndex)
+	if len(configs) > 0 {
+		for i := range configs {
+			event, err = r.ps.GetWait(msgbus.ConfigMsg, msgbus.IDString(configs[i]))
+			if err != nil {
+				panic(fmt.Sprintf("Getting Config Failed: %s", err))
+			}
+			config := event.Data.(msgbus.ConfigInfo)
+			r.AddConfigInfoFromMsgBus(msgbus.ConfigID(configs[i]), config)
+		}
+	}
+	
+	event, err = r.ps.SubWait(msgbus.ConfigMsg, "", configCh)
+	if err != nil {
+		panic(fmt.Sprintf("SubWait failed: %s\n", err))
+	}
+	if event.EventType != msgbus.SubscribedEvent {
+		panic(fmt.Sprintf("Wrong event type %v\n", event))
+	}
+
+	for event = range configCh {
+		switch event.EventType {
+		//
+		// Subscribe Event
+		//
+		case msgbus.SubscribedEvent:
+			fmt.Printf(lumerinlib.Funcname()+" Subscribe Event: %v\n", event)
+
+			//
+			// Publish Event
+			//
+		case msgbus.PublishEvent:
+			fmt.Printf(lumerinlib.Funcname()+" Publish Event: %v\n", event)
+			configID := msgbus.ConfigID(event.ID)
+			config := event.Data.(msgbus.ConfigInfo)
+			r.AddConfigInfoFromMsgBus(configID, config)
+			
+			//
+			// Delete/Unpublish Event
+			//
+		case msgbus.DeleteEvent:
+			fallthrough
+		case msgbus.UnpublishEvent:
+			fmt.Printf(lumerinlib.Funcname()+" Delete/Unpublish Event: %v\n", event)
+			configID := msgbus.ConfigID(event.ID)
+			r.DeleteConfigInfo(string(configID))
+
+			//
+			// Update Event
+			//
+		case msgbus.UpdateEvent:
+			fmt.Printf(lumerinlib.Funcname()+" Update Event: %v\n", event)
+			configID := msgbus.ConfigID(event.ID)
+			config := event.Data.(msgbus.ConfigInfo)
+			configJSON := ConvertConfigInfoMSGtoConfigInfoJSON(config)
+			r.UpdateConfigInfo(string(configID), configJSON)
+			
+			//
+			// Rut Row...
+			//
+		default:
+			fmt.Printf(lumerinlib.Funcname()+" Got Event: %v\n", event)
+		}
+	}
+}
+
 func ConvertConfigInfoJSONtoConfigInfoMSG(conf ConfigInfoJSON, msg msgbus.ConfigInfo) msgbus.ConfigInfo {
 	msg.ID = msgbus.ConfigID(conf.ID)
 	msg.DefaultDest = msgbus.DestID(conf.DefaultDest)
 	msg.Seller = msgbus.SellerID(conf.Seller)
 
 	return msg	
+}
+
+func ConvertConfigInfoMSGtoConfigInfoJSON(msg msgbus.ConfigInfo) (conf ConfigInfoJSON) {
+	conf.ID = string(msg.ID)
+	conf.DefaultDest = string(msg.DefaultDest)
+	conf.Seller = string(msg.Seller)
+
+	return conf	
 }

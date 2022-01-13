@@ -20,7 +20,8 @@ func TestAddSeller(t *testing.T) {
         "0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
 	}   
 
-	sellerRepo := NewSeller()
+	ps := msgbus.New(10)
+	sellerRepo := NewSeller(ps)
 	sellerRepo.AddSeller(seller)
 
 	if len(sellerRepo.SellerJSONs) != 1 {
@@ -42,7 +43,8 @@ func TestGetAllSellers(t *testing.T) {
 		}  
 	}
 	
-	sellerRepo := NewSeller()
+	ps := msgbus.New(10)
+	sellerRepo := NewSeller(ps)
 	for i := 0; i < 10; i++ {
 		sellerRepo.AddSeller(seller[i])
 	}
@@ -67,7 +69,8 @@ func TestGetSeller(t *testing.T) {
 		}  
 	}
 	
-	sellerRepo := NewSeller()
+	ps := msgbus.New(10)
+	sellerRepo := NewSeller(ps)
 	for i := 0; i < 10; i++ {
 		sellerRepo.AddSeller(seller[i])
 	}
@@ -96,7 +99,8 @@ func TestUpdateSeller(t *testing.T) {
 		}  
 	}
 	
-	sellerRepo := NewSeller()
+	ps := msgbus.New(10)
+	sellerRepo := NewSeller(ps)
 	for i := 0; i < 10; i++ {
 		sellerRepo.AddSeller(seller[i])
 	}
@@ -140,7 +144,8 @@ func TestDeleteSeller(t *testing.T) {
 		}  
 	}
 	
-	sellerRepo := NewSeller()
+	ps := msgbus.New(10)
+	sellerRepo := NewSeller(ps)
 	for i := 0; i < 10; i++ {
 		sellerRepo.AddSeller(seller[i])
 	}

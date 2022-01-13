@@ -3,6 +3,9 @@ package msgdata
 import (
 	"fmt"
 	"testing"
+	"time"
+
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 func TestAddMiner(t *testing.T) {
@@ -15,7 +18,8 @@ func TestAddMiner(t *testing.T) {
 		CurrentHashRate:         100,
 	}
 	
-	minerRepo := NewMiner()
+	ps := msgbus.New(10)
+	minerRepo := NewMiner(ps)
 	minerRepo.AddMiner(miner)
 
 	if len(minerRepo.MinerJSONs) != 1 {
@@ -34,7 +38,8 @@ func TestGetAllMiners(t *testing.T) {
 		miner[i].CurrentHashRate = 100
 	}
 	
-	minerRepo := NewMiner()
+	ps := msgbus.New(10)
+	minerRepo := NewMiner(ps)
 	for i := 0; i < 10; i++ {
 		minerRepo.AddMiner(miner[i])
 	}
@@ -56,7 +61,8 @@ func TestGetMiner(t *testing.T) {
 		miner[i].CurrentHashRate = 100
 	}
 	
-	minerRepo := NewMiner()
+	ps := msgbus.New(10)
+	minerRepo := NewMiner(ps)
 	for i := 0; i < 10; i++ {
 		minerRepo.AddMiner(miner[i])
 	}
@@ -82,7 +88,8 @@ func TestUpdateMiner(t *testing.T) {
 		miner[i].CurrentHashRate = 100
 	}
 	
-	minerRepo := NewMiner()
+	ps := msgbus.New(10)
+	minerRepo := NewMiner(ps)
 	for i := 0; i < 10; i++ {
 		minerRepo.AddMiner(miner[i])
 	}
@@ -124,7 +131,8 @@ func TestDeleteMiner(t *testing.T) {
 		miner[i].CurrentHashRate = 100
 	}
 	
-	minerRepo := NewMiner()
+	ps := msgbus.New(10)
+	minerRepo := NewMiner(ps)
 	for i := 0; i < 10; i++ {
 		minerRepo.AddMiner(miner[i])
 	}
@@ -136,4 +144,28 @@ func TestDeleteMiner(t *testing.T) {
 	if len(minerRepo.MinerJSONs) != 9 {
 		t.Errorf("Miner was not deleted")
 	}
+}
+
+func TestSubsribeToMsgBus(t *testing.T) {
+	ps := msgbus.New(10)
+	minerRepo := NewMiner(ps)
+	go minerRepo.SubscribeToMinerMsgBus()
+	time.Sleep(time.Millisecond*2000)
+	minerData := msgbus.Miner {
+		ID: msgbus.MinerID("Test"),
+		Name: "Test",
+		IP: "Test",
+		MAC: "Test",
+		State: msgbus.OnlineState,
+		Seller: "Test",
+		Dest: "Test",
+		InitialMeasuredHashRate: 100,
+		CurrentHashRate: 100,
+	}
+	_, err := ps.PubWait(msgbus.MinerMsg, msgbus.IDString("Test"), minerData)
+	if err != nil {
+		panic(fmt.Sprintf("SetWait failed: %s\n", err))
+	}
+	
+	fmt.Println(minerRepo.MinerJSONs)
 }

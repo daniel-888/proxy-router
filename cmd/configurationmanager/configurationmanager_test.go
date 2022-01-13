@@ -38,23 +38,18 @@ func TestLoadConfigToAPIandMsgBus(t *testing.T) {
 	config.ID = cmConfig["seller"].(string)
 
 	var seller msgdata.SellerJSON
-	availableContractsMap := make(map[msgbus.ContractID]bool)
-	for key,value := range cmConfig["availableContracts"].(map[string]interface{}){
-		availableContractsMap[msgbus.ContractID(key)] = value.(bool)
-	}
-	activeContractsMap := make(map[msgbus.ContractID]bool)
-	for key,value := range cmConfig["activeContracts"].(map[string]interface{}){
-		activeContractsMap[msgbus.ContractID(key)] = value.(bool)
-	}
-
 	seller.ID = cmConfig["seller"].(string)
+	availableContract := cmConfig["availableContracts"].(string)
+	runningContract := cmConfig["runningContracts"].(string)
+	seller.Contracts[msgbus.ContractID(availableContract)] = msgbus.ContAvailableState
+	seller.Contracts[msgbus.ContractID(runningContract)] = msgbus.ContRunningState
 
 	var api externalapi.APIRepos
-	api.InitializeJSONRepos()
-	api.Config.AddConfigInfo(config)
+	api.InitializeJSONRepos(ps)
+	// api.Config.AddConfigInfo(config)
 	var ConfigMSG msgbus.ConfigInfo
 	configMSG := msgdata.ConvertConfigInfoJSONtoConfigInfoMSG(api.Config.ConfigInfoJSONs[0], ConfigMSG)
-	api.Seller.AddSeller(seller)
+	// api.Seller.AddSeller(seller)
 	var SellerMSG msgbus.Seller
 	sellerMSG := msgdata.ConvertSellerJSONtoSellerMSG(api.Seller.SellerJSONs[0], SellerMSG)
 

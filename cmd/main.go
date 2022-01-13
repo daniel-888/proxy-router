@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
@@ -13,6 +14,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/localvalidator"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/walletmanager"
+	"gitlab.com/TitanInd/lumerin/cmd/externalapi"
 )
 
 // -------------------------------------------
@@ -58,6 +60,10 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Getting Disable Schedule val failed: %s\n", err))
 	}
+	disableapi, err := config.ConfigGetVal(config.DisableAPI)
+	if err != nil {
+		panic(fmt.Sprintf("Getting Disable API val failed: %s\n", err))
+	}
 
 	//
 	// Fire up logger
@@ -73,7 +79,6 @@ func main() {
 	//
 	// Setup Default Dest
 	//
-
 	defaultpooladdr, err := config.ConfigGetVal(config.DefaultPoolAddr)
 	if err != nil {
 		panic(fmt.Sprintf("Getting Default Pool Address/URL: %s\n", err))
@@ -143,6 +148,15 @@ func main() {
 		}
 	}
 
+	//
+	//Fire up external api
+	//
+	if disableapi == "false" {
+		var api externalapi.APIRepos
+		api.InitializeJSONRepos(ps)
+		time.Sleep(time.Millisecond*2000)
+		go api.RunAPI()
+	}
 	//	ps.PubWait(msgbus.DestMsg, "destMsg01", msgbus.Dest{})
 	//	ps.Sub(msgbus.DestMsg, "destMsg01", ech)
 	//	ps.Set(msgbus.DestMsg, "destMsg01", dest)

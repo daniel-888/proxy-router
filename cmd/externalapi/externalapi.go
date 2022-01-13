@@ -1,11 +1,13 @@
 package externalapi
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
+	
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/handlers"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 type APIRepos struct {
@@ -18,14 +20,27 @@ type APIRepos struct {
 	Buyer		*msgdata.BuyerRepo
 }
 
-func (api *APIRepos) InitializeJSONRepos() {
-	api.Config = msgdata.NewConfigInfo()
-	api.Connection = msgdata.NewConnection()
-	api.Contract = msgdata.NewContract()
-	api.Dest = msgdata.NewDest()
-	api.Miner = msgdata.NewMiner()
-	api.Seller = msgdata.NewSeller()
-	api.Buyer = msgdata.NewBuyer()
+func (api *APIRepos) InitializeJSONRepos(ps *msgbus.PubSub) {
+	api.Config = msgdata.NewConfigInfo(ps)
+	go api.Config.SubscribeToConfigInfoMsgBus()
+
+	api.Connection = msgdata.NewConnection(ps)
+	go api.Connection.SubscribeToConnectionMsgBus()
+
+	api.Contract = msgdata.NewContract(ps)
+	go api.Contract.SubscribeToContractMsgBus()
+
+	api.Dest = msgdata.NewDest(ps)
+	go api.Dest.SubscribeToDestMsgBus()
+
+	api.Miner = msgdata.NewMiner(ps)
+	go api.Miner.SubscribeToMinerMsgBus()
+
+	api.Seller = msgdata.NewSeller(ps)
+	go api.Seller.SubscribeToSellerMsgBus()
+
+	api.Buyer = msgdata.NewBuyer(ps)
+	go api.Buyer.SubscribeToBuyerMsgBus()
 }
 
 func (api *APIRepos) RunAPI() {
@@ -95,6 +110,6 @@ func (api *APIRepos) RunAPI() {
 	}
 
 	if err := r.Run(); err != nil {
-		log.Fatal(err.Error())
+		panic(fmt.Sprintf("external api failed to run:%s", err))
 	}
 }

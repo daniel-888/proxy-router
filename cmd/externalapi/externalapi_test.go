@@ -1,256 +1,211 @@
 package externalapi
 
 import (
-	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
-	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 func TestMsgBusDataAddedToApiRepos(t *testing.T) {
-	ech := make(msgbus.EventChan)
-	ps := msgbus.New(1)
+	ps := msgbus.New(10)
 
 	dest := msgbus.Dest{
-		ID:   		"DestID01",
-		NetUrl: 	"stratum+tcp://127.0.0.1:3334/",	
-	}
-	config := msgbus.ConfigInfo{
-		ID:          "ConfigID01",
-		DefaultDest: "DestID01",
-		Seller:      "SellerID01",
+		ID:   		msgbus.DestID("DestID01"),
+		NetUrl: 	msgbus.DestNetUrl("stratum+tcp://127.0.0.1:3334/"),	
 	}
 	seller := msgbus.Seller{
-		ID:                     "SellerID01",
-		DefaultDest:            "DestID01",
+		ID:                    msgbus.SellerID("SellerID01"),
+		DefaultDest:           dest.ID,
 		TotalAvailableHashRate: 0,
 		UnusedHashRate:         0,
 	}
-	seller.Contracts = map[msgbus.ContractID]msgbus.ContractState{
-		"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": msgbus.ContRunningState,
-        "0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": msgbus.ContAvailableState,
-        "0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
-	}  
-	contract := msgbus.Contract{
-		ID:				"ContractID01",
-		State: 			msgbus.ContRunningState,
-		Buyer: 			"Buyer ID01",
-		Price: 			100,
-		Limit: 			100,
-		Speed: 			100,
-		Length: 		100,
-		StartingBlockTimestamp: 100,
+	buyer := msgbus.Buyer{
+		ID: 			msgbus.BuyerID("BuyerID01"),
+		DefaultDest: 	dest.ID,
 	}
-	
+	contract := msgbus.Contract{
+		IsSeller: 				true,	
+		ID:						msgbus.ContractID("ContractID01"),
+		State: 					msgbus.ContRunningState,
+		Buyer: 					buyer.ID,
+		Price: 					100,
+		Limit: 					100,
+		Speed: 					100,
+		Length: 				100,
+		StartingBlockTimestamp: 100,
+		Dest:					dest.ID,
+	}
+	seller.Contracts = map[msgbus.ContractID]msgbus.ContractState{
+		contract.ID: msgbus.ContRunningState,
+	}
+	buyer.Contracts = map[msgbus.ContractID]msgbus.ContractState{
+		contract.ID: msgbus.ContRunningState,
+	}
+	config := msgbus.ConfigInfo{
+		ID:          msgbus.ConfigID("ConfigID01"),
+		DefaultDest: dest.ID,
+		Seller:      seller.ID,
+	}
 	miner := msgbus.Miner{
-		ID:						"MinerID01",
+		ID:						msgbus.MinerID("MinerID01"),
 		State: 					msgbus.OnlineState,
-		Seller:   				"SellerID01",
-		Dest:					"DestID01",	
+		Seller:   				seller.ID,
+		Dest:					dest.ID,	
 		InitialMeasuredHashRate: 10000,
 		CurrentHashRate:         9000,
 
 	}
 	connection := msgbus.Connection{
-		ID:        				"ConnectionID01",
-		Miner:    				"MinerID01",
-		Dest:      				"DestID01",
+		ID:        				msgbus.ConnectionID("ConnectionID01"),
+		Miner:    				miner.ID,
+		Dest:      				dest.ID,
 		State:     				msgbus.ConnAuthState,
 		TotalHash: 				10000,
 		StartDate: 				time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC),
 	}
 
 	var api APIRepos
-	api.InitializeJSONRepos()
-
-	go func(ech msgbus.EventChan) {
-		for e := range ech {
-			switch e.Msg {
-			case msgbus.ConfigMsg:
-				api.Config.AddConfigInfoFromMsgBus(config)
-				if api.Config.ConfigInfoJSONs[0].ID != "ConfigID01" {
-					t.Errorf("Failed to add Config to Repo")
-				} 
-			case msgbus.DestMsg:
-				api.Dest.AddDestFromMsgBus(dest)
-				if api.Dest.DestJSONs[0].ID != "DestID01" {
-					t.Errorf("Failed to add Dest to Repo")
-				} 
-			case msgbus.SellerMsg:
-				api.Seller.AddSellerFromMsgBus(seller)
-				if api.Seller.SellerJSONs[0].ID != "SellerID01" {
-					t.Errorf("Failed to add Seller to Repo")
-				} 
-			case msgbus.ContractMsg:
-				api.Contract.AddContractFromMsgBus(contract)
-				if api.Contract.ContractJSONs[0].ID != "ContractID01" {
-					t.Errorf("Failed to add Contract to Repo")
-				} 
-			case msgbus.MinerMsg:
-				api.Miner.AddMinerFromMsgBus(miner)
-				if api.Miner.MinerJSONs[0].ID != "MinerID01" {
-					t.Errorf("Failed to add Miner to Repo")
-				} 
-			case msgbus.ConnectionMsg:
-				api.Connection.AddConnectionFromMsgBus(connection)
-				if api.Connection.ConnectionJSONs[0].ID != "ConnectionID01" {
-					t.Errorf("Failed to add Connection to Repo")
-				} 
-			default:
-			
-			} 
-		}
-	}(ech)
-
-	ps.Pub(msgbus.ConfigMsg, "configMsg01", msgbus.ConfigInfo{})
-	ps.Pub(msgbus.DestMsg, "destMsg01", msgbus.Dest{})
-	ps.Pub(msgbus.SellerMsg, "sellerMsg01", msgbus.Seller{})
-	ps.Pub(msgbus.ContractMsg, "contractMsg01", msgbus.Contract{})
-	ps.Pub(msgbus.MinerMsg, "minerMsg01", msgbus.Miner{})
-	ps.Pub(msgbus.ConnectionMsg, "connectionMsg01", msgbus.Connection{})
-
-	ps.Sub(msgbus.ConfigMsg, "configMsg01", ech)
-	ps.Sub(msgbus.DestMsg, "destMsg01", ech)
-	ps.Sub(msgbus.SellerMsg, "sellerMsg01", ech)
-	ps.Sub(msgbus.ContractMsg, "contractMsg01", ech)
-	ps.Sub(msgbus.MinerMsg, "minerMsg01", ech)
-	ps.Sub(msgbus.ConnectionMsg, "connectionMsg01", ech)
-
-	ps.Set(msgbus.ConfigMsg, "configMsg01", config)
-	ps.Set(msgbus.DestMsg, "destMsg01", dest)
-	ps.Set(msgbus.SellerMsg, "sellerMsg01", seller)
-	ps.Set(msgbus.ContractMsg, "contractMsg01", contract)
-	ps.Set(msgbus.MinerMsg, "minerMsg01", miner)
-	ps.Set(msgbus.ConnectionMsg, "connectionMsg01", connection)
-}
-
-func TestMockPOSTAddedToMsgBus(t *testing.T) {	
-	// Mock POST Requests by declaring new JSON structures and adding them to api repos
-	eaConfig,err := configurationmanager.LoadConfiguration("../configurationmanager/testconfig.json", "externalAPI")
-	if err != nil {
-		t.Errorf("LoadConfiguration returned error")
+	api.InitializeJSONRepos(ps)
+	time.Sleep(time.Millisecond*1000)
+	go api.RunAPI()
+	
+	fmt.Print("\n/// Publish Msgbus Msgs //\n\n")
+	ps.PubWait(msgbus.DestMsg, msgbus.IDString(dest.ID), msgbus.Dest{})
+	time.Sleep(time.Millisecond*100)
+	if api.Dest.DestJSONs[0].ID != string(dest.ID) {
+		t.Errorf("Failed to add dest to API repo after publish from msgbus")
 	}
+	ps.PubWait(msgbus.BuyerMsg, msgbus.IDString(buyer.ID), msgbus.Buyer{})
+	time.Sleep(time.Millisecond*100)
+	if api.Buyer.BuyerJSONs[0].ID != string(buyer.ID) {
+		t.Errorf("Failed to add buyer to API repo after publish from msgbus")
+	}
+	ps.PubWait(msgbus.SellerMsg, msgbus.IDString(seller.ID), msgbus.Seller{})
+	time.Sleep(time.Millisecond*100)
+	if api.Seller.SellerJSONs[0].ID != string(seller.ID) {
+		t.Errorf("Failed to add seller to API repo after publish from msgbus")
+	}
+	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract.ID), msgbus.Contract{})
+	time.Sleep(time.Millisecond*100)
+	if api.Contract.ContractJSONs[0].ID != string(contract.ID) {
+		t.Errorf("Failed to add contract to API repo after publish from msgbus")
+	}
+	ps.PubWait(msgbus.ConfigMsg, msgbus.IDString(config.ID), msgbus.ConfigInfo{})
+	time.Sleep(time.Millisecond*100)
+	if api.Config.ConfigInfoJSONs[0].ID != string(config.ID) {
+		t.Errorf("Failed to add config to API repo after publish from msgbus")
+	}
+	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), msgbus.Miner{})
+	time.Sleep(time.Millisecond*100)
+	if api.Miner.MinerJSONs[0].ID != string(miner.ID) {
+		t.Errorf("Failed to add miner to API repo after publish from msgbus")
+	}
+	ps.PubWait(msgbus.ConnectionMsg, msgbus.IDString(connection.ID), msgbus.Connection{})
+	time.Sleep(time.Millisecond*100)
+	if api.Connection.ConnectionJSONs[0].ID != string(connection.ID) {
+		t.Errorf("Failed to add connection to API repo after publish from msgbus")
+	}
+	fmt.Print("\nAPI Repos::\n")
+	fmt.Println("Dest Repo: ", api.Dest.DestJSONs)
+	fmt.Println("Buyer Repo: ", api.Buyer.BuyerJSONs)
+	fmt.Println("Seller Repo: ", api.Seller.SellerJSONs)
+	fmt.Println("Contract Repo: ", api.Contract.ContractJSONs)
+	fmt.Println("Config Repo: ", api.Config.ConfigInfoJSONs)
+	fmt.Println("Miner Repo: ", api.Miner.MinerJSONs)
+	fmt.Println("Connection Repo: ", api.Connection.ConnectionJSONs)
 
-	dest := eaConfig["dest"].(map[string]interface{})
-	destMarshaled,_ := json.Marshal(dest)
-	destJSON := msgdata.DestJSON {}
-	json.Unmarshal(destMarshaled, &destJSON)
+	fmt.Print("\n/// Update Msgbus Msgs //\n\n")
+	ps.SetWait(msgbus.DestMsg, msgbus.IDString(dest.ID), dest)
+	time.Sleep(time.Millisecond*100)
+	if api.Dest.DestJSONs[0] != msgdata.ConvertDestMSGtoDestJSON(dest) {
+		t.Errorf("Failed to update dest in API repo after update from msgbus")
+	}
+	ps.SetWait(msgbus.BuyerMsg, msgbus.IDString(buyer.ID), buyer)
+	time.Sleep(time.Millisecond*100)
+	if api.Buyer.BuyerJSONs[0].DefaultDest != msgdata.ConvertBuyerMSGtoBuyerJSON(buyer).DefaultDest {
+		t.Errorf("Failed to update buyer in API repo after update from msgbus")
+	}
+	ps.SetWait(msgbus.SellerMsg, msgbus.IDString(seller.ID), seller)
+	time.Sleep(time.Millisecond*100)
+	if api.Seller.SellerJSONs[0].DefaultDest != msgdata.ConvertSellerMSGtoSellerJSON(seller).DefaultDest {
+		t.Errorf("Failed to update seller in API repo after update from msgbus")
+	}
+	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract.ID), contract)
+	time.Sleep(time.Millisecond*100)
+	if api.Contract.ContractJSONs[0] != msgdata.ConvertContractMSGtoContractJSON(contract) {
+		t.Errorf("Failed to update contract in API repo after update from msgbus")
+	}
+	ps.SetWait(msgbus.ConfigMsg, msgbus.IDString(config.ID), config)
+	time.Sleep(time.Millisecond*100)
+	if api.Config.ConfigInfoJSONs[0] != msgdata.ConvertConfigInfoMSGtoConfigInfoJSON(config) {
+		t.Errorf("Failed to update config in API repo after update from msgbus")
+	}
+	ps.SetWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), miner)
+	time.Sleep(time.Millisecond*100)
+	if api.Miner.MinerJSONs[0] != msgdata.ConvertMinerMSGtoMinerJSON(miner) {
+		t.Errorf("Failed to update miner in API repo after update from msgbus")
+	}
+	ps.SetWait(msgbus.ConnectionMsg, msgbus.IDString(connection.ID), connection)
+	time.Sleep(time.Millisecond*100)
+	if api.Connection.ConnectionJSONs[0] != msgdata.ConvertConnectionMSGtoConnectionJSON(connection) {
+		t.Errorf("Failed to update connection in API repo after update from msgbus")
+	}
+	fmt.Print("\nAPI Repos::\n")
+	fmt.Println("Dest Repo: ", api.Dest.DestJSONs)
+	fmt.Println("Buyer Repo: ", api.Buyer.BuyerJSONs)
+	fmt.Println("Seller Repo: ", api.Seller.SellerJSONs)
+	fmt.Println("Contract Repo: ", api.Contract.ContractJSONs)
+	fmt.Println("Config Repo: ", api.Config.ConfigInfoJSONs)
+	fmt.Println("Miner Repo: ", api.Miner.MinerJSONs)
+	fmt.Println("Connection Repo: ", api.Connection.ConnectionJSONs)
 
-	config := eaConfig["config"].(map[string]interface{})
-	configMarshaled,_ := json.Marshal(config)
-	configJSON := msgdata.ConfigInfoJSON {}
-	json.Unmarshal(configMarshaled, &configJSON)
-
-	connection := eaConfig["connection"].(map[string]interface{})
-	connectionMarshaled,_ := json.Marshal(connection)
-	connectionJSON := msgdata.ConnectionJSON {}
-	json.Unmarshal(connectionMarshaled, &connectionJSON)
-
-	contract := eaConfig["contract"].(map[string]interface{})
-	contractMarshaled,_ := json.Marshal(contract)
-	contractJSON := msgdata.ContractJSON {}
-	json.Unmarshal(contractMarshaled, &contractJSON)
-
-	miner := eaConfig["miner"].(map[string]interface{})
-	minerMarshaled,_ := json.Marshal(miner)
-	minerJSON := msgdata.MinerJSON {}
-	json.Unmarshal(minerMarshaled, &minerJSON)
-
-	seller := eaConfig["seller"].(map[string]interface{})
-	sellerMarshaled,_ := json.Marshal(seller)
-	sellerJSON := msgdata.SellerJSON {}
-	json.Unmarshal(sellerMarshaled, &sellerJSON)
-	
-	ech := make(msgbus.EventChan)
-	ps := msgbus.New(1)
-
-	var api APIRepos
-	api.InitializeJSONRepos()
-
-	api.Config.AddConfigInfo(configJSON)
-	api.Connection.AddConnection(connectionJSON)
-	api.Contract.AddContract(contractJSON)
-	api.Dest.AddDest(destJSON)
-	api.Miner.AddMiner(minerJSON)
-	api.Seller.AddSeller(sellerJSON)
-
-	var ConfigMSG msgbus.ConfigInfo
-	var ConnectionMSG msgbus.Connection
-	var ContractMSG msgbus.Contract
-	var DestMSG msgbus.Dest
-	var MinerMSG msgbus.Miner
-	var SellerMSG msgbus.Seller
-
-	configMSG := msgdata.ConvertConfigInfoJSONtoConfigInfoMSG(api.Config.ConfigInfoJSONs[0], ConfigMSG)
-	connectionMSG := msgdata.ConvertConnectionJSONtoConnectionMSG(api.Connection.ConnectionJSONs[0], ConnectionMSG)
-	contractMSG := msgdata.ConvertContractJSONtoContractMSG(api.Contract.ContractJSONs[0], ContractMSG)
-	destMSG := msgdata.ConvertDestJSONtoDestMSG(api.Dest.DestJSONs[0], DestMSG)
-	minerMSG := msgdata.ConvertMinerJSONtoMinerMSG(api.Miner.MinerJSONs[0], MinerMSG)
-	sellerMSG := msgdata.ConvertSellerJSONtoSellerMSG(api.Seller.SellerJSONs[0], SellerMSG)
-	
-	go func(ech msgbus.EventChan) {
-		for e := range ech {
-			if e.EventType == msgbus.GetEvent {
-				switch e.Msg {
-				case msgbus.ConfigMsg:
-					if e.Data == nil {
-						t.Errorf("Failed to add Config to message bus")
-					} 
-				case msgbus.DestMsg:
-					if e.Data == nil {
-						t.Errorf("Failed to add Dest to message bus")
-					} 
-				case msgbus.SellerMsg:
-					if e.Data == nil {
-						t.Errorf("Failed to add Seller to message bus")
-					} 
-				case msgbus.ContractMsg:
-					if e.Data == nil {
-						t.Errorf("Failed to add Contract to message bus")
-					} 
-				case msgbus.MinerMsg:
-					if e.Data == nil {
-						t.Errorf("Failed to add Miner to message bus")
-					} 
-				case msgbus.ConnectionMsg:
-					if e.Data == nil {
-						t.Errorf("Failed to add Connection to message bus")
-					} 
-				default:
-				
-				} 
-			}
-		}
-	}(ech)
-
-	ps.Pub(msgbus.ConfigMsg, msgbus.IDString(configMSG.ID), msgbus.ConfigInfo{})
-	ps.Pub(msgbus.DestMsg, msgbus.IDString(destMSG.ID), msgbus.Dest{})
-	ps.Pub(msgbus.SellerMsg, msgbus.IDString(sellerMSG.ID), msgbus.Seller{})
-	ps.Pub(msgbus.ContractMsg, msgbus.IDString(contractMSG.ID), msgbus.Contract{})
-	ps.Pub(msgbus.MinerMsg, msgbus.IDString(minerMSG.ID), msgbus.Miner{})
-	ps.Pub(msgbus.ConnectionMsg, msgbus.IDString(connectionMSG.ID), msgbus.Connection{})
-
-	ps.Sub(msgbus.ConfigMsg, msgbus.IDString(configMSG.ID), ech)
-	ps.Sub(msgbus.DestMsg, msgbus.IDString(destMSG.ID), ech)
-	ps.Sub(msgbus.SellerMsg, msgbus.IDString(sellerMSG.ID), ech)
-	ps.Sub(msgbus.ContractMsg, msgbus.IDString(contractMSG.ID), ech)
-	ps.Sub(msgbus.MinerMsg, msgbus.IDString(minerMSG.ID), ech)
-	ps.Sub(msgbus.ConnectionMsg, msgbus.IDString(connectionMSG.ID), ech)
-
-	ps.Set(msgbus.ConfigMsg, msgbus.IDString(configMSG.ID), configMSG)
-	ps.Set(msgbus.DestMsg, msgbus.IDString(destMSG.ID), destMSG)
-	ps.Set(msgbus.SellerMsg, msgbus.IDString(sellerMSG.ID), sellerMSG)
-	ps.Set(msgbus.ContractMsg, msgbus.IDString(contractMSG.ID), contractMSG)
-	ps.Set(msgbus.MinerMsg, msgbus.IDString(minerMSG.ID), minerMSG)
-	ps.Set(msgbus.ConnectionMsg, msgbus.IDString(connectionMSG.ID), connectionMSG)
-
-	ps.Get(msgbus.ConfigMsg, msgbus.IDString(configMSG.ID), ech)
-	ps.Get(msgbus.DestMsg, msgbus.IDString(destMSG.ID), ech)
-	ps.Get(msgbus.SellerMsg, msgbus.IDString(sellerMSG.ID), ech)
-	ps.Get(msgbus.ContractMsg, msgbus.IDString(contractMSG.ID), ech)
-	ps.Get(msgbus.MinerMsg, msgbus.IDString(minerMSG.ID), ech)
-	ps.Get(msgbus.ConnectionMsg, msgbus.IDString(connectionMSG.ID), ech)
+	time.Sleep(time.Minute/6)
+	fmt.Print("\n/// UnPublish Msgbus Msgs //\n\n")
+	ps.UnpubWait(msgbus.DestMsg, msgbus.IDString(dest.ID))
+	time.Sleep(time.Millisecond*100)
+	if len(api.Dest.DestJSONs) > 0 {
+		t.Errorf("Failed to remove dest from API repo after unpublish from msgbus")
+	}
+	ps.UnpubWait(msgbus.BuyerMsg, msgbus.IDString(buyer.ID))
+	time.Sleep(time.Millisecond*100)
+	if len(api.Buyer.BuyerJSONs) > 0 {
+		t.Errorf("Failed to remove buyer from API repo after unpublish from msgbus")
+	}
+	ps.UnpubWait(msgbus.SellerMsg, msgbus.IDString(seller.ID))
+	time.Sleep(time.Millisecond*100)
+	if len(api.Seller.SellerJSONs) > 0 {
+		t.Errorf("Failed to remove seller from API repo after unpublish from msgbus")
+	}
+	ps.UnpubWait(msgbus.ContractMsg, msgbus.IDString(contract.ID))
+	time.Sleep(time.Millisecond*100)
+	if len(api.Contract.ContractJSONs) > 0 {
+		t.Errorf("Failed to remove contract from API repo after unpublish from msgbus")
+	}
+	ps.UnpubWait(msgbus.ConfigMsg, msgbus.IDString(config.ID))
+	time.Sleep(time.Millisecond*100)
+	if len(api.Config.ConfigInfoJSONs) > 0 {
+		t.Errorf("Failed to remove config from API repo after unpublish from msgbus")
+	}
+	ps.UnpubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID))
+	time.Sleep(time.Millisecond*100)
+	if len(api.Miner.MinerJSONs) > 0 {
+		t.Errorf("Failed to remove miner from API repo after unpublish from msgbus")
+	}
+	ps.UnpubWait(msgbus.ConnectionMsg, msgbus.IDString(connection.ID))
+	time.Sleep(time.Millisecond*100)
+	if len(api.Connection.ConnectionJSONs) > 0 {
+		t.Errorf("Failed to remove connection from API repo after unpublish from msgbus")
+	}
+	fmt.Print("\nAPI Repos::\n")
+	fmt.Println("Dest Repo: ", api.Dest.DestJSONs)
+	fmt.Println("Buyer Repo: ", api.Buyer.BuyerJSONs)
+	fmt.Println("Seller Repo: ", api.Seller.SellerJSONs)
+	fmt.Println("Contract Repo: ", api.Contract.ContractJSONs)
+	fmt.Println("Config Repo: ", api.Config.ConfigInfoJSONs)
+	fmt.Println("Miner Repo: ", api.Miner.MinerJSONs)
+	fmt.Println("Connection Repo: ", api.Connection.ConnectionJSONs)
+	time.Sleep(time.Minute/6)
 }

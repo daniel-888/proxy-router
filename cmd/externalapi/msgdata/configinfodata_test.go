@@ -3,6 +3,8 @@ package msgdata
 import (
 	"fmt"
 	"testing"
+
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 func TestAddConfigInfo(t *testing.T) {
@@ -12,7 +14,8 @@ func TestAddConfigInfo(t *testing.T) {
 		Seller:      "Test",
 	}
 	
-	configRepo := NewConfigInfo()
+	ps := msgbus.New(10)
+	configRepo := NewConfigInfo(ps)
 	configRepo.AddConfigInfo(config)
 
 	if len(configRepo.ConfigInfoJSONs) != 1 {
@@ -28,7 +31,8 @@ func TestGetAllConfigInfos(t *testing.T) {
 		config[i].Seller = "Test"
 	}
 	
-	configRepo := NewConfigInfo()
+	ps := msgbus.New(10)
+	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
 	}
@@ -47,7 +51,8 @@ func TestGetConfigInfo(t *testing.T) {
 		config[i].Seller = "Test"
 	}
 	
-	configRepo := NewConfigInfo()
+	ps := msgbus.New(10)
+	configRepo := NewConfigInfo(ps)	
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
 	}
@@ -70,7 +75,8 @@ func TestUpdateConfigInfo(t *testing.T) {
 		config[i].Seller = "Test"
 	}
 	
-	configRepo := NewConfigInfo()
+	ps := msgbus.New(10)
+	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
 	}
@@ -106,7 +112,8 @@ func TestDeleteConfigInfo(t *testing.T) {
 		config[i].Seller = "Test"
 	}
 	
-	configRepo := NewConfigInfo()
+	ps := msgbus.New(10)
+	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
 	}

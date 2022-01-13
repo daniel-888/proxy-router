@@ -3,6 +3,8 @@ package msgdata
 import (
 	"fmt"
 	"testing"
+
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 func TestAddContract(t *testing.T) {
@@ -14,11 +16,11 @@ func TestAddContract(t *testing.T) {
 		Limit: 			100,
 		Speed: 			100,
 		Length: 		100,
-		Port: 			100,
 		StartingBlockTimestamp: 100,
 	}
 	
-	contractRepo := NewContract()
+	ps := msgbus.New(10)
+	contractRepo := NewContract(ps)
 	contractRepo.AddContract(contract)
 
 	if len(contractRepo.ContractJSONs) != 1 {
@@ -36,11 +38,11 @@ func TestGetAllContracts(t *testing.T) {
 		contract[i].Limit = 100
 		contract[i].Speed = 100
 		contract[i].Length = 100
-		contract[i].Port = 100
 		contract[i].StartingBlockTimestamp = 100
 	}
 	
-	contractRepo := NewContract()
+	ps := msgbus.New(10)
+	contractRepo := NewContract(ps)
 	for i := 0; i < 10; i++ {
 		contractRepo.AddContract(contract[i])
 	}
@@ -61,11 +63,11 @@ func TestGetContract(t *testing.T) {
 		contract[i].Limit = 100
 		contract[i].Speed = 100
 		contract[i].Length = 100
-		contract[i].Port = 100
 		contract[i].StartingBlockTimestamp = 100
 	}
 	
-	contractRepo := NewContract()
+	ps := msgbus.New(10)
+	contractRepo := NewContract(ps)
 	for i := 0; i < 10; i++ {
 		contractRepo.AddContract(contract[i])
 	}
@@ -90,11 +92,11 @@ func TestUpdateContract(t *testing.T) {
 		contract[i].Limit = 100
 		contract[i].Speed = 100
 		contract[i].Length = 100
-		contract[i].Port = 100
 		contract[i].StartingBlockTimestamp = 100
 	}
 	
-	contractRepo := NewContract()
+	ps := msgbus.New(10)
+	contractRepo := NewContract(ps)
 	for i := 0; i < 10; i++ {
 		contractRepo.AddContract(contract[i])
 	}
@@ -107,7 +109,6 @@ func TestUpdateContract(t *testing.T) {
 		Limit: 			0,
 		Speed: 			0,
 		Length: 		0,
-		Port: 			0,
 		StartingBlockTimestamp: 100,
 	}
 	
@@ -138,11 +139,11 @@ func TestDeleteContract(t *testing.T) {
 		contract[i].Limit = 100
 		contract[i].Speed = 100
 		contract[i].Length = 100
-		contract[i].Port = 100
 		contract[i].StartingBlockTimestamp = 100
 	}
 	
-	contractRepo := NewContract()
+	ps := msgbus.New(10)
+	contractRepo := NewContract(ps)
 	for i := 0; i < 10; i++ {
 		contractRepo.AddContract(contract[i])
 	}

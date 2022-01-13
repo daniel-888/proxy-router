@@ -3,28 +3,34 @@ package msgdata
 import (
 	"errors"
 	"time"
+	"fmt"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
 // Struct of Connection parameters in JSON
 type ConnectionJSON struct {
-	ID        	string 	`json:"id"`
-	Miner     	string 	`json:"miner"`
-	Dest  		string 	`json:"dest"`
-	State     	string 	`json:"state"`
-	TotalHash 	int 	`json:"totalHash"`
-	StartDate 	string 	`json:"startDate"`
+	ID        	string 		`json:"id"`
+	Miner     	string 		`json:"miner"`
+	Dest  		string 		`json:"dest"`
+	State     	string 		`json:"state"`
+	TotalHash 	int 		`json:"totalHash"`
+	StartDate 	time.Time 	`json:"startDate"`
 }
 
 //Struct that stores slice of all JSON Connection structs in Repo
 type ConnectionRepo struct {
 	ConnectionJSONs []ConnectionJSON
+	ps          *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON Connection structs
-func NewConnection() *ConnectionRepo {
-	return &ConnectionRepo{}
+func NewConnection(ps *msgbus.PubSub) *ConnectionRepo {
+	return &ConnectionRepo{
+		ConnectionJSONs:	[]ConnectionJSON{},
+		ps:					ps,
+	}
 }
 
 //Return all Connection Structs in Repo
@@ -48,15 +54,15 @@ func (r *ConnectionRepo) AddConnection(conn ConnectionJSON) {
 }
 
 //Converts Connection struct from msgbus to JSON struct and adds it to Repo
-func (r *ConnectionRepo) AddConnectionFromMsgBus(conn msgbus.Connection) {
+func (r *ConnectionRepo) AddConnectionFromMsgBus(connID msgbus.ConnectionID, conn msgbus.Connection) {
 	var connJSON ConnectionJSON
 
-	connJSON.ID = string(conn.ID)
+	connJSON.ID = string(connID)
 	connJSON.Miner = string(conn.Miner)
 	connJSON.Dest = string(conn.Dest)
 	connJSON.State = 	string(conn.State)
 	connJSON.TotalHash = conn.TotalHash 
-	connJSON.StartDate = conn.StartDate.String()
+	connJSON.StartDate = conn.StartDate
 	
 	r.ConnectionJSONs = append(r.ConnectionJSONs, connJSON)
 }
@@ -69,7 +75,7 @@ func (r *ConnectionRepo) UpdateConnection(id string, newConnection ConnectionJSO
 			if newConnection.Dest != "" {r.ConnectionJSONs[i].Dest = newConnection.Dest}
 			if newConnection.State != "" {r.ConnectionJSONs[i].State = newConnection.State}
 			if newConnection.TotalHash != 0 {r.ConnectionJSONs[i].TotalHash = newConnection.TotalHash}
-			if newConnection.StartDate != "" {r.ConnectionJSONs[i].StartDate = newConnection.StartDate}
+			r.ConnectionJSONs[i].StartDate = newConnection.StartDate
 
 			return nil
 		}
@@ -89,13 +95,99 @@ func (r *ConnectionRepo) DeleteConnection(id string) error {
 	return errors.New("ID not found")
 }
 
+//Subscribe to events for connection msgs on msgbus to update API repos with data
+func (r *ConnectionRepo) SubscribeToConnectionMsgBus() {
+	connectionCh := r.ps.NewEventChan()
+	
+	// add existing connections to api repo
+	event, err := r.ps.GetWait(msgbus.ConnectionMsg, "")
+	if err != nil {
+		panic(fmt.Sprintf("Getting Connections Failed: %s", err))
+	}
+	connections := event.Data.(msgbus.IDIndex)
+	if len(connections) > 0 {
+		for i := range connections {
+			event, err = r.ps.GetWait(msgbus.ConnectionMsg, msgbus.IDString(connections[i]))
+			if err != nil {
+				panic(fmt.Sprintf("Getting Connection Failed: %s", err))
+			}
+			connection := event.Data.(msgbus.Connection)
+			r.AddConnectionFromMsgBus(msgbus.ConnectionID(connections[i]), connection)
+		}
+	}
+
+	event, err = r.ps.SubWait(msgbus.ConnectionMsg, "", connectionCh)
+	if err != nil {
+		panic(fmt.Sprintf("SubWait failed: %s\n", err))
+	}
+	if event.EventType != msgbus.SubscribedEvent {
+		panic(fmt.Sprintf("Wrong event type %v\n", event))
+	}
+
+	for event = range connectionCh {
+		switch event.EventType {
+		//
+		// Subscribe Event
+		//
+		case msgbus.SubscribedEvent:
+			fmt.Printf(lumerinlib.Funcname()+" Subscribe Event: %v\n", event)
+
+			//
+			// Publish Event
+			//
+		case msgbus.PublishEvent:
+			fmt.Printf(lumerinlib.Funcname()+" Publish Event: %v\n", event)
+			connectionID := msgbus.ConnectionID(event.ID)
+			connection := event.Data.(msgbus.Connection)
+			r.AddConnectionFromMsgBus(connectionID, connection)
+			
+			//
+			// Delete/Unpublish Event
+			//
+		case msgbus.DeleteEvent:
+			fallthrough
+		case msgbus.UnpublishEvent:
+			fmt.Printf(lumerinlib.Funcname()+" Delete/Unpublish Event: %v\n", event)
+			connectionID := msgbus.ConnectionID(event.ID)
+			r.DeleteConnection(string(connectionID))
+
+			//
+			// Update Event
+			//
+		case msgbus.UpdateEvent:
+			fmt.Printf(lumerinlib.Funcname()+" Update Event: %v\n", event)
+			connectionID := msgbus.ConnectionID(event.ID)
+			connection := event.Data.(msgbus.Connection)
+			connectionJSON := ConvertConnectionMSGtoConnectionJSON(connection)
+			r.UpdateConnection(string(connectionID), connectionJSON)
+			
+			//
+			// Rut Row...
+			//
+		default:
+			fmt.Printf(lumerinlib.Funcname()+" Got Event: %v\n", event)
+		}
+	}
+}
+
 func ConvertConnectionJSONtoConnectionMSG(conn ConnectionJSON, msg msgbus.Connection) msgbus.Connection {	
 	msg.ID = msgbus.ConnectionID(conn.ID)
 	msg.Miner = msgbus.MinerID(conn.Miner)
 	msg.Dest = msgbus.DestID(conn.Dest)
 	msg.State = msgbus.ConnectionState(conn.State)
 	msg.TotalHash = conn.TotalHash
-	msg.StartDate,_ = time.Parse(conn.StartDate, "000000")
+	msg.StartDate = conn.StartDate
 
 	return msg	
+}
+
+func ConvertConnectionMSGtoConnectionJSON(msg msgbus.Connection) (connection ConnectionJSON) {
+	connection.ID = string(msg.ID)
+	connection.Miner = string(msg.Miner)
+	connection.Dest = string(msg.Dest)
+	connection.State = string(msg.State)
+	connection.TotalHash = msg.TotalHash
+	connection.StartDate = msg.StartDate
+
+	return connection	
 }

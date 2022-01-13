@@ -44,10 +44,10 @@
     },
 
     "contractManager": {
-        "sellerEthereumAddress": "0x74A8CE7398D0a5a6d0C4aBB9c2B24D75C06dEaD3",
-        "sellerEthereumPrivateKey": "6534a4521ab41eec96fd23d758cf5e712b8b87f1abb4d58a2fe32bb3d8487345",
-        "buyerEthereumAddress": "0x73A660D157E0e62dcA959C6EeE4ecD3593DD4429",
-        "buyerEthereumPrivateKey": "d8ccfb65c889a3bbf49138cf5f4cc9c065af41d24ba9472d673e62db12f96457",
+        "sellerEthereumAddress": "0x0201c163a6a229244D176e6FC28dA7e5852961Be",
+        "sellerEthereumPrivateKey": "8c03cba071d08cd98786d6449b1864f57360641d2a4fdd699b534625654e5de0",
+        "buyerEthereumAddress": "0x86e160CE2602e1A0EA525Bd7E4526F77B3Db622a",
+        "buyerEthereumPrivateKey": "f05315fa1bfe63c4f4d1a3b0c33dc8dc53d144735762a762daa378a20c1cb16a",
         "rpcClientAddress": "ws://127.0.0.1:7545",
         "claimFunds": true,
         "cloneFactoryAddress": "0x32ef573e7B4AbE68146FCb43F1159D2CAd910426",

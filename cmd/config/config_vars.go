@@ -24,6 +24,7 @@ const (
 	DisableConnection                ConfigConst = "DisableConnection"
 	DisableContract                  ConfigConst = "DisableContract"
 	DisableSchedule                  ConfigConst = "DisableSchedule"
+	DisableAPI						 ConfigConst = "DisableAPI"
 )
 
 // Config Structure
@@ -122,7 +123,6 @@ var ConfigMap = map[ConfigConst]configitem{
 		envval:     nil,
 		flagval:    nil,
 	},
-
 	ConfigContractShareDropTolerance: {
 		flagname:   "",
 		flagusage:  "",
@@ -200,6 +200,15 @@ var ConfigMap = map[ConfigConst]configitem{
 		flagname:  "disableschedule",
 		flagusage: "Disable the schedule manager",
 		envname:   "DISABLESCHEDULE",
+		defval:    "false",
+		configval: nil,
+		envval:    nil,
+		flagval:   nil,
+	},
+	DisableAPI: {
+		flagname:  "disableapi",
+		flagusage: "Disable the external api",
+		envname:   "DISABLEAPI",
 		defval:    "false",
 		configval: nil,
 		envval:    nil,

@@ -2,8 +2,10 @@ package msgdata
 
 import (
 	"errors"
+	"fmt"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
 //Struct of Buyer parameters in JSON 
@@ -16,11 +18,15 @@ type BuyerJSON struct {
 //Struct that stores slice of all JSON Buyer structs in Repo
 type BuyerRepo struct {
 	BuyerJSONs []BuyerJSON
+	ps          *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON Buyer structs
-func NewBuyer() *BuyerRepo {
-	return &BuyerRepo{}
+func NewBuyer(ps *msgbus.PubSub) *BuyerRepo {
+	return &BuyerRepo{
+		BuyerJSONs:	[]BuyerJSON{},
+	ps:				ps,
+	}
 }
 
 //Return all Buyer Structs in Repo
@@ -44,10 +50,10 @@ func (r *BuyerRepo) AddBuyer(buyer BuyerJSON) {
 }
 
 //Converts Buyer struct from msgbus to JSON struct and adds it to Repo
-func (r *BuyerRepo) AddBuyerFromMsgBus(buyer msgbus.Buyer) {
+func (r *BuyerRepo) AddBuyerFromMsgBus(buyerID msgbus.BuyerID, buyer msgbus.Buyer) {
 	var buyerJSON BuyerJSON
 
-	buyerJSON.ID = string(buyer.ID)
+	buyerJSON.ID = string(buyerID)
 	buyerJSON.DefaultDest = string(buyer.DefaultDest)
 	buyerJSON.Contracts = buyer.Contracts
 	
@@ -76,6 +82,81 @@ func (r *BuyerRepo) DeleteBuyer(id string) error {
 		}
 	}
 	return errors.New("ID not found")
+}
+
+//Subscribe to events for buyer msgs on msgbus to update API repos with data
+func (r *BuyerRepo) SubscribeToBuyerMsgBus() {
+	buyerCh := r.ps.NewEventChan()
+	
+	// add existing buyers to api repo
+	event, err := r.ps.GetWait(msgbus.BuyerMsg, "")
+	if err != nil {
+		panic(fmt.Sprintf("Getting Buyers Failed: %s", err))
+	}
+	buyers := event.Data.(msgbus.IDIndex)
+	if len(buyers) > 0 {
+		for i := range buyers {
+			event, err = r.ps.GetWait(msgbus.BuyerMsg, msgbus.IDString(buyers[i]))
+			if err != nil {
+				panic(fmt.Sprintf("Getting Buyer Failed: %s", err))
+			}
+			buyer := event.Data.(msgbus.Buyer)
+			r.AddBuyerFromMsgBus(msgbus.BuyerID(buyers[i]), buyer)
+		}
+	}
+
+	event, err = r.ps.SubWait(msgbus.BuyerMsg, "", buyerCh)
+	if err != nil {
+		panic(fmt.Sprintf("SubWait failed: %s\n", err))
+	}
+	if event.EventType != msgbus.SubscribedEvent {
+		panic(fmt.Sprintf("Wrong event type %v\n", event))
+	}
+
+	for event = range buyerCh {
+		switch event.EventType {
+		//
+		// Subscribe Event
+		//
+		case msgbus.SubscribedEvent:
+			fmt.Printf(lumerinlib.Funcname()+" Subscribe Event: %v\n", event)
+
+			//
+			// Publish Event
+			//
+		case msgbus.PublishEvent:
+			fmt.Printf(lumerinlib.Funcname()+" Publish Event: %v\n", event)
+			buyerID := msgbus.BuyerID(event.ID)
+			buyer := event.Data.(msgbus.Buyer)
+			r.AddBuyerFromMsgBus(buyerID, buyer)
+			
+			//
+			// Delete/Unpublish Event
+			//
+		case msgbus.DeleteEvent:
+			fallthrough
+		case msgbus.UnpublishEvent:
+			fmt.Printf(lumerinlib.Funcname()+" Delete/Unpublish Event: %v\n", event)
+			buyerID := msgbus.BuyerID(event.ID)
+			r.DeleteBuyer(string(buyerID))
+
+			//
+			// Update Event
+			//
+		case msgbus.UpdateEvent:
+			fmt.Printf(lumerinlib.Funcname()+" Update Event: %v\n", event)
+			buyerID := msgbus.BuyerID(event.ID)
+			buyer := event.Data.(msgbus.Buyer)
+			buyerJSON := ConvertBuyerMSGtoBuyerJSON(buyer)
+			r.UpdateBuyer(string(buyerID), buyerJSON)
+			
+			//
+			// Rut Row...
+			//
+		default:
+			fmt.Printf(lumerinlib.Funcname()+" Got Event: %v\n", event)
+		}
+	}
 }
 
 func ConvertBuyerJSONtoBuyerMSG(buyer BuyerJSON, msg msgbus.Buyer) msgbus.Buyer {
