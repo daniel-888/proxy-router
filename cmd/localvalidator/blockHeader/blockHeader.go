@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"example.com/chainhash"
 	"example.com/wire"
-	_ "github.com/btcsuite/btcd/blockchain"
+	"github.com/btcsuite/btcd/blockchain"
+	chainhashOnline "github.com/btcsuite/btcd/chaincfg/chainhash"
 	"fmt"
 	"strconv"
+	"math/big"
 )
 
 type BlockHeader struct {
@@ -51,7 +53,6 @@ func reverseHexNumber(x string) [32]byte {
 	for i := 0; i < len(x); i = i + 2 {
 		newNum = x[i:i+2] + newNum
 	}
-	//return newNum
 	//pass newNum to NewHashFromString
 	res := chainhash.NewHashFromStr(newNum)
 	return res
@@ -69,8 +70,6 @@ func (bh *BlockHeader) HashInput(nonce string, time string) [32]byte {
 		Version:    int32(sVersion),
 		PrevBlock:  chainhash.NewHashFromStr(bh.PreviousBlockHash),
 		MerkleRoot: chainhash.NewHashFromStr(bh.MerkleRoot),
-		//PrevBlock: sPrevHash,
-		//MerkleRoot: sMerkleRoot,
 		Timestamp: int32(sTime),
 		Bits:      uint32(sDifficulty),
 		Nonce:     uint32(sNonce),
@@ -93,4 +92,9 @@ func (bh *BlockHeader) UpdateHeaderInformation(_version string, _previousBlockHa
 	bh.Difficulty = _difficulty
 }
 
+func BlockHashToBigInt(hash [32]byte) *big.Int {
+	//convert input to chainhash.Hash
+	chash, _ := chainhashOnline.NewHash(hash[:])
+	return blockchain.HashToBig(chash)
+}
 //going to be getting the same message as described in stratum
