@@ -3,8 +3,9 @@ package blockHeader
 import (
 	"encoding/binary"
 	"encoding/json"
-	"example.com/blockchain"
-	"example.com/chainhash"
+	"github.com/btcsuite/btcd/blockchain"
+	chainhash1 "example.com/chainhash"
+	chainhash2 "github.com/btcsuite/btcd/chaincfg/chainhash"
 	"example.com/wire"
 	"fmt"
 	"math/big"
@@ -58,7 +59,7 @@ func reverseHexNumber(x string) [32]byte {
 	}
 	//return newNum
 	//pass newNum to NewHashFromString
-	res := chainhash.NewHashFromStr(newNum)
+	res := chainhash1.NewHashFromStr(newNum)
 	return res
 }
 
@@ -72,8 +73,8 @@ func (bh *BlockHeader) HashInput(nonce string, time string) [32]byte {
 	//PrevBlock and MerkleRoot need to be little-endian
 	newBlockHash := wire.BlockHeader{
 		Version:    int32(sVersion),
-		PrevBlock:  chainhash.NewHashFromStr(bh.PreviousBlockHash),
-		MerkleRoot: chainhash.NewHashFromStr(bh.MerkleRoot),
+		PrevBlock:  chainhash1.NewHashFromStr(bh.PreviousBlockHash),
+		MerkleRoot: chainhash1.NewHashFromStr(bh.MerkleRoot),
 		Timestamp:  int32(sTime),
 		Bits:       uint32(sDifficulty),
 		Nonce:      uint32(sNonce),
@@ -95,7 +96,8 @@ func (bh *BlockHeader) UpdateHeaderInformation(_version string, _previousBlockHa
 //going to be getting the same message as described in stratum
 
 func HashToBigInt(hash [32]byte) *big.Int {
-	return blockchain.HashToBig(hash)
+	hashified, _ := chainhash2.NewHash(hash[:]) 
+	return blockchain.HashToBig(hashified)
 }
 
 func TargetDifficultyFromBits(n uint32) *big.Int {
