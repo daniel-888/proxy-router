@@ -8,6 +8,8 @@ require (
 	example.com/chainhash v0.0.0-00010101000000-000000000000
 	example.com/hashing v0.0.0-00010101000000-000000000000
 	example.com/wire v0.0.0-00010101000000-000000000000
+	github.com/btcsuite/btcd v0.22.0-beta // indirect
+	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce // indirect
 )
 
 replace example.com/chainhash => ../chainhash

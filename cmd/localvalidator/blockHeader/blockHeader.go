@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"example.com/chainhash"
 	"example.com/wire"
+	_ "github.com/btcsuite/btcd/blockchain"
 	"fmt"
 	"strconv"
 )
