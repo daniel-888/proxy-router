@@ -44,14 +44,20 @@ func (v *Validator) closeOutContract() {
 
 //receives a nonce and a hash, compares the two, and updates instance parameters
 //need to modify to check to see if the resulting hash is below the given difficulty level
-func (v *Validator) IncomingHash(nonce string, time string, hash string, difficulty string) message.HashResult {
+func (v *Validator) IncomingHash(nonce string, time string, hash string, difficulty string) (message.HashResult, error) {
 	/*
 		remove section to reflect changes to blockHeader package
 	*/
 	calcHash := v.BH.HashInput(nonce, time)
-	uintDifficulty, _ := strconv.ParseUint(v.BH.Difficulty, 16, 32)
+	uintDifficulty, strConvErr := strconv.ParseUint(v.BH.Difficulty, 16, 32)
+	if strConvErr != nil {
+		return message.HashResult{}, strConvErr
+	}
 	var hashingResult bool //temp until revised logic put in place
-	hashAsBigInt := blockHeader.BlockHashToBigInt(calcHash)
+	hashAsBigInt, hashingErr := blockHeader.BlockHashToBigInt(calcHash)
+	if hashingErr != nil {
+		return message.HashResult{}, hashingErr
+	}
 	var bigDifficulty *big.Int = blockHeader.DifficultyToBigInt(uint32(uintDifficulty))
 
 	if hashAsBigInt.Cmp(bigDifficulty) < 1 {
@@ -70,7 +76,7 @@ func (v *Validator) IncomingHash(nonce string, time string, hash string, difficu
 	} //send out the message stating that the contract is closed with 0 hashes left
 	var result = message.HashResult{}
 	result.IsCorrect = strconv.FormatBool(hashingResult)
-	return result
+	return result, nil
 }
 
 //function to update the validators block header
