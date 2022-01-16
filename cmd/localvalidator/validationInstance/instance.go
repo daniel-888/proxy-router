@@ -7,6 +7,7 @@ import (
 	//"math"
 	"strconv"
 	"time"
+	"math/big"
 )
 
 //an individual validator which will operate as a thread
@@ -41,21 +42,6 @@ func (v *Validator) closeOutContract() {
 	fmt.Println("web3 call to smart contract to initiate closeout procedure")
 }
 
-/*
-//take in the hex code of the bytes and return the 256 bit hex representation
-func calculateDifficulty(diff string) string {
-	b0 := diff[:2]
-	b1 := diff[2:4]
-	b2 := diff[4:6]
-	b3 := diff[6:]
-	i0, _ := strconv.ParseUint(b3, 16, 8)
-	i1, _ := strconv.ParseUint(fmt.Sprintf("%s%s%s", b2, b1, b0), 16, 24)
-	calc := i1 * math.Pow(2, (8*(i0-3)))
-	return fmt.Sprintf("%x", calc)
-
-}
-*/
-
 //receives a nonce and a hash, compares the two, and updates instance parameters
 //need to modify to check to see if the resulting hash is below the given difficulty level
 func (v *Validator) IncomingHash(nonce string, time string, hash string, difficulty string) message.HashResult {
@@ -63,10 +49,12 @@ func (v *Validator) IncomingHash(nonce string, time string, hash string, difficu
 		remove section to reflect changes to blockHeader package
 	*/
 	calcHash := v.BH.HashInput(nonce, time)
-	newHash := fmt.Sprintf("%x", calcHash)
-	fmt.Println(newHash)
+	uintDifficulty, _ := strconv.ParseUint(v.BH.Difficulty, 16, 32)
 	var hashingResult bool //temp until revised logic put in place
-	if newHash == hash {
+	hashAsBigInt := blockHeader.BlockHashToBigInt(calcHash)
+	var bigDifficulty *big.Int = blockHeader.DifficultyToBigInt(uint32(uintDifficulty))
+
+	if hashAsBigInt.Cmp(bigDifficulty) < 10 {
 		hashingResult = true
 	} else {
 		hashingResult = false

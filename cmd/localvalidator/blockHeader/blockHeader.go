@@ -13,11 +13,12 @@ import (
 )
 
 type BlockHeader struct {
-	Version           string
-	PreviousBlockHash string
-	MerkleRoot        string
-	Time              string
-	Difficulty        string
+	Version           string // little endian hex format
+	PreviousBlockHash string // little endian hex format
+	MerkleRoot        string // little endian hex format
+	//time is not used, eventually need to deprecate
+	Time              string // little endian hex format
+	Difficulty        string // little endian hex format
 }
 
 //expects a string of the form `"Version": "001"`... etc to parse as a JSON
@@ -41,13 +42,15 @@ func ConvertBlockHeaderToString(h BlockHeader) string {
 	return fmt.Sprintf(`{\"Version\":\"%s\",\"PreviousBlockHash\":\"%s\",\"MerkleRoot\":\"%s\",\"Time\":\"%s\",\"Difficulty\":\"%s\"}`, h.Version, h.PreviousBlockHash, h.MerkleRoot, h.Time, h.Difficulty)
 }
 
-func uintToLittleEndian(x string) string {
-	u, _ := strconv.ParseUint(x, 10, 64) //convert string to uint64
+//convert the string of a uint64 into a little endian hex format
+func uintToLittleEndian(x string) (string, error) {
+	u, err := strconv.ParseUint(x, 10, 64) //convert string to uint64
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, u)
-	return fmt.Sprintf("%x", buf[:4])
+	return fmt.Sprintf("%x", buf[:4]), err
 }
 
+//convert a big endian hex to a little endian hex
 func reverseHexNumber(x string) [32]byte {
 	newNum := ""
 	for i := 0; i < len(x); i = i + 2 {
@@ -58,7 +61,7 @@ func reverseHexNumber(x string) [32]byte {
 	return res
 }
 
-// takes a given nonce, and serialize block header into form used for hashing
+// takes a given nonce and timestamp, and returns the little-endian block hash
 func (bh *BlockHeader) HashInput(nonce string, time string) [32]byte {
 	sVersion, _ := strconv.ParseInt(bh.Version, 16, 32)
 	sTime, _ := strconv.ParseInt(time, 16, 32)
@@ -75,11 +78,6 @@ func (bh *BlockHeader) HashInput(nonce string, time string) [32]byte {
 		Nonce:     uint32(sNonce),
 	}
 	hash := newBlockHash.BlockHash() //little-endian
-
-	//converting the resulting hash to big-endian format
-	for i, j := 0, len(hash)-1; i < j; i, j = i+1, j-1 {
-		hash[i], hash[j] = hash[j], hash[i]
-	}
 	return hash
 
 }
@@ -92,9 +90,15 @@ func (bh *BlockHeader) UpdateHeaderInformation(_version string, _previousBlockHa
 	bh.Difficulty = _difficulty
 }
 
-func BlockHashToBigInt(hash [32]byte) *big.Int {
+//converts a block hash to a big integer. returns an error if conversion fails
+func BlockHashToBigInt(hash [32]byte) (*big.Int, error) {
 	//convert input to chainhash.Hash
-	chash, _ := chainhashOnline.NewHash(hash[:])
-	return blockchain.HashToBig(chash)
+	chash, err := chainhashOnline.NewHash(hash[:])
+	return blockchain.HashToBig(chash), err
 }
-//going to be getting the same message as described in stratum
+
+//expects the block difficulty as a uint32, returns a big int
+func DifficultyToBigInt(diff uint32) *big.Int {
+	//return blockchain.CalcWork(diff) //testing will need to be done to ensure this is the correct approach
+	return blockchain.CompactToBig(diff)
+}
