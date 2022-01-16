@@ -19,6 +19,7 @@ import (
 	"example.com/validationInstance"
 	"strconv"
 	"time"
+	"fmt"
 )
 
 //creates a channel object which can be used to access created validators
@@ -27,6 +28,7 @@ type Validator struct {
 }
 
 //creates a validator
+//func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff uint, messages chan message.Message) error{
 func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff uint, messages chan message.Message) {
 	go func() {
 		myValidator := validationInstance.Validator{
@@ -43,7 +45,10 @@ func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff
 			if m.MessageType == "validate" {
 				//potentially bubble up result of function call
 				req := message.ReceiveHashingRequest(m.Message)
-				result := myValidator.IncomingHash(req.Nonce, req.Time, req.Hash, req.Difficulty) //this function broadcasts a message
+				result, hashingErr := myValidator.IncomingHash(req.Nonce, req.Time, req.Hash, req.Difficulty) //this function broadcasts a message
+				if hashingErr != nil {
+					fmt.Printf("error encountered validating a mining.submit message: %s\n", hashingErr)
+				}
 				newM := m
 				newM.Message = message.ConvertMessageToString(result)
 				messages <- newM //sends the message.HashResult struct into the channel
