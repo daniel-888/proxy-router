@@ -48,15 +48,16 @@ func (v *Validator) IncomingHash(nonce string, time string, hash string, difficu
 	/*
 		remove section to reflect changes to blockHeader package
 	*/
+	var result = message.HashResult{} //initialize result here to use in error response
 	calcHash := v.BH.HashInput(nonce, time)
 	uintDifficulty, strConvErr := strconv.ParseUint(v.BH.Difficulty, 16, 32)
 	if strConvErr != nil {
-		return message.HashResult{}, strConvErr
+		return result, strConvErr
 	}
 	var hashingResult bool //temp until revised logic put in place
 	hashAsBigInt, hashingErr := blockHeader.BlockHashToBigInt(calcHash)
 	if hashingErr != nil {
-		return message.HashResult{}, hashingErr
+		return result, hashingErr
 	}
 	var bigDifficulty *big.Int = blockHeader.DifficultyToBigInt(uint32(uintDifficulty))
 
@@ -66,15 +67,11 @@ func (v *Validator) IncomingHash(nonce string, time string, hash string, difficu
 		hashingResult = false
 	}
 	if hashingResult {
-		//increase the hashes calculated by 1
 		v.HashesAnalyzed++
-	} else {
-		//message to indicate hashing failed
-	}
+	} 
 	if v.HashrateRemaining() == false {
-		v.closeOutContract()
-	} //send out the message stating that the contract is closed with 0 hashes left
-	var result = message.HashResult{}
+		v.closeOutContract() 
+	}
 	result.IsCorrect = strconv.FormatBool(hashingResult)
 	return result, nil
 }
