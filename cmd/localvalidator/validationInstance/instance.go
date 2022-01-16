@@ -54,7 +54,7 @@ func (v *Validator) IncomingHash(nonce string, time string, hash string, difficu
 	hashAsBigInt := blockHeader.BlockHashToBigInt(calcHash)
 	var bigDifficulty *big.Int = blockHeader.DifficultyToBigInt(uint32(uintDifficulty))
 
-	if hashAsBigInt.Cmp(bigDifficulty) < 10 {
+	if hashAsBigInt.Cmp(bigDifficulty) < 1 {
 		hashingResult = true
 	} else {
 		hashingResult = false
