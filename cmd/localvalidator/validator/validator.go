@@ -97,6 +97,7 @@ func (v *Validator) SendMessageToValidator(m message.Message) *message.Message {
 	}
 }
 
+//creates a new validator which can spawn multiple validation instances
 func MakeNewValidator() Validator {
 	ch := channels.Channels{
 		ValidationChannels: make(map[string]chan message.Message),

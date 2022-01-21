@@ -14,3 +14,5 @@ require (
 replace example.com/chainhash => ../chainhash
 
 replace example.com/hashing => ../hashing
+
+replace example.com/blockchain => ../blockchain

@@ -3,11 +3,14 @@ package blockHeader
 import (
 	"encoding/binary"
 	"encoding/json"
-	"example.com/chainhash"
+	"github.com/btcsuite/btcd/blockchain"
+	chainhash1 "example.com/chainhash"
+	chainhash2 "github.com/btcsuite/btcd/chaincfg/chainhash"
 	"example.com/wire"
 	"github.com/btcsuite/btcd/blockchain"
 	chainhashOnline "github.com/btcsuite/btcd/chaincfg/chainhash"
 	"fmt"
+	"math/big"
 	"strconv"
 	"math/big"
 )
@@ -22,6 +25,7 @@ type BlockHeader struct {
 }
 
 //expects a string of the form `"Version": "001"`... etc to parse as a JSON
+//all message fields being provided to block header must be little endian since that is what the hashing function expects
 func ConvertToBlockHeader(message string) BlockHeader {
 	// string will look like a JSON object
 	// first convert the string into a map
@@ -29,15 +33,16 @@ func ConvertToBlockHeader(message string) BlockHeader {
 	var bi map[string]string             //create an empty map to put string variables into
 	json.Unmarshal([]byte(message), &bi) //unmarshal string and put into bi (block info) map
 	return BlockHeader{
-		Version:           bi["Version"],
-		PreviousBlockHash: bi["PreviousBlockHash"],
-		MerkleRoot:        bi["MerkleRoot"],
-		Time:              bi["Time"],
-		Difficulty:        bi["Difficulty"],
+		Version:           bi["Version"],           //little endian
+		PreviousBlockHash: bi["PreviousBlockHash"], //little endian
+		MerkleRoot:        bi["MerkleRoot"],        //little endian
+		Time:              bi["Time"],              //little endian
+		Difficulty:        bi["Difficulty"],        //little endian
 	}
 
 }
 
+//converts a block header to a string, used to create a Message which the validation instance can pass to the msg bus
 func ConvertBlockHeaderToString(h BlockHeader) string {
 	return fmt.Sprintf(`{\"Version\":\"%s\",\"PreviousBlockHash\":\"%s\",\"MerkleRoot\":\"%s\",\"Time\":\"%s\",\"Difficulty\":\"%s\"}`, h.Version, h.PreviousBlockHash, h.MerkleRoot, h.Time, h.Difficulty)
 }
@@ -57,7 +62,7 @@ func reverseHexNumber(x string) [32]byte {
 		newNum = x[i:i+2] + newNum
 	}
 	//pass newNum to NewHashFromString
-	res := chainhash.NewHashFromStr(newNum)
+	res := chainhash1.NewHashFromStr(newNum)
 	return res
 }
 
