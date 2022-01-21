@@ -50,16 +50,16 @@ func (v *Validator) IncomingHash(nonce string, time string, hash string, difficu
 	*/
 	var result = message.HashResult{} //initialize result here to use in error response
 	calcHash := v.BH.HashInput(nonce, time)
-	uintDifficulty, strConvErr := strconv.ParseUint(v.BH.Difficulty, 16, 32)
-	if strConvErr != nil {
-		return result, strConvErr
-	}
+	//uintDifficulty, strConvErr := strconv.ParseUint(v.DifficultyTarget, 16, 32)
+	//if strConvErr != nil {
+	//	return result, strConvErr
+	//}
 	var hashingResult bool //temp until revised logic put in place
 	hashAsBigInt, hashingErr := blockHeader.BlockHashToBigInt(calcHash)
 	if hashingErr != nil {
 		return result, hashingErr
 	}
-	var bigDifficulty *big.Int = blockHeader.DifficultyToBigInt(uint32(uintDifficulty))
+	var bigDifficulty *big.Int = blockHeader.DifficultyToBigInt(uint32(v.DifficultyTarget))
 
 	if hashAsBigInt.Cmp(bigDifficulty) < 1 {
 		hashingResult = true
