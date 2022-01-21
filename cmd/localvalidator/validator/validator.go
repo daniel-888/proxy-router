@@ -29,7 +29,7 @@ type Validator struct {
 
 //creates a validator
 //func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff uint, messages chan message.Message) error{
-func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff uint, messages chan message.Message) {
+func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff uint, pc string, messages chan message.Message) {
 	go func() {
 		myValidator := validationInstance.Validator{
 			BH:               bh,
@@ -38,6 +38,7 @@ func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff
 			DifficultyTarget: diff,
 			ContractHashRate: hashRate,
 			ContractLimit:    limit,
+			PoolCredentials: pc, // pool login credentials
 		}
 		for {
 			//message is of type message, with messageType and content values
@@ -45,7 +46,7 @@ func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff
 			if m.MessageType == "validate" {
 				//potentially bubble up result of function call
 				req := message.ReceiveHashingRequest(m.Message)
-				result, hashingErr := myValidator.IncomingHash(req.Nonce, req.Time, req.Hash, req.Difficulty) //this function broadcasts a message
+				result, hashingErr := myValidator.IncomingHash(req.Username, req.Nonce, req.Time, req.Hash, req.Difficulty) //this function broadcasts a message
 				if hashingErr != nil {
 					fmt.Printf("error encountered validating a mining.submit message: %s\n", hashingErr)
 				}
