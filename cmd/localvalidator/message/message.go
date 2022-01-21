@@ -16,6 +16,10 @@ type Message struct {
 
 //struct for new validator message
 type NewValidator struct {
+	//BH is a block header
+	//HashRate is the smart contract defined hashrate
+	//Limit is the number of hashes that the contract has promised to deliver
+	//Diff is pool difficulty target which submitted hashes must fall under
 	BH, HashRate, Limit, Diff string
 }
 
@@ -42,7 +46,16 @@ type HashCount struct { //string will be an integer
 	HashCount string
 }
 
-//function to take any given message struct and convert it into a string
+//for testing purposes for now
+type MiningNotify struct{}
+
+
+//for testing purposes for now
+//contains all the field of a stratum mining.submit message
+type MiningSubmit struct{
+	WorkerName, JobID, ExtraNonce2, NTime, NOnce string
+}
+
 func ConvertMessageToString(i interface{}) string {
 	v := reflect.ValueOf(i)
 	myString := "{"
