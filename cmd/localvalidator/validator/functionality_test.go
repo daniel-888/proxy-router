@@ -15,7 +15,7 @@ func createTestValidator() message.Message {
 		BH:       blockHeader.ConvertBlockHeaderToString(createTestBlockHeader()),
 		HashRate: "10",
 		Limit:    "10",
-		Diff:     "10",
+		Diff:     "100000000000000000000000000000000000000000000000000000000000",
 	}
 	newValidatorString := message.ConvertMessageToString(newValidatorMessage)
 	returnMessage.Message = newValidatorString
@@ -37,6 +37,35 @@ func createTestBlockHeader() blockHeader.BlockHeader {
 
 func createBlockHeaderUpdate() {
 }
+
+//creates a submit message which is of the same type as stratum mining.submit
+func createSubmitMessage(wn string, jid string, en2 string, nt string, no string) {
+	returnMessage := message.Message{}
+	mySubmit := message.MiningSubmit{}
+	mySubmit.WorkerName = wn
+	mySubmit.JobID = jid
+	mySubmit.ExtraNonce2 = en2
+	mySubmit.NTime = nt
+	mySubmit.NOnce = no
+	returnMessage.Address = "123"
+	returnMessage.MessageType = "validate"
+	returnMessage.Message = message.ConvertMessageToString(mySubmit)
+}
+
+//creates a notify message which is of the same type as stratum mining.notify
+func createNotifyMessage(wn string, jid string, en2 string, nt string, no string) {
+	returnMessage := message.Message{}
+	mySubmit := message.MiningSubmit{}
+	mySubmit.WorkerName = wn
+	mySubmit.JobID = jid
+	mySubmit.ExtraNonce2 = en2
+	mySubmit.NTime = nt
+	mySubmit.NOnce = no
+	returnMessage.Address = "123"
+	returnMessage.MessageType = "validate"
+	returnMessage.Message = message.ConvertMessageToString(mySubmit)
+}
+
 
 func createHashSubmissionMessage() message.Message {
 	var returnMessage = message.Message{}
