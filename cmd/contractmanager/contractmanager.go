@@ -153,7 +153,7 @@ func (seller *SellerContractManager) start() (err error) {
 
 		// monitor new contracts getting created and start hashrate conrtract monitor routine when they are created
 		contractEventChan := seller.ps.NewEventChan()
-		err := seller.ps.Sub(msgbus.ContractMsg, "", contractEventChan)
+		err = seller.ps.Sub(msgbus.ContractMsg, "", contractEventChan)
 		if err != nil {
 			panic(fmt.Sprintf("Failed to subscribe to contract events on msgbus, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err))
 		}

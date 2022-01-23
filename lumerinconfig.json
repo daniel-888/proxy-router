@@ -27,7 +27,7 @@
     },
 
     "contractManager": {
-        "mnemonic": "social auto mistake glad artist equip autumn annual body drop describe shoulder",
+        "mnemonic": "YOUR MNEMONIC GOES HERE --- ADD TO GITIGNORE BEFORE PUSHING TO A PUBLIC REPOSITORY",
         "accountIndex": 0,
         "ethNodeAddr": "ws://127.0.0.1:7545",
         "claimFunds": true,
