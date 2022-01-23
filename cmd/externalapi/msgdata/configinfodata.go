@@ -18,14 +18,14 @@ type ConfigInfoJSON struct {
 //Struct that stores slice of all JSON ConfigInfo structs in Repo
 type ConfigInfoRepo struct {
 	ConfigInfoJSONs []ConfigInfoJSON
-	ps          	*msgbus.PubSub
+	Ps          	*msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON ConfigInfo structs
 func NewConfigInfo(ps *msgbus.PubSub) *ConfigInfoRepo {
 	return &ConfigInfoRepo{
 		ConfigInfoJSONs:	[]ConfigInfoJSON{},
-		ps:					ps,
+		Ps:					ps,
 	}
 }
 
@@ -87,17 +87,17 @@ func (r *ConfigInfoRepo) DeleteConfigInfo(id string) error {
 
 //Subscribe to events for config msgs on msgbus to update API repos with data
 func (r *ConfigInfoRepo) SubscribeToConfigInfoMsgBus() {
-	configCh := r.ps.NewEventChan()
+	configCh := r.Ps.NewEventChan()
 	
 	// add existing configs to api repo
-	event, err := r.ps.GetWait(msgbus.ConfigMsg, "")
+	event, err := r.Ps.GetWait(msgbus.ConfigMsg, "")
 	if err != nil {
 		panic(fmt.Sprintf("Getting Configs Failed: %s", err))
 	}
 	configs := event.Data.(msgbus.IDIndex)
 	if len(configs) > 0 {
 		for i := range configs {
-			event, err = r.ps.GetWait(msgbus.ConfigMsg, msgbus.IDString(configs[i]))
+			event, err = r.Ps.GetWait(msgbus.ConfigMsg, msgbus.IDString(configs[i]))
 			if err != nil {
 				panic(fmt.Sprintf("Getting Config Failed: %s", err))
 			}
@@ -106,7 +106,7 @@ func (r *ConfigInfoRepo) SubscribeToConfigInfoMsgBus() {
 		}
 	}
 	
-	event, err = r.ps.SubWait(msgbus.ConfigMsg, "", configCh)
+	event, err = r.Ps.SubWait(msgbus.ConfigMsg, "", configCh)
 	if err != nil {
 		panic(fmt.Sprintf("SubWait failed: %s\n", err))
 	}
@@ -115,6 +115,7 @@ func (r *ConfigInfoRepo) SubscribeToConfigInfoMsgBus() {
 	}
 
 	for event = range configCh {
+		loop:
 		switch event.EventType {
 		//
 		// Subscribe Event
@@ -128,6 +129,13 @@ func (r *ConfigInfoRepo) SubscribeToConfigInfoMsgBus() {
 		case msgbus.PublishEvent:
 			fmt.Printf(lumerinlib.Funcname()+" Publish Event: %v\n", event)
 			configID := msgbus.ConfigID(event.ID)
+
+			// do not push to api repo if it already exists
+			for i := range r.ConfigInfoJSONs {
+				if r.ConfigInfoJSONs[i].ID == string(configID) {
+					break loop
+				}
+			}
 			config := event.Data.(msgbus.ConfigInfo)
 			r.AddConfigInfoFromMsgBus(configID, config)
 			
@@ -160,7 +168,9 @@ func (r *ConfigInfoRepo) SubscribeToConfigInfoMsgBus() {
 	}
 }
 
-func ConvertConfigInfoJSONtoConfigInfoMSG(conf ConfigInfoJSON, msg msgbus.ConfigInfo) msgbus.ConfigInfo {
+func ConvertConfigInfoJSONtoConfigInfoMSG(conf ConfigInfoJSON) msgbus.ConfigInfo {
+	var msg msgbus.ConfigInfo
+
 	msg.ID = msgbus.ConfigID(conf.ID)
 	msg.DefaultDest = msgbus.DestID(conf.DefaultDest)
 	msg.Seller = msgbus.SellerID(conf.Seller)

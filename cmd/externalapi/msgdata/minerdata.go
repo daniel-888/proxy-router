@@ -24,14 +24,14 @@ type MinerJSON struct {
 //Struct that stores slice of all JSON Miner structs in Repo
 type MinerRepo struct {
 	MinerJSONs []MinerJSON
-	ps          *msgbus.PubSub
+	Ps          *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON Miner structs
 func NewMiner(ps *msgbus.PubSub) *MinerRepo {
 	return &MinerRepo{
 		MinerJSONs: []MinerJSON{},
-		ps:			ps,
+		Ps:			ps,
 	}
 }
 
@@ -99,16 +99,16 @@ func (r *MinerRepo) DeleteMiner(id string) error {
 
 //Subscribe to events for miner msgs on msgbus to update API repo with data
 func (r *MinerRepo) SubscribeToMinerMsgBus() {
-	minerCh := r.ps.NewEventChan()
+	minerCh := r.Ps.NewEventChan()
 	
 	// add existing miners to api repo
-	miners, err := r.ps.MinerGetAllWait()
+	miners, err := r.Ps.MinerGetAllWait()
 	if err != nil {
 		panic(fmt.Sprintf("Getting Miners Failed: %s", err))
 	}
 	if len(miners) > 0 {
 		for i := range miners {
-			miner, err := r.ps.MinerGetWait(miners[i])
+			miner, err := r.Ps.MinerGetWait(miners[i])
 			if err != nil {
 				panic(fmt.Sprintf("Getting Miner Failed: %s", err))
 			}
@@ -116,7 +116,7 @@ func (r *MinerRepo) SubscribeToMinerMsgBus() {
 		}
 	}
 
-	event, err := r.ps.SubWait(msgbus.MinerMsg, "", minerCh)
+	event, err := r.Ps.SubWait(msgbus.MinerMsg, "", minerCh)
 	if err != nil {
 		panic(fmt.Sprintf("SubWait failed: %s\n", err))
 	}
@@ -125,6 +125,7 @@ func (r *MinerRepo) SubscribeToMinerMsgBus() {
 	}
 
 	for event = range minerCh {
+		loop:
 		switch event.EventType {
 		//
 		// Subscribe Event
@@ -138,6 +139,13 @@ func (r *MinerRepo) SubscribeToMinerMsgBus() {
 		case msgbus.PublishEvent:
 			fmt.Printf(lumerinlib.Funcname()+" Publish Event: %v\n", event)
 			minerID := msgbus.MinerID(event.ID)
+
+			// do not push to api repo if it already exists
+			for i := range r.MinerJSONs {
+				if r.MinerJSONs[i].ID == string(minerID) {
+					break loop
+				}
+			}
 			miner := event.Data.(msgbus.Miner)
 			r.AddMinerFromMsgBus(minerID, miner)
 			
@@ -170,7 +178,9 @@ func (r *MinerRepo) SubscribeToMinerMsgBus() {
 	}
 }
 
-func ConvertMinerJSONtoMinerMSG(miner MinerJSON, msg msgbus.Miner) msgbus.Miner {
+func ConvertMinerJSONtoMinerMSG(miner MinerJSON) msgbus.Miner {
+	var msg msgbus.Miner
+	
 	msg.ID = msgbus.MinerID(miner.ID)
 	msg.State = msgbus.MinerState(miner.State)
 	msg.Seller = msgbus.SellerID(miner.Seller)

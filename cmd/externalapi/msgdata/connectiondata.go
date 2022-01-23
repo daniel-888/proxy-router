@@ -22,14 +22,14 @@ type ConnectionJSON struct {
 //Struct that stores slice of all JSON Connection structs in Repo
 type ConnectionRepo struct {
 	ConnectionJSONs []ConnectionJSON
-	ps          *msgbus.PubSub
+	Ps          *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON Connection structs
 func NewConnection(ps *msgbus.PubSub) *ConnectionRepo {
 	return &ConnectionRepo{
 		ConnectionJSONs:	[]ConnectionJSON{},
-		ps:					ps,
+		Ps:					ps,
 	}
 }
 
@@ -97,17 +97,17 @@ func (r *ConnectionRepo) DeleteConnection(id string) error {
 
 //Subscribe to events for connection msgs on msgbus to update API repos with data
 func (r *ConnectionRepo) SubscribeToConnectionMsgBus() {
-	connectionCh := r.ps.NewEventChan()
+	connectionCh := r.Ps.NewEventChan()
 	
 	// add existing connections to api repo
-	event, err := r.ps.GetWait(msgbus.ConnectionMsg, "")
+	event, err := r.Ps.GetWait(msgbus.ConnectionMsg, "")
 	if err != nil {
 		panic(fmt.Sprintf("Getting Connections Failed: %s", err))
 	}
 	connections := event.Data.(msgbus.IDIndex)
 	if len(connections) > 0 {
 		for i := range connections {
-			event, err = r.ps.GetWait(msgbus.ConnectionMsg, msgbus.IDString(connections[i]))
+			event, err = r.Ps.GetWait(msgbus.ConnectionMsg, msgbus.IDString(connections[i]))
 			if err != nil {
 				panic(fmt.Sprintf("Getting Connection Failed: %s", err))
 			}
@@ -116,7 +116,7 @@ func (r *ConnectionRepo) SubscribeToConnectionMsgBus() {
 		}
 	}
 
-	event, err = r.ps.SubWait(msgbus.ConnectionMsg, "", connectionCh)
+	event, err = r.Ps.SubWait(msgbus.ConnectionMsg, "", connectionCh)
 	if err != nil {
 		panic(fmt.Sprintf("SubWait failed: %s\n", err))
 	}
@@ -125,6 +125,7 @@ func (r *ConnectionRepo) SubscribeToConnectionMsgBus() {
 	}
 
 	for event = range connectionCh {
+		loop:
 		switch event.EventType {
 		//
 		// Subscribe Event
@@ -138,6 +139,13 @@ func (r *ConnectionRepo) SubscribeToConnectionMsgBus() {
 		case msgbus.PublishEvent:
 			fmt.Printf(lumerinlib.Funcname()+" Publish Event: %v\n", event)
 			connectionID := msgbus.ConnectionID(event.ID)
+
+			// do not push to api repo if it already exists
+			for i := range r.ConnectionJSONs {
+				if r.ConnectionJSONs[i].ID == string(connectionID) {
+					break loop
+				}
+			}
 			connection := event.Data.(msgbus.Connection)
 			r.AddConnectionFromMsgBus(connectionID, connection)
 			
@@ -170,7 +178,9 @@ func (r *ConnectionRepo) SubscribeToConnectionMsgBus() {
 	}
 }
 
-func ConvertConnectionJSONtoConnectionMSG(conn ConnectionJSON, msg msgbus.Connection) msgbus.Connection {	
+func ConvertConnectionJSONtoConnectionMSG(conn ConnectionJSON) msgbus.Connection {	
+	var msg msgbus.Connection
+
 	msg.ID = msgbus.ConnectionID(conn.ID)
 	msg.Miner = msgbus.MinerID(conn.Miner)
 	msg.Dest = msgbus.DestID(conn.Dest)

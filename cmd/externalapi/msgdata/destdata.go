@@ -17,14 +17,14 @@ type DestJSON struct {
 //Struct that stores slice of all JSON Dest structs in Repo
 type DestRepo struct {
 	DestJSONs []DestJSON
-	ps          *msgbus.PubSub
+	Ps          *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON Dest structs
 func NewDest(ps *msgbus.PubSub) *DestRepo {
 	return &DestRepo{
 		DestJSONs:	[]DestJSON{},
-		ps:			ps,
+		Ps:			ps,
 	}
 }
 
@@ -84,17 +84,17 @@ func (r *DestRepo) DeleteDest(id string) error {
 
 //Subscribe to events for dest msgs on msgbus to update API repos with data
 func (r *DestRepo) SubscribeToDestMsgBus() {
-	destCh := r.ps.NewEventChan()
+	destCh := r.Ps.NewEventChan()
 	
 	// add existing dests to api repo
-	event, err := r.ps.GetWait(msgbus.DestMsg, "")
+	event, err := r.Ps.GetWait(msgbus.DestMsg, "")
 	if err != nil {
 		panic(fmt.Sprintf("Getting Dests Failed: %s", err))
 	}
 	dests := event.Data.(msgbus.IDIndex)
 	if len(dests) > 0 {
 		for i := range dests {
-			event, err = r.ps.GetWait(msgbus.DestMsg, msgbus.IDString(dests[i]))
+			event, err = r.Ps.GetWait(msgbus.DestMsg, msgbus.IDString(dests[i]))
 			if err != nil {
 				panic(fmt.Sprintf("Getting Dest Failed: %s", err))
 			}
@@ -103,7 +103,7 @@ func (r *DestRepo) SubscribeToDestMsgBus() {
 		}
 	}
 
-	event, err = r.ps.SubWait(msgbus.DestMsg, "", destCh)
+	event, err = r.Ps.SubWait(msgbus.DestMsg, "", destCh)
 	if err != nil {
 		panic(fmt.Sprintf("SubWait failed: %s\n", err))
 	}
@@ -112,6 +112,7 @@ func (r *DestRepo) SubscribeToDestMsgBus() {
 	}
 
 	for event = range destCh {
+		loop:
 		switch event.EventType {
 		//
 		// Subscribe Event
@@ -125,6 +126,13 @@ func (r *DestRepo) SubscribeToDestMsgBus() {
 		case msgbus.PublishEvent:
 			fmt.Printf(lumerinlib.Funcname()+" Publish Event: %v\n", event)
 			destID := msgbus.DestID(event.ID)
+
+			// do not push to api repo if it already exists
+			for i := range r.DestJSONs {
+				if r.DestJSONs[i].ID == string(destID) {
+					break loop
+				}
+			}
 			dest := event.Data.(msgbus.Dest)
 			r.AddDestFromMsgBus(destID, dest)
 			
@@ -158,7 +166,9 @@ func (r *DestRepo) SubscribeToDestMsgBus() {
 
 }
 
-func ConvertDestJSONtoDestMSG(dest DestJSON, msg msgbus.Dest) msgbus.Dest {
+func ConvertDestJSONtoDestMSG(dest DestJSON) msgbus.Dest {
+	var msg msgbus.Dest
+	
 	msg.ID = msgbus.DestID(dest.ID)
 	msg.NetUrl = msgbus.DestNetUrl(dest.NetUrl)
 

@@ -1,12 +1,13 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
-
 
 func SellersGET(seller *msgdata.SellerRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -36,6 +37,11 @@ func SellerPOST(seller *msgdata.SellerRepo) gin.HandlerFunc {
 		}
 		for i := range(requestBody) {
 			seller.AddSeller(requestBody[i])
+			sellerMsg := msgdata.ConvertSellerJSONtoSellerMSG(requestBody[i])
+			_,err := seller.Ps.PubWait(msgbus.SellerMsg, msgbus.IDString(sellerMsg.ID), sellerMsg)
+			if err != nil {
+				log.Printf("Seller POST request failed to update msgbus: %s", err)
+			}
 		}
 		
 		c.Status(http.StatusOK)
@@ -55,6 +61,13 @@ func SellerPUT(seller *msgdata.SellerRepo) gin.HandlerFunc {
 			c.Status(http.StatusNotFound)
 			return
 		}
+
+		sellerMsg := msgdata.ConvertSellerJSONtoSellerMSG(requestBody)
+		_,err := seller.Ps.SetWait(msgbus.SellerMsg, msgbus.IDString(sellerMsg.ID), sellerMsg)
+		if err != nil {
+			log.Printf("Seller PUT request failed to update msgbus: %s", err)
+		}
+
 		c.Status(http.StatusOK)
 	}
 }
@@ -67,6 +80,12 @@ func SellerDELETE(seller *msgdata.SellerRepo) gin.HandlerFunc {
 			c.Status(http.StatusNotFound)
 			return
 		}
+
+		_,err := seller.Ps.UnpubWait(msgbus.SellerMsg, msgbus.IDString(id))
+		if err != nil {
+			log.Printf("Seller DELETE request failed to update msgbus: %s", err)
+		}
+
 		c.Status(http.StatusOK)
 	}
 }

@@ -11,21 +11,21 @@ import (
 //Struct of Buyer parameters in JSON 
 type BuyerJSON struct {
 	ID          string 										`json:"id"`
-	DefaultDest string 										`json:"destID"`
+	DefaultDest string 										`json:"defaultDest"`
 	Contracts	map[msgbus.ContractID]msgbus.ContractState	`json:"contracts"`
 }
 
 //Struct that stores slice of all JSON Buyer structs in Repo
 type BuyerRepo struct {
 	BuyerJSONs []BuyerJSON
-	ps          *msgbus.PubSub
+	Ps          *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON Buyer structs
 func NewBuyer(ps *msgbus.PubSub) *BuyerRepo {
 	return &BuyerRepo{
 		BuyerJSONs:	[]BuyerJSON{},
-	ps:				ps,
+		Ps:				ps,
 	}
 }
 
@@ -63,6 +63,7 @@ func (r *BuyerRepo) AddBuyerFromMsgBus(buyerID msgbus.BuyerID, buyer msgbus.Buye
 //Update Buyer Struct with specific ID and leave empty parameters unchanged
 func (r *BuyerRepo) UpdateBuyer(id string, newBuyer BuyerJSON) error {
 	for i,d := range r.BuyerJSONs {
+		fmt.Println(d.ID)
 		if d.ID == id {
 			if newBuyer.DefaultDest != "" {r.BuyerJSONs[i].DefaultDest = newBuyer.DefaultDest}
 			if newBuyer.Contracts != nil {r.BuyerJSONs[i].Contracts = newBuyer.Contracts}
@@ -77,7 +78,6 @@ func (r *BuyerRepo) DeleteBuyer(id string) error {
 	for i,d := range r.BuyerJSONs {
 		if d.ID == id {
 			r.BuyerJSONs = append(r.BuyerJSONs[:i], r.BuyerJSONs[i+1:]...)
-
 			return nil
 		}
 	}
@@ -86,17 +86,17 @@ func (r *BuyerRepo) DeleteBuyer(id string) error {
 
 //Subscribe to events for buyer msgs on msgbus to update API repos with data
 func (r *BuyerRepo) SubscribeToBuyerMsgBus() {
-	buyerCh := r.ps.NewEventChan()
+	buyerCh := r.Ps.NewEventChan()
 	
 	// add existing buyers to api repo
-	event, err := r.ps.GetWait(msgbus.BuyerMsg, "")
+	event, err := r.Ps.GetWait(msgbus.BuyerMsg, "")
 	if err != nil {
 		panic(fmt.Sprintf("Getting Buyers Failed: %s", err))
 	}
 	buyers := event.Data.(msgbus.IDIndex)
 	if len(buyers) > 0 {
 		for i := range buyers {
-			event, err = r.ps.GetWait(msgbus.BuyerMsg, msgbus.IDString(buyers[i]))
+			event, err = r.Ps.GetWait(msgbus.BuyerMsg, msgbus.IDString(buyers[i]))
 			if err != nil {
 				panic(fmt.Sprintf("Getting Buyer Failed: %s", err))
 			}
@@ -105,7 +105,7 @@ func (r *BuyerRepo) SubscribeToBuyerMsgBus() {
 		}
 	}
 
-	event, err = r.ps.SubWait(msgbus.BuyerMsg, "", buyerCh)
+	event, err = r.Ps.SubWait(msgbus.BuyerMsg, "", buyerCh)
 	if err != nil {
 		panic(fmt.Sprintf("SubWait failed: %s\n", err))
 	}
@@ -159,7 +159,8 @@ func (r *BuyerRepo) SubscribeToBuyerMsgBus() {
 	}
 }
 
-func ConvertBuyerJSONtoBuyerMSG(buyer BuyerJSON, msg msgbus.Buyer) msgbus.Buyer {
+func ConvertBuyerJSONtoBuyerMSG(buyer BuyerJSON) msgbus.Buyer {
+	var msg msgbus.Buyer
 	msg.ID = msgbus.BuyerID(buyer.ID)
 	msg.DefaultDest = msgbus.DestID(buyer.DefaultDest)
 	msg.Contracts = buyer.Contracts

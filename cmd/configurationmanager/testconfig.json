@@ -1,9 +1,0 @@
-{
-"configurationManager": {
-    "id": "ConfigID01",
-    "destID": "DestID01",
-    "seller": "SellerID01",
-    "availableContract": "0x85A256C5688D012263D5A79EE37E84FC35EC4524",
-    "runningContract": "0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D"
-}
-}

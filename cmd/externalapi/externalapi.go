@@ -11,18 +11,22 @@ import (
 )
 
 type APIRepos struct {
-	Config		*msgdata.ConfigInfoRepo 
-	Connection 	*msgdata.ConnectionRepo 
-	Contract	*msgdata.ContractRepo 
-	Dest		*msgdata.DestRepo 
-	Miner		*msgdata.MinerRepo 
-	Seller		*msgdata.SellerRepo
-	Buyer		*msgdata.BuyerRepo
+	Config					*msgdata.ConfigInfoRepo 
+	ContractManagerConfig	*msgdata.ContractManagerConfigRepo
+	Connection 				*msgdata.ConnectionRepo 
+	Contract				*msgdata.ContractRepo 
+	Dest					*msgdata.DestRepo 
+	Miner					*msgdata.MinerRepo 
+	Seller					*msgdata.SellerRepo
+	Buyer					*msgdata.BuyerRepo
 }
 
 func (api *APIRepos) InitializeJSONRepos(ps *msgbus.PubSub) {
 	api.Config = msgdata.NewConfigInfo(ps)
 	go api.Config.SubscribeToConfigInfoMsgBus()
+
+	api.ContractManagerConfig = msgdata.NewContractManagerConfig(ps)
+	go api.ContractManagerConfig.SubscribeToContractManagerConfigMsgBus()
 
 	api.Connection = msgdata.NewConnection(ps)
 	go api.Connection.SubscribeToConnectionMsgBus()
@@ -53,6 +57,15 @@ func (api *APIRepos) RunAPI() {
 		configRoutes.POST("/", handlers.ConfigPOST(api.Config))
 		configRoutes.PUT("/:id", handlers.ConfigPUT(api.Config))
 		configRoutes.DELETE("/:id", handlers.ConfigDELETE(api.Config))
+	}
+
+	contractManagerConfigRoutes := r.Group("/contractmanagerconfig")
+	{
+		contractManagerConfigRoutes.GET("/", handlers.ContractManagerConfigsGET(api.ContractManagerConfig))
+		contractManagerConfigRoutes.GET("/:id", handlers.ContractManagerConfigGET(api.ContractManagerConfig))
+		contractManagerConfigRoutes.POST("/", handlers.ContractManagerConfigPOST(api.ContractManagerConfig))
+		contractManagerConfigRoutes.PUT("/:id", handlers.ContractManagerConfigPUT(api.ContractManagerConfig))
+		contractManagerConfigRoutes.DELETE("/:id", handlers.ContractManagerConfigDELETE(api.ContractManagerConfig))
 	}
 
 	connectionRoutes := r.Group("/connection")

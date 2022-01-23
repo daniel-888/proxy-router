@@ -11,7 +11,7 @@ import (
 //Struct of Seller parameters in JSON 
 type SellerJSON struct {
 	ID                     	string 										`json:"id"`
-	DefaultDest          	string 										`json:"destID"`
+	DefaultDest          	string 										`json:"defaultDest"`
 	TotalAvailableHashRate 	int 										`json:"totalAvailableHashrate"`
 	UnusedHashRate         	int 										`json:"unusedHashRate"`
 	Contracts				map[msgbus.ContractID]msgbus.ContractState	`json:"contracts"`
@@ -20,14 +20,14 @@ type SellerJSON struct {
 //Struct that stores slice of all JSON Seller structs in Repo
 type SellerRepo struct {
 	SellerJSONs []SellerJSON
-	ps          *msgbus.PubSub
+	Ps          *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON Seller structs
 func NewSeller(ps *msgbus.PubSub) *SellerRepo {
 	return &SellerRepo{
 		SellerJSONs:	[]SellerJSON{},
-		ps:				ps,
+		Ps:				ps,
 	}
 }
 
@@ -92,17 +92,17 @@ func (r *SellerRepo) DeleteSeller(id string) error {
 
 //Subscribe to events for seller msgs on msgbus to update API repos with data
 func (r *SellerRepo) SubscribeToSellerMsgBus() {
-	sellerCh := r.ps.NewEventChan()
+	sellerCh := r.Ps.NewEventChan()
 	
 	// add existing sellers to api repo
-	event, err := r.ps.GetWait(msgbus.SellerMsg, "")
+	event, err := r.Ps.GetWait(msgbus.SellerMsg, "")
 	if err != nil {
 		panic(fmt.Sprintf("Getting Sellers Failed: %s", err))
 	}
 	sellers := event.Data.(msgbus.IDIndex)
 	if len(sellers) > 0 {
 		for i := range sellers {
-			event, err = r.ps.GetWait(msgbus.SellerMsg, msgbus.IDString(sellers[i]))
+			event, err = r.Ps.GetWait(msgbus.SellerMsg, msgbus.IDString(sellers[i]))
 			if err != nil {
 				panic(fmt.Sprintf("Getting Seller Failed: %s", err))
 			}
@@ -111,7 +111,7 @@ func (r *SellerRepo) SubscribeToSellerMsgBus() {
 		}
 	}
 	
-	event, err = r.ps.SubWait(msgbus.SellerMsg, "", sellerCh)
+	event, err = r.Ps.SubWait(msgbus.SellerMsg, "", sellerCh)
 	if err != nil {
 		panic(fmt.Sprintf("SubWait failed: %s\n", err))
 	}
@@ -120,6 +120,7 @@ func (r *SellerRepo) SubscribeToSellerMsgBus() {
 	}
 
 	for event = range sellerCh {
+		loop:
 		switch event.EventType {
 		//
 		// Subscribe Event
@@ -133,6 +134,13 @@ func (r *SellerRepo) SubscribeToSellerMsgBus() {
 		case msgbus.PublishEvent:
 			fmt.Printf(lumerinlib.Funcname()+" Publish Event: %v\n", event)
 			sellerID := msgbus.SellerID(event.ID)
+
+			// do not push to api repo if it already exists
+			for i := range r.SellerJSONs {
+				if r.SellerJSONs[i].ID == string(sellerID) {
+					break loop
+				}
+			}
 			seller := event.Data.(msgbus.Seller)
 			r.AddSellerFromMsgBus(sellerID, seller)
 			
@@ -165,7 +173,9 @@ func (r *SellerRepo) SubscribeToSellerMsgBus() {
 	}
 }
 
-func ConvertSellerJSONtoSellerMSG(seller SellerJSON, msg msgbus.Seller) msgbus.Seller {
+func ConvertSellerJSONtoSellerMSG(seller SellerJSON) msgbus.Seller {
+	var msg msgbus.Seller
+
 	msg.ID = msgbus.SellerID(seller.ID)
 	msg.DefaultDest = msgbus.DestID(seller.DefaultDest)
 	msg.TotalAvailableHashRate = seller.TotalAvailableHashRate

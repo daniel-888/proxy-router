@@ -25,14 +25,14 @@ type ContractJSON struct {
 //Struct that stores slice of all JSON Contract structs in Repo
 type ContractRepo struct {
 	ContractJSONs []ContractJSON
-	ps          *msgbus.PubSub
+	Ps          *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON Contract structs
 func NewContract(ps *msgbus.PubSub) *ContractRepo {
 	return &ContractRepo{
 		ContractJSONs:	[]ContractJSON{},
-		ps:			ps,
+		Ps:			ps,
 	}
 }
 
@@ -108,17 +108,17 @@ func (r *ContractRepo) DeleteContract(id string) error {
 
 //Subscribe to events for contract msgs on msgbus to update API repos with data
 func (r *ContractRepo) SubscribeToContractMsgBus() {
-	contractCh := r.ps.NewEventChan()
+	contractCh := r.Ps.NewEventChan()
 	
 	// add existing contracts to api repo
-	event, err := r.ps.GetWait(msgbus.ContractMsg, "")
+	event, err := r.Ps.GetWait(msgbus.ContractMsg, "")
 	if err != nil {
 		panic(fmt.Sprintf("Getting Contracts Failed: %s", err))
 	}
 	contracts := event.Data.(msgbus.IDIndex)
 	if len(contracts) > 0 {
 		for i := range contracts {
-			event, err = r.ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contracts[i]))
+			event, err = r.Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contracts[i]))
 			if err != nil {
 				panic(fmt.Sprintf("Getting Contract Failed: %s", err))
 			}
@@ -127,7 +127,7 @@ func (r *ContractRepo) SubscribeToContractMsgBus() {
 		}
 	}
 	
-	event, err = r.ps.SubWait(msgbus.ContractMsg, "", contractCh)
+	event, err = r.Ps.SubWait(msgbus.ContractMsg, "", contractCh)
 	if err != nil {
 		panic(fmt.Sprintf("SubWait failed: %s\n", err))
 	}
@@ -136,6 +136,7 @@ func (r *ContractRepo) SubscribeToContractMsgBus() {
 	}
 
 	for event = range contractCh {
+		loop:
 		switch event.EventType {
 		//
 		// Subscribe Event
@@ -149,6 +150,13 @@ func (r *ContractRepo) SubscribeToContractMsgBus() {
 		case msgbus.PublishEvent:
 			fmt.Printf(lumerinlib.Funcname()+" Publish Event: %v\n", event)
 			contractID := msgbus.ContractID(event.ID)
+
+			// do not push to api repo if it already exists
+			for i := range r.ContractJSONs {
+				if r.ContractJSONs[i].ID == string(contractID) {
+					break loop
+				}
+			}
 			contract := event.Data.(msgbus.Contract)
 			r.AddContractFromMsgBus(contractID, contract)
 			
@@ -181,7 +189,9 @@ func (r *ContractRepo) SubscribeToContractMsgBus() {
 	}
 }
 
-func ConvertContractJSONtoContractMSG(contract ContractJSON, msg msgbus.Contract) msgbus.Contract {
+func ConvertContractJSONtoContractMSG(contract ContractJSON) msgbus.Contract {
+	var msg msgbus.Contract
+	
 	msg.IsSeller = contract.IsSeller
 	msg.ID = msgbus.ContractID(contract.ID)
 	msg.State = msgbus.ContractState(contract.State)
