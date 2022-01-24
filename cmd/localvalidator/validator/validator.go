@@ -65,6 +65,8 @@ func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff
 			} else if m.MessageType == "blockHeaderUpdate" {
 				bh := blockHeader.ConvertToBlockHeader(m.Message)
 				myValidator.UpdateBlockHeader(bh)
+			} else if m.MessageType == "closeValidator" {
+				return
 			}
 		}
 	}()
