@@ -50,7 +50,10 @@ type HashCount struct { //string will be an integer
 }
 
 //for testing purposes for now
-type MiningNotify struct{}
+type MiningNotify struct{
+	JobID, PreviousBlockHash, GTP1, GTP2, MerkleList, Version, NBits, NTime string
+	CleanJobs bool
+}
 
 
 //for testing purposes for now
