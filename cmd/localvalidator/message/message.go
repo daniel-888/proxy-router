@@ -20,7 +20,7 @@ type NewValidator struct {
 	//HashRate is the smart contract defined hashrate
 	//Limit is the number of hashes that the contract has promised to deliver
 	//Diff is pool difficulty target which submitted hashes must fall under
-	BH, HashRate, Limit, Diff string
+	BH, HashRate, Limit, Diff, WorkerName string
 }
 
 //struct for hashing message
