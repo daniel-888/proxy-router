@@ -5,14 +5,13 @@ import (
 	"encoding/json"
 	"github.com/btcsuite/btcd/blockchain"
 	chainhash1 "example.com/chainhash"
-	chainhash2 "github.com/btcsuite/btcd/chaincfg/chainhash"
+	_ "github.com/btcsuite/btcd/chaincfg/chainhash"
 	"example.com/wire"
-	"github.com/btcsuite/btcd/blockchain"
+	_ "github.com/btcsuite/btcd/blockchain"
 	chainhashOnline "github.com/btcsuite/btcd/chaincfg/chainhash"
 	"fmt"
 	"math/big"
 	"strconv"
-	"math/big"
 )
 
 type BlockHeader struct {
@@ -76,8 +75,8 @@ func (bh *BlockHeader) HashInput(nonce string, time string) [32]byte {
 	//PrevBlock and MerkleRoot need to be little-endian
 	newBlockHash := wire.BlockHeader{
 		Version:    int32(sVersion),
-		PrevBlock:  chainhash.NewHashFromStr(bh.PreviousBlockHash),
-		MerkleRoot: chainhash.NewHashFromStr(bh.MerkleRoot),
+		PrevBlock:  chainhash1.NewHashFromStr(bh.PreviousBlockHash),
+		MerkleRoot: chainhash1.NewHashFromStr(bh.MerkleRoot),
 		Timestamp: int32(sTime),
 		Bits:      uint32(sDifficulty),
 		Nonce:     uint32(sNonce),
