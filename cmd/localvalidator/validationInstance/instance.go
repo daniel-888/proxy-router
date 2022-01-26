@@ -5,7 +5,7 @@ import (
 	"example.com/message"
 	"fmt"
 	//"math"
-	"errors"
+	//"errors"
 	"strconv"
 	"time"
 	"math/big"
@@ -19,6 +19,7 @@ type Validator struct {
 	DifficultyTarget uint
 	ContractHashRate uint
 	ContractLimit    uint
+	PoolCredentials string //the pool username that the hashrate is being allocated to
 }
 
 //emits a message notifying whether or not the block was hashed correctly
@@ -45,16 +46,16 @@ func (v *Validator) closeOutContract() {
 
 //receives a nonce and a hash, compares the two, and updates instance parameters
 //need to modify to check to see if the resulting hash is below the given difficulty level
-func (v *Validator) IncomingHash(credential string, nonce string, time string, hash string, difficulty string) (message.HashResult, error) {
-	if credential != v.PoolCredentials {
-		return false, errors.Sprintf("Hashrate Hijacking Detected. Check pool user %s", credential)
-	}
+func (v *Validator) IncomingHash(credential string, nonce string, time string) (message.HashResult, string) {
 	var result = message.HashResult{} //initialize result here to use in error response
+	if credential != v.PoolCredentials {
+		return result, fmt.Sprintf("Hashrate Hijacking Detected. Check pool user %s", credential)
+	}
 	calcHash := v.BH.HashInput(nonce, time)
 	var hashingResult bool //temp until revised logic put in place
 	hashAsBigInt, hashingErr := blockHeader.BlockHashToBigInt(calcHash)
 	if hashingErr != nil {
-		return result, hashingErr
+		return result, fmt.Sprintf("error when hashing block: %s", hashingErr)
 	}
 	var bigDifficulty *big.Int = blockHeader.DifficultyToBigInt(uint32(v.DifficultyTarget))
 
@@ -70,7 +71,7 @@ func (v *Validator) IncomingHash(credential string, nonce string, time string, h
 		v.closeOutContract() 
 	}
 	result.IsCorrect = strconv.FormatBool(hashingResult)
-	return result, nil
+	return result, ""
 }
 //function to update the validators block header
 func (v *Validator) UpdateBlockHeader(bh blockHeader.BlockHeader) {
