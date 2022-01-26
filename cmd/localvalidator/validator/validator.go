@@ -46,12 +46,13 @@ func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff
 			if m.MessageType == "validate" {
 				//potentially bubble up result of function call
 				req := message.ReceiveHashingRequest(m.Message)
-				result, hashingErr := myValidator.IncomingHash(req.Username, req.Nonce, req.Time, req.Hash, req.Difficulty) //this function broadcasts a message
-				if hashingErr != nil {
-					fmt.Printf("error encountered validating a mining.submit message: %s\n", hashingErr)
-				}
+				result, hashingErr := myValidator.IncomingHash(req.WorkerName, req.NOnce, req.NTime) //this function broadcasts a message
 				newM := m
-				newM.Message = message.ConvertMessageToString(result)
+				if hashingErr != "" { //make this error the message contents precedded by ERROR
+					newM.Message = fmt.Sprintf("ERROR: error encountered validating a mining.submit message: %s\n", hashingErr)
+				} else {
+					newM.Message = message.ConvertMessageToString(result)
+				}
 				messages <- newM //sends the message.HashResult struct into the channel
 			} else if m.MessageType == "getHashCompleted" {
 				//print number of hashes done
@@ -66,6 +67,7 @@ func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff
 				bh := blockHeader.ConvertToBlockHeader(m.Message)
 				myValidator.UpdateBlockHeader(bh)
 			} else if m.MessageType == "closeValidator" {
+				close(messages)
 				return
 			}
 		}
@@ -84,6 +86,7 @@ func (v *Validator) SendMessageToValidator(m message.Message) *message.Message {
 			utils.ConvertStringToUint(creation.HashRate),
 			utils.ConvertStringToUint(creation.Limit),
 			utils.ConvertStringToUint(creation.Diff),
+			creation.WorkerName,
 			newChannel,
 		)
 		return nil
