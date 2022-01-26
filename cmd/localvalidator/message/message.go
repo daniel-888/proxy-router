@@ -28,7 +28,7 @@ type NewValidator struct {
 //Username and JobID are not used. They're included to ease the process of deserializing the
 //mining.submit message into a HashingInstance struct
 type HashingInstance struct {
-	UserName, JobID, ExtraNonce2, NTime, NOnce string
+	WorkerName, JobID, ExtraNonce2, NTime, NOnce string
 }
 
 //struct for requesting information from validator
