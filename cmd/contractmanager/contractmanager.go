@@ -50,21 +50,10 @@ type nonce struct {
 
 type ContractManager interface {
 	start() (err error)
-	init(ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString) (err error)
+	init(ctx *context.Context, ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString) (err error)
 	setupExistingContracts() (err error)
 	readContracts() ([]common.Address, error)
 	watchHashrateContract(addr msgbus.ContractID, hrLogs chan types.Log, hrSub ethereum.Subscription)
-}
-
-type BuyerContractManager struct {
-	ps                  *msgbus.PubSub
-	ethClient           *ethclient.Client
-	cloneFactoryAddress common.Address
-	account             common.Address
-	privateKey          string
-	currentNonce        nonce
-	msg                 msgbus.Buyer
-	miners              map[msgbus.MinerID]msgbus.Miner
 }
 
 type SellerContractManager struct {
@@ -76,10 +65,26 @@ type SellerContractManager struct {
 	claimFunds          bool
 	currentNonce        nonce
 	msg                 msgbus.Seller
+	ctx 				context.Context
 }
 
-func Run(contractManager ContractManager, ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString) (err error) {
-	err = contractManager.init(ps, contractManagerConfigID)
+type BuyerContractManager struct {
+	ps                  *msgbus.PubSub
+	ethClient           *ethclient.Client
+	cloneFactoryAddress common.Address
+	account             common.Address
+	privateKey          string
+	currentNonce        nonce
+	msg                 msgbus.Buyer
+	miners              map[msgbus.MinerID]msgbus.Miner
+	ctx 				context.Context
+}
+
+func Run(ctx *context.Context, contractManager ContractManager, ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString) (err error) {
+	contractManagerCtx, contractManagerCancel := context.WithCancel(*ctx)
+	go newConfigMonitor(ctx, contractManagerCancel, contractManager, ps, contractManagerConfigID)
+
+	err = contractManager.init(&contractManagerCtx, ps, contractManagerConfigID)
 	if err != nil {
 		return err
 	}
@@ -87,11 +92,36 @@ func Run(contractManager ContractManager, ps *msgbus.PubSub, contractManagerConf
 	if err != nil {
 		return err
 	}
-
+	
 	return err
 }
 
-func (seller *SellerContractManager) init(ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString) (err error) {
+func newConfigMonitor(ctx *context.Context, cancel context.CancelFunc, contractManager ContractManager, ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString) {
+	contractConfigCh := ps.NewEventChan()
+	event, err := ps.SubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractConfigCh)
+	if err != nil {
+		panic(fmt.Sprintf("SubWait failed: %s\n", err))
+	}
+	if event.EventType != msgbus.SubscribedEvent {
+		panic(fmt.Sprintf("Wrong event type %v\n", event))
+	}
+
+	for event = range contractConfigCh {
+		if event.EventType == msgbus.UpdateEvent {
+			fmt.Printf(lumerinlib.Funcname()+" Updated Contract Manager Configuration: Restarting Contract Manager: %v\n", event)
+			cancel()
+			err = Run(ctx, contractManager, ps, contractManagerConfigID)
+			if err != nil {
+				panic(fmt.Sprintf("contract manager failed to run:%s", err))
+			}
+			return
+		}
+	}
+}
+
+func (seller *SellerContractManager) init(ctx *context.Context, ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString) (err error) {
+	seller.ctx = *ctx
+	
 	event, err := ps.GetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID) 
 	if err != nil {
 		return err
@@ -115,15 +145,22 @@ func (seller *SellerContractManager) init(ps *msgbus.PubSub, contractManagerConf
 	seller.ethClient = client
 	seller.cloneFactoryAddress = common.HexToAddress(contractManagerConfig.CloneFactoryAddress)
 	
-	contractsMap := make(map[msgbus.ContractID]msgbus.ContractState)
+	event,_ = ps.GetWait(msgbus.SellerMsg, msgbus.IDString(seller.account.Hex()))
 
-	sellerMsg := msgbus.Seller{
-		ID:        msgbus.SellerID(seller.account.Hex()),
-		Contracts: contractsMap,
+	if event.Data == nil {
+		contractsMap := make(map[msgbus.ContractID]msgbus.ContractState)
+
+		sellerMsg := msgbus.Seller{
+			ID:        msgbus.SellerID(seller.account.Hex()),
+			Contracts: contractsMap,
+		}
+	
+		seller.msg = sellerMsg
+		seller.ps.PubWait(msgbus.SellerMsg, msgbus.IDString(seller.msg.ID), seller.msg)
+	} else {
+		seller.msg = event.Data.(msgbus.Seller)
 	}
-
-	seller.msg = sellerMsg
-
+	
 	return err
 }
 
@@ -158,16 +195,21 @@ func (seller *SellerContractManager) start() (err error) {
 			panic(fmt.Sprintf("Failed to subscribe to contract events on msgbus, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err))
 		}
 		for {
-			event := <-contractEventChan
-			if event.EventType == msgbus.PublishEvent {
-				newContract := event.Data.(msgbus.Contract)
-				if newContract.State == msgbus.ContAvailableState {
-					addr := common.HexToAddress(string(newContract.ID))
-					hrLogs, hrSub, err := subscribeToContractEvents(seller.ethClient, addr)
-					if err != nil {
-						panic(fmt.Sprintf("Failed to subscribe to events on hashrate contract %s, Fileline::%s, Error::%v\n", newContract.ID, lumerinlib.FileLine(), err))
+			select {
+			case <-seller.ctx.Done():
+				fmt.Println("Switching to new contract manager context: cancelling start routine")
+				return
+			case event := <-contractEventChan:
+				if event.EventType == msgbus.PublishEvent {
+					newContract := event.Data.(msgbus.Contract)
+					if newContract.State == msgbus.ContAvailableState {
+						addr := common.HexToAddress(string(newContract.ID))
+						hrLogs, hrSub, err := subscribeToContractEvents(seller.ethClient, addr)
+						if err != nil {
+							panic(fmt.Sprintf("Failed to subscribe to events on hashrate contract %s, Fileline::%s, Error::%v\n", newContract.ID, lumerinlib.FileLine(), err))
+						}
+						go seller.watchHashrateContract(msgbus.ContractID(addr.Hex()), hrLogs, hrSub)
 					}
-					go seller.watchHashrateContract(msgbus.ContractID(addr.Hex()), hrLogs, hrSub)
 				}
 			}
 		}
@@ -178,30 +220,38 @@ func (seller *SellerContractManager) start() (err error) {
 func (seller *SellerContractManager) setupExistingContracts() (err error) {
 	var contractValues []hashrateContractValues
 	var contractMsgs []msgbus.Contract
+	var sellerUpdated bool
 
 	sellerContracts, err := seller.readContracts()
 	if err != nil {
 		return err
 	}
 	fmt.Println("Existing Seller Contracts: ", sellerContracts)
+	
 	for i := range sellerContracts {
-		contract, err := readHashrateContract(seller.ethClient, sellerContracts[i])
-		if err != nil {
-			return err
-		}
-		contractValues = append(contractValues, contract)
-		contractMsgs = append(contractMsgs, createContractMsg(sellerContracts[i], contractValues[i], true))
-		seller.ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contractMsgs[i].ID), contractMsgs[i])
-
-		seller.msg.Contracts[msgbus.ContractID(sellerContracts[i].Hex())] = msgbus.ContAvailableState
-
-		if contractValues[i].State == RunningState {
-			seller.msg.Contracts[msgbus.ContractID(sellerContracts[i].Hex())] = msgbus.ContRunningState
+		id := msgbus.ContractID(sellerContracts[i].Hex())
+		if _, ok := seller.msg.Contracts[id]; !ok {
+			contract, err := readHashrateContract(seller.ethClient, sellerContracts[i])
+			if err != nil {
+				return err
+			}
+			contractValues = append(contractValues, contract)
+			contractMsgs = append(contractMsgs, createContractMsg(sellerContracts[i], contractValues[i], true))
+			seller.ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contractMsgs[i].ID), contractMsgs[i])
+	
+			seller.msg.Contracts[msgbus.ContractID(sellerContracts[i].Hex())] = msgbus.ContAvailableState
+	
+			if contractValues[i].State == RunningState {
+				seller.msg.Contracts[msgbus.ContractID(sellerContracts[i].Hex())] = msgbus.ContRunningState
+			}
+			sellerUpdated = true
 		}
 	}
 
-	seller.ps.PubWait(msgbus.SellerMsg, msgbus.IDString(seller.msg.ID), seller.msg)
-
+	if sellerUpdated {
+		seller.ps.SetWait(msgbus.SellerMsg, msgbus.IDString(seller.msg.ID), seller.msg)
+	}
+	
 	return err
 }
 
@@ -253,6 +303,9 @@ func (seller *SellerContractManager) watchContractCreation(cfLogs chan types.Log
 		select {
 		case err := <-cfSub.Err():
 			panic(fmt.Sprintf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err))
+		case <-seller.ctx.Done():
+			fmt.Println("Switching to new contract manager context: cancelling watchContractCreation go routine")
+			return
 		case cfLog := <-cfLogs:
 			if cfLog.Topics[0].Hex() == contractCreatedSigHash.Hex() {
 				address := common.HexToAddress(cfLog.Topics[1].Hex())
@@ -318,6 +371,9 @@ func (seller *SellerContractManager) watchHashrateContract(addr msgbus.ContractI
 			select {
 			case err := <-hrSub.Err():
 				panic(fmt.Sprintf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err))
+			case <-seller.ctx.Done():
+				fmt.Println("Switching to new contract manager context: cancelling watchHashrateContract go routine")
+				return
 			case hLog := <-hrLogs:
 				switch hLog.Topics[0].Hex() {
 				case contractPurchasedSigHash.Hex():
@@ -428,12 +484,17 @@ func (seller *SellerContractManager) watchHashrateContract(addr msgbus.ContractI
 	}
 	// once contract is running, closeout after length of contract has passed if it was not closed out early
 	for {
-		event := <-contractEventChan
-		if event.EventType == msgbus.UpdateEvent {
-			runningContractMsg := event.Data.(msgbus.Contract)
-			if runningContractMsg.State == msgbus.ContRunningState {
-				// run routine for each running contract to check if contract length has passed and contract should be closed out
-				go seller.closeOutMonitor(runningContractMsg)
+		select {
+		case <-seller.ctx.Done():
+			fmt.Println("Switching to new contract manager context: cancelling watchHashrateContract go routine")
+			return
+		case event := <-contractEventChan:
+			if event.EventType == msgbus.UpdateEvent {
+				runningContractMsg := event.Data.(msgbus.Contract)
+				if runningContractMsg.State == msgbus.ContRunningState {
+					// run routine for each running contract to check if contract length has passed and contract should be closed out
+					go seller.closeOutMonitor(runningContractMsg)
+				}
 			}
 		}
 	}
@@ -451,11 +512,14 @@ func (seller *SellerContractManager) closeOutMonitor(contractMsg msgbus.Contract
 	defer close(headers)
 	defer sub.Unsubscribe()
 
-loop:
+	loop:
 	for {
 		select {
 		case err := <-sub.Err():
 			panic(fmt.Sprintf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err))
+		case <-seller.ctx.Done():
+			fmt.Println("Switching to new contract manager context: cancelling closeout monitor go routine")
+			return
 		case header := <-headers:
 			// get latest block from header
 			block, err := seller.ethClient.BlockByHash(context.Background(), header.Hash())
@@ -494,7 +558,9 @@ loop:
 	}
 }
 
-func (buyer *BuyerContractManager) init(ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString) (err error) {
+func (buyer *BuyerContractManager) init(ctx *context.Context, ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString) (err error) {
+	buyer.ctx = *ctx
+	
 	event, err := ps.GetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID) 
 	if err != nil {
 		return err
@@ -516,15 +582,22 @@ func (buyer *BuyerContractManager) init(ps *msgbus.PubSub, contractManagerConfig
 	buyer.ps = ps
 	buyer.ethClient = client
 	buyer.cloneFactoryAddress = common.HexToAddress(contractManagerConfig.CloneFactoryAddress)
+	
+	event,_ = ps.GetWait(msgbus.BuyerMsg, msgbus.IDString(buyer.account.Hex()))
 
-	contractsMap := make(map[msgbus.ContractID]msgbus.ContractState)
+	if event.Data == nil {
+		contractsMap := make(map[msgbus.ContractID]msgbus.ContractState)
 
-	buyerMsg := msgbus.Buyer{
-		ID:        msgbus.BuyerID(buyer.account.Hex()),
-		Contracts: contractsMap,
+		buyerMsg := msgbus.Buyer{
+			ID:        msgbus.BuyerID(buyer.account.Hex()),
+			Contracts: contractsMap,
+		}
+	
+		buyer.msg = buyerMsg
+		ps.PubWait(msgbus.BuyerMsg, msgbus.IDString(buyer.msg.ID), buyer.msg)
+	} else {
+		buyer.msg = event.Data.(msgbus.Buyer)
 	}
-
-	buyer.msg = buyerMsg
 
 	buyer.miners = make(map[msgbus.MinerID]msgbus.Miner)
 
@@ -585,15 +658,20 @@ func (buyer *BuyerContractManager) start() (err error) {
 			panic(fmt.Sprintf("Failed to subscribe to contract events on msgbus, Fileline::%s, Error::%s\n", lumerinlib.FileLine(), err))
 		}
 		for {
-			event := <-contractEventChan
-			if event.EventType == msgbus.PublishEvent {
-				newContract := event.Data.(msgbus.Contract)
-				addr := common.HexToAddress(string(newContract.ID))
-				hrLogs, hrSub, err := subscribeToContractEvents(buyer.ethClient, addr)
-				if err != nil {
-					panic(fmt.Sprintf("Failed to subscribe to events on hashrate contract %s, Fileline::%s, Error::%s\n", addr, lumerinlib.FileLine(), err))
+			select {
+			case <-buyer.ctx.Done():
+				fmt.Println("Switching to new contract manager context: cancelling start routine")
+				return
+			case event := <-contractEventChan:
+				if event.EventType == msgbus.PublishEvent {
+					newContract := event.Data.(msgbus.Contract)
+					addr := common.HexToAddress(string(newContract.ID))
+					hrLogs, hrSub, err := subscribeToContractEvents(buyer.ethClient, addr)
+					if err != nil {
+						panic(fmt.Sprintf("Failed to subscribe to events on hashrate contract %s, Fileline::%s, Error::%s\n", addr, lumerinlib.FileLine(), err))
+					}
+					go buyer.watchHashrateContract(msgbus.ContractID(addr.Hex()), hrLogs, hrSub)
 				}
-				go buyer.watchHashrateContract(msgbus.ContractID(addr.Hex()), hrLogs, hrSub)
 			}
 		}
 	}()
@@ -603,25 +681,33 @@ func (buyer *BuyerContractManager) start() (err error) {
 func (buyer *BuyerContractManager) setupExistingContracts() (err error) {
 	var contractValues []hashrateContractValues
 	var contractMsgs []msgbus.Contract
+	var buyerUpdated bool
 
 	buyerContracts, err := buyer.readContracts()
 	if err != nil {
 		return err
 	}
 	fmt.Println("Existing Buyer Contracts: ", buyerContracts)
-	for i := range buyerContracts {
-		contract, err := readHashrateContract(buyer.ethClient, buyerContracts[i])
-		if err != nil {
-			return err
-		}
-		contractValues = append(contractValues, contract)
-		contractMsgs = append(contractMsgs, createContractMsg(buyerContracts[i], contractValues[i], false))
-		buyer.ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contractMsgs[i].ID), contractMsgs[i])
 
-		buyer.msg.Contracts[msgbus.ContractID(buyerContracts[i].Hex())] = msgbus.ContRunningState
+	for i := range buyerContracts {
+		id := msgbus.ContractID(buyerContracts[i].Hex())
+		if _, ok := buyer.msg.Contracts[id]; !ok {
+			contract, err := readHashrateContract(buyer.ethClient, buyerContracts[i])
+			if err != nil {
+				return err
+			}
+			contractValues = append(contractValues, contract)
+			contractMsgs = append(contractMsgs, createContractMsg(buyerContracts[i], contractValues[i], false))
+			buyer.ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contractMsgs[i].ID), contractMsgs[i])
+	
+			buyer.msg.Contracts[msgbus.ContractID(buyerContracts[i].Hex())] = msgbus.ContRunningState
+			buyerUpdated = true
+		}	
 	}
 
-	buyer.ps.PubWait(msgbus.BuyerMsg, msgbus.IDString(buyer.msg.ID), buyer.msg)
+	if buyerUpdated {
+		buyer.ps.SetWait(msgbus.BuyerMsg, msgbus.IDString(buyer.msg.ID), buyer.msg)
+	}
 
 	return err
 }
@@ -673,6 +759,9 @@ func (buyer *BuyerContractManager) watchContractPurchase(cfLogs chan types.Log, 
 
 	for {
 		select {
+		case <-buyer.ctx.Done():
+			fmt.Println("Switching to new contract manager context: cancelling watchContractPurchase routine")
+			return
 		case err := <-cfSub.Err():
 			panic(fmt.Sprintf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err))
 		case cfLog := <-cfLogs:
@@ -749,6 +838,9 @@ func (buyer *BuyerContractManager) watchHashrateContract(addr msgbus.ContractID,
 	go func() {
 		for {
 			select {
+			case <-buyer.ctx.Done():
+				fmt.Println("Switching to new contract manager context: cancelling watchHashrateContract go routine")
+				return
 			case err := <-hrSub.Err():
 				log.Fatal(err)
 			case hLog := <-hrLogs:
@@ -824,22 +916,30 @@ func (buyer *BuyerContractManager) watchHashrateContract(addr msgbus.ContractID,
 	}
 	// check hashrate when updates are made to running contract
 	for {
-		contractEvent = <-contractEventChan
-		if contractEvent.EventType == msgbus.UpdateEvent {
-			runningContractMsg := contractEvent.Data.(msgbus.Contract)
-			if runningContractMsg.State == msgbus.ContRunningState {
-				buyer.checkHashRate(common.HexToAddress(string(runningContractMsg.ID)))
+		select {
+		case <-buyer.ctx.Done():
+			fmt.Println("Switching to new contract manager context: cancelling watchHashrateContract go routine")
+			return
+		case contractEvent = <-contractEventChan:
+			if contractEvent.EventType == msgbus.UpdateEvent {
+				runningContractMsg := contractEvent.Data.(msgbus.Contract)
+				if runningContractMsg.State == msgbus.ContRunningState {
+					buyer.checkHashRate(common.HexToAddress(string(runningContractMsg.ID)))
+				}
 			}
 		}
 	}
 }
 
 func (buyer *BuyerContractManager) minerMonitor(ch msgbus.EventChan) {
-	// routine for listening to updates on miner channel
-	go func() {
-		for event := range ch {
+	for {
+		select {
+		case <-buyer.ctx.Done():
+			fmt.Println("Switching to new contract manager context: cancelling minerMonitor go routine")
+			return
+		case event := <-ch:
 			id := msgbus.MinerID(event.ID)
-
+	
 			switch event.EventType {
 			
 				//
@@ -847,10 +947,10 @@ func (buyer *BuyerContractManager) minerMonitor(ch msgbus.EventChan) {
 				//
 			case msgbus.PublishEvent:
 				fmt.Printf("Got PublishEvent: %v\n", event)
-
+	
 				if _, ok := buyer.miners[id]; !ok {
 				buyer.miners[id] = event.Data.(msgbus.Miner)
-
+	
 				// check hashrate is being fulfilled for all running contracts
 				for addr := range buyer.msg.Contracts {
 					buyer.checkHashRate(common.HexToAddress(string(addr)))
@@ -874,14 +974,14 @@ func (buyer *BuyerContractManager) minerMonitor(ch msgbus.EventChan) {
 				//
 			case msgbus.UpdateEvent:
 				fmt.Printf("Miner Update Event:%v\n", event)
-
+	
 				if _, ok := buyer.miners[id]; !ok {
 					panic(fmt.Sprintf("Got Miner ID does not exist: %v\n", event))
 				}
-
+	
 				// Update the current miner data
 				buyer.miners[id] = event.Data.(msgbus.Miner)
-
+	
 				// check hashrate is being fulfilled for all running contracts
 				for addr := range buyer.msg.Contracts {
 					buyer.checkHashRate(common.HexToAddress(string(addr)))
@@ -892,13 +992,13 @@ func (buyer *BuyerContractManager) minerMonitor(ch msgbus.EventChan) {
 				//
 			case msgbus.UnpublishEvent:
 				fmt.Printf("Miner Unpublish/Unsubscribe Event:%v\n", event)
-
+	
 				if _, ok := buyer.miners[id]; ok {
 					delete(buyer.miners, id)
 				} else {
 					panic(fmt.Sprintf("Got UnsubscribeEvent, but dont have the ID: %v\n", event))
 				}
-
+	
 				// check hashrate is being fulfilled for all running contracts
 				for addr := range buyer.msg.Contracts {
 					buyer.checkHashRate(common.HexToAddress(string(addr)))
@@ -906,8 +1006,8 @@ func (buyer *BuyerContractManager) minerMonitor(ch msgbus.EventChan) {
 			default:
 				fmt.Printf("Got Event: %v\n", event)
 			}
-		}
-	}()
+		}	
+	}
 }
 
 func (buyer *BuyerContractManager) checkHashRate(addr common.Address) bool {

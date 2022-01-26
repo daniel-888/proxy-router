@@ -4,6 +4,7 @@ import (
 	//"crypto/ecdsa"
 	//"crypto/rand"
 	//"errors"
+	"context"
 	"fmt"
 	"log"
 	"sync"
@@ -15,7 +16,6 @@ import (
 
 	//"github.com/ethereum/go-ethereum/crypto/ecies"
 
-	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
@@ -25,6 +25,8 @@ func TestSellerRoutine(t *testing.T) {
 	ts := BeforeEach()
 	var hashrateContractAddress [4]common.Address
 	var purchasedHashrateContractAddress [4]common.Address
+	mainCtx := context.Background()
+	contractManagerCtx, contractManagerCancel := context.WithCancel(mainCtx)
 	var contractManagerConfig msgbus.ContractManagerConfig
 	contractManagerConfigID := msgbus.GetRandomIDString()
 
@@ -32,7 +34,7 @@ func TestSellerRoutine(t *testing.T) {
 	//encryptedDest := "04d9b65eada6828aad11f7956e92a5afaa46718e95c2229b21b371c3c6e317bad00018d15f2cedb6400d2156a3cc1c3360b7f747d5ab7e72926937776fc133ae5b9ada0e1d95b57f29b917220a92ed28ff1f57301b6688f7e5ef4ae87015508aefb7156aba0de5cc25d65d1f11a7d3c75330d54d045ebc22231af70fb1aa02b38a6cf93b34a974076db109433ba4191171b2292885"
 	//updateEncryptedDest := "049de7772c44fd044bab5600d878a60d14bcd43276888b84e6ea461ed7b7befa06fb2a3eb6c9d8cd065f17fd5744aac7e1ad90d3d1d9da37d42cbc090d813febdef2b6a8d9038d6b5f2023610f64b8837afe3fa1cb7d92977658604848c66d99bfac4ad8596833ae3645a8f05ca6122e246791150f05a3bcf29efd1e33fbb774182acd9c7a7dcfa6b5c1184e2ce8384b4123541abb"
 
-	contractManagerConfigFile, err := config.LoadConfiguration("contractManager")
+	contractManagerConfigFile, err := LoadTestConfiguration("contractManager", "../../ganacheconfig.json")
 	if err != nil {
 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 	}
@@ -41,6 +43,7 @@ func TestSellerRoutine(t *testing.T) {
 	contractManagerConfig.AccountIndex = int(contractManagerConfigFile["accountIndex"].(float64))
 	contractManagerConfig.EthNodeAddr = contractManagerConfigFile["ethNodeAddr"].(string)
 	contractManagerConfig.ClaimFunds = contractManagerConfigFile["claimFunds"].(bool)
+	contractManagerConfig.CloneFactoryAddress = ts.cloneFactoryAddress.Hex()
 
 	contractLength := 15 // 15 s on ganache
 	sleepTime := 5000 // 5000 ms sleeptime in ganache
@@ -58,11 +61,11 @@ func TestSellerRoutine(t *testing.T) {
 	ps.PubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractManagerConfig)
 
 	var cman SellerContractManager
-	err = cman.init(ps, contractManagerConfigID)
+	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, contractManagerConfigID)
+	err = cman.init(&contractManagerCtx, ps, contractManagerConfigID)
 	if err != nil {
 		panic(fmt.Sprintf("contract manager init failed:%s", err))
 	}
-	cman.cloneFactoryAddress = ts.cloneFactoryAddress
 
 	// subcribe to creation events emitted by clonefactory contract
 	cfLogs, cfSub, _ := subscribeToContractEvents(ts.ethClient, ts.cloneFactoryAddress)
@@ -300,6 +303,16 @@ func TestSellerRoutine(t *testing.T) {
 		if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[3].Hex())] != msgbus.ContAvailableState {
 			t.Errorf("Contract 4 did not close out correctly")
 		}
+	}
+
+	//
+	// test contract manager config updated
+	//
+	contractManagerConfig.ClaimFunds = false 
+	ps.SetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractManagerConfig)
+	time.Sleep(time.Second * 3)
+	if cman.claimFunds != false {
+		t.Errorf("Contract manager's configuration was not updated after msgbus update")
 	}
 
 	//

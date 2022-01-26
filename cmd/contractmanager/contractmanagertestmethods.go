@@ -9,6 +9,10 @@ import (
 	"log"
 	"math/big"
 	"time"
+	"os"
+	"path/filepath"
+	"io/ioutil"
+	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -18,7 +22,6 @@ import (
 	//"github.com/ethereum/go-ethereum/crypto/ecies"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/clonefactory"
@@ -34,6 +37,31 @@ type TestSetup struct {
 	proxyAddress           common.Address
 	lumerinAddress         common.Address
 	cloneFactoryAddress    common.Address
+}
+
+func LoadTestConfiguration(pkg string, filePath string) (map[string]interface{}, error) {
+	var data map[string]interface{}
+	var err error = nil 
+	currDir,_ := os.Getwd()
+	defer os.Chdir(currDir)
+
+	if err != nil {
+		panic(fmt.Errorf("error retrieving config file variable: %s", err))
+	}
+	file := filepath.Base(filePath)
+	filePath = filepath.Dir(filePath)
+	os.Chdir(filePath)
+	
+	configFile, err := os.Open(file)
+	if err != nil {
+		return data, err
+	}
+	defer configFile.Close()
+	byteValue,_ := ioutil.ReadAll(configFile)
+	
+
+	err = json.Unmarshal(byteValue, &data)
+	return data[pkg].(map[string]interface{}), err
 }
 
 func DeployContract(client *ethclient.Client,
@@ -346,7 +374,7 @@ func createNewGanacheBlock(ts TestSetup, account common.Address, privateKey stri
 
 func BeforeEach() (ts TestSetup) {
 	var constructorParams [5]common.Address
-	configData, err := config.LoadConfiguration("contractManager")
+	configData, err := LoadTestConfiguration("contractManager", "../../ganacheconfig.json")
 	if err != nil {
 		log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
 	}
@@ -380,68 +408,3 @@ func BeforeEach() (ts TestSetup) {
 
 	return ts
 }
-
-// func TestDeployment(t *testing.T) {
-// 	BeforeEach()
-// }
-
-// func TestCreateHashrateContract(t *testing.T) {
-// 	ps := msgbus.New(10)
-// 	var hashrateContractAddress common.Address
-// 	contractManagerConfig, err := configurationmanager.LoadConfiguration("lumerinconfig.json", "contractManager")
-// 	if err != nil {
-// 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
-// 	}
-
-// 	fmt.Println(contractManagerConfig)
-
-// 	var cman SellerContractManager
-
-// 	cman.init(ps, contractManagerConfigID)
-
-// 	// subcribe to creation events emitted by clonefactory contract 
-// 	cfLogs, cfSub, _ := subscribeToContractEvents(cman.ethClient, cman.cloneFactoryAddress)
-// 	// create event signature to parse out creation event
-// 	contractCreatedSig := []byte("contractCreated(address)")
-// 	contractCreatedSigHash := crypto.Keccak256Hash(contractCreatedSig)
-// 	go func() {
-// 		for {
-// 			select {
-// 			case err := <-cfSub.Err():
-// 				log.Fatal(err)
-// 			case cfLog := <-cfLogs:
-// 				if cfLog.Topics[0].Hex() == contractCreatedSigHash.Hex() {
-// 					hashrateContractAddress = common.HexToAddress(cfLog.Topics[1].Hex())
-// 					fmt.Printf("Address of created Hashrate Contract: %s\n\n", hashrateContractAddress.Hex())
-// 				}
-// 			}
-// 		}
-// 	}()
-
-// 	cloneFactoryAddress := common.HexToAddress(contractManagerConfig["cloneFactoryAddress"].(string))
-
-// 	CreateHashrateContract(cman.ethClient, cman.account, cman.privateKey, cloneFactoryAddress, int(0), int(0), int(0), int(2000), cman.account)
-// 	loop:
-// 	for {
-// 		if hashrateContractAddress != common.HexToAddress("0x0000000000000000000000000000000000000000") {
-// 			break loop
-// 		}
-// 	}
-// }
-
-// func TestPurchaseHashrateContract(t *testing.T) {
-// 	ps := msgbus.New(10)
-// 	contractManagerConfig, err := configurationmanager.LoadConfiguration("lumerinconfig.json", "contractManager")
-// 	if err != nil {
-// 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
-// 	}
-
-// 	var cman BuyerContractManager
-// 	err = cman.init(ps, contractManagerConfig)
-// 	if err != nil {
-// 		panic(fmt.Sprintf("contract manager failed:%s", err))
-// 	}
-// 	hashrateContractAddress := "0x50a6c6c8eC06577A8258d5F86688d0045026e18e"
-
-// 	PurchaseHashrateContract(cman.ethClient, cman.account, cman.privateKey, cman.cloneFactoryAddress, common.HexToAddress(hashrateContractAddress), cman.account, "stratum+tcp://127.0.0.1:3333/testrig")
-// }

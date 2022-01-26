@@ -4,16 +4,14 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+	"context"
 
-	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi"
-	"gitlab.com/TitanInd/lumerin/cmd/localvalidator"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/cmd/walletmanager"
 )
 
 // -------------------------------------------
@@ -28,10 +26,9 @@ import (
 //
 // -------------------------------------------
 func main() {
-	var buyer bool = false
+	mainContext, _ := context.WithCancel(context.Background())
 
-	// Need something better...
-	done := make(chan int)
+	var buyer bool = false
 
 	configFile, err := config.ConfigGetVal(config.ConfigConfigFilePath)
 	if err != nil {
@@ -168,6 +165,10 @@ func main() {
 			contractManagerConfig.AccountIndex = int(contractManagerConfigFile["accountIndex"].(float64))
 			contractManagerConfig.EthNodeAddr = contractManagerConfigFile["ethNodeAddr"].(string)
 			contractManagerConfig.ClaimFunds = contractManagerConfigFile["claimFunds"].(bool)
+			contractManagerConfig.CloneFactoryAddress = contractManagerConfigFile["cloneFactoryAddress"].(string)
+			contractManagerConfig.LumerinTokenAddress = contractManagerConfigFile["lumerinTokenAddress"].(string)
+			contractManagerConfig.ValidatorAddress = contractManagerConfigFile["validatorAddress"].(string)
+			contractManagerConfig.ProxyAddress = contractManagerConfigFile["proxyAddress"].(string)
 		} else {
 			contractManagerConfig.Mnemonic, err = config.ConfigGetVal(config.ConfigContractMnemonic)
 			if err != nil {
@@ -202,10 +203,10 @@ func main() {
 
 		if buyer {
 			var buyerCM contractmanager.BuyerContractManager
-			err = contractmanager.Run(&buyerCM, ps, contractManagerConfigID)
+			err = contractmanager.Run(&mainContext, &buyerCM, ps, contractManagerConfigID)
 		} else {
 			var sellerCM contractmanager.SellerContractManager
-			err = contractmanager.Run(&sellerCM, ps, contractManagerConfigID)
+			err = contractmanager.Run(&mainContext, &sellerCM, ps, contractManagerConfigID)
 		}
 		if err != nil {
 			panic(fmt.Sprintf("contract manager failed to run:%s", err))
@@ -221,36 +222,8 @@ func main() {
 		time.Sleep(time.Millisecond*2000)
 		go api.RunAPI()
 	}
-	//	ps.PubWait(msgbus.DestMsg, "destMsg01", msgbus.Dest{})
-	//	ps.Sub(msgbus.DestMsg, "destMsg01", ech)
-	//	ps.Set(msgbus.DestMsg, "destMsg01", dest)
 
-	//	ps.Get(msgbus.DestMsg, "destMsg01", ech)
-	//	ps.Get(msgbus.DestMsg, "", ech)
-
-	//	ps.Set(msgbus.DestMsg, "destMsg01", dest)
-
-	//	time.Sleep(5 * time.Second)
-
-	// Need a better mechanism for running context
-
-	// if false {
-	// 	testmod.MinersTouchAll(ps)
-	// }
-
-	// testmod.CreateContract(ps)
-
-	<-done
+	<-mainContext.Done()
 
 	return
-
-	fmt.Println(accountingmanager.BoilerPlateFunc())
-	//  fmt.Println(configurationmanager.BoilerPlateFunc())
-	//	fmt.Println(connectionmanager.BoilerPlateFunc())
-	// fmt.Println(connectionscheduler.BoilerPlateFunc())
-	// fmt.Println(contractmanager.BoilerPlateFunc())
-	// fmt.Println(externalapi.BoilerPlateFunc())
-	fmt.Println(localvalidator.BoilerPlateFunc())
-	// fmt.Println(logging.BoilerPlateFunc())
-	fmt.Println(walletmanager.BoilerPlateFunc())
 }

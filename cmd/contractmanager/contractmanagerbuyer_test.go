@@ -8,13 +8,13 @@ import (
 	"log"
 	"testing"
 	"time"
+	"context"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	//"github.com/ethereum/go-ethereum/crypto/ecies"
 
-	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
@@ -24,12 +24,14 @@ func TestBuyerRoutine(t *testing.T) {
 	ts := BeforeEach()
 	var hashrateContractAddress [3]common.Address
 	var purchasedHashrateContractAddress [3]common.Address
+	mainCtx := context.Background()
+	contractManagerCtx, contractManagerCancel := context.WithCancel(mainCtx)
 	var contractManagerConfig msgbus.ContractManagerConfig
 	contractManagerConfigID := msgbus.GetRandomIDString()
 
 	contractLength := 10000 
 
-	contractManagerConfigFile, err := config.LoadConfiguration("contractManager")
+	contractManagerConfigFile, err := LoadTestConfiguration("contractManager", "../../ganacheconfig.json")
 	if err != nil {
 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 	}
@@ -37,7 +39,7 @@ func TestBuyerRoutine(t *testing.T) {
 	contractManagerConfig.Mnemonic = contractManagerConfigFile["mnemonic"].(string)
 	contractManagerConfig.AccountIndex = int(contractManagerConfigFile["accountIndex"].(float64))
 	contractManagerConfig.EthNodeAddr = contractManagerConfigFile["ethNodeAddr"].(string)
-	contractManagerConfig.ClaimFunds = contractManagerConfigFile["claimFunds"].(bool)
+	contractManagerConfig.CloneFactoryAddress = ts.cloneFactoryAddress.Hex()
 
 	sleepTime := 5000 // 5000 ms sleeptime in ganache
 	if contractManagerConfig.EthNodeAddr != "ws://127.0.0.1:7545" {
@@ -53,11 +55,11 @@ func TestBuyerRoutine(t *testing.T) {
 	ps.PubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractManagerConfig)
 
 	var cman BuyerContractManager
-	err = cman.init(ps, contractManagerConfigID)
+	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, contractManagerConfigID)
+	err = cman.init(&contractManagerCtx, ps, contractManagerConfigID)
 	if err != nil {
 		panic(fmt.Sprintf("contract manager init failed:%s", err))
 	}
-	cman.cloneFactoryAddress = ts.cloneFactoryAddress
 
 	miner1 := msgbus.Miner {
 		ID:		msgbus.MinerID("MinerID01"),
@@ -320,5 +322,16 @@ func TestBuyerRoutine(t *testing.T) {
 	// check contracts map is empty now
 	if len(cman.msg.Contracts) != 0 {
 		t.Errorf("Contracts did not closeout after all miners were set to offline")
+	}
+
+	//
+	// test contract manager config updated
+	//
+	contractManagerConfig.AccountIndex = 1 
+	ps.SetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractManagerConfig)
+	time.Sleep(time.Second * 3)
+	newAccount,_ := hdWalletKeys(contractManagerConfig.Mnemonic, 1)
+	if cman.account != newAccount.Address {
+		t.Errorf("Contract manager's configuration was not updated after msgbus update")
 	}
 }
