@@ -68,6 +68,22 @@ func createSubmitMessage(wn string, jid string, en2 string, nt string, no string
 	return returnMessage
 }
 
+//creates a tabulation message which is of the same type as stratum mining.submit
+func createTabulationMessage(wn string, jid string, en2 string, nt string, no string) message.Message {
+	returnMessage := message.Message{}
+	mySubmit := message.HashrateTabulation{}
+	mySubmit.WorkerName = wn
+	mySubmit.JobID = jid
+	mySubmit.ExtraNonce2 = en2
+	mySubmit.NTime = nt
+	mySubmit.NOnce = no
+	returnMessage.Address = "1"
+	returnMessage.MessageType = "validate"
+	returnMessage.Message = message.ConvertMessageToString(mySubmit)
+	fmt.Printf("%+v", returnMessage)
+	return returnMessage
+}
+
 //creates a notify message which is of the same type as stratum mining.notify
 func createNotifyMessage(JobID string, PreviousBlockHash string, GTP1 string, GTP2 string, MerkleList string, Version string, NBits string, NTime string, CleanJobs bool) message.Message {
 	returnMessage := message.Message{}
@@ -133,6 +149,18 @@ func TestCreateValidator(t *testing.T) {
 	if strings.Contains(closingResult.Message, "ERROR") { //need to update this functionality
 		t.Errorf("error closing validator: %v", closingResult.Message)
 	}
+}
+
+func TestHashRatePerAsic(t *testing.T) {
+	/*
+	this is a test to see if a mining rig can have its hashrate tabulated to within a certain degree
+	steps:
+	1. connect an asic to the proxy server (this is ignored and instead a new validator is created with address of 1
+	2. send the same mining message to the validator every N seconds
+	3. call the function to get the calculated hashrate in the validator
+	4. compare to the expected hashrate
+	*/
+	validator := createTestValidator()
 }
 
 /*
