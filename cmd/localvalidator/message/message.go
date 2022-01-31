@@ -49,6 +49,11 @@ type HashCount struct { //string will be an integer
 	HashCount string
 }
 
+//used for the mining rig hashrate tracking process
+type TabulationCount struct { //string will be an integer
+	HashCount uint
+}
+
 //for testing purposes for now
 type MiningNotify struct{
 	JobID, PreviousBlockHash, GTP1, GTP2, MerkleList, Version, NBits, NTime string
