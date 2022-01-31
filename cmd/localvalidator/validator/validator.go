@@ -27,6 +27,7 @@ type Validator struct {
 	channel channels.Channels
 }
 
+
 //creates a validator
 //func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff uint, messages chan message.Message) error{
 func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff uint, pc string, messages chan message.Message) {
@@ -69,6 +70,19 @@ func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff
 			} else if m.MessageType == "closeValidator" {
 				close(messages)
 				return
+			} else if m.MessageType == "tabulate" { 
+				/*
+				this is similar to the validation message, but instead of returning a boolean value, it returns the current hashrate after the message is sent to it
+				*/
+				result := message.TabulationCount{}
+				req := message.ReceiveHashingRequest(m.Message)
+				myValidator.IncomingHash(req.WorkerName, req.NOnce, req.NTime) //this function broadcasts a message
+				hashrate := myValidator.UpdateHashrate()
+				result.HashRate = hashrate
+				newM := m
+				newM.Message = message.ConvertMessageToString(result)
+				messages <- newM
+
 			}
 		}
 	}()
