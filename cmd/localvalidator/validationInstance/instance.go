@@ -33,7 +33,7 @@ func (v *Validator) blockAnalysisMessage(validHash bool) string {
 }
 
 //need to confirm if DifficultyTarget is already an INT at this point or still in condensed form
-func (v *Validator) UpdateHashrate() {
+func (v *Validator) UpdateHashrate() uint{
 	//determine the current duration of the contract
 	contractDuration := time.Now().Sub(v.StartTime) //returns an i64
 	//calculate the number of hashes represented by the pool difficulty target
@@ -44,7 +44,7 @@ func (v *Validator) UpdateHashrate() {
 	totalHashes := new(big.Int).Mul(hashesPerSubmission, bigHashesAnalyzed)
 	//divide represented hashes by time duration
 	rateBigInt := new(big.Int).Div(totalHashes, big.NewInt(int64(contractDuration.Seconds())))
-	v.DifficultyTarget = uint(rateBigInt.Uint64())
+	return uint(rateBigInt.Uint64())
 	//update contracthashrate with value
 }
 
