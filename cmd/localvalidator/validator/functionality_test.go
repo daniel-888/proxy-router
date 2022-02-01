@@ -15,10 +15,10 @@ func createTestValidator() message.Message {
 	//need function to convert message to string and string to message
 	newValidatorMessage := message.NewValidator{
 		BH:         blockHeader.ConvertBlockHeaderToString(createTestBlockHeader()),
-		HashRate:   "10",
-		Limit:      "10",
-		Diff:       "100000000000000000000000000000000000000000000000000000000000",
-		WorkerName: "prod.s9x8",
+		HashRate:   "10", //arbitrary number
+		Limit:      "10", //arbitrary number
+		Diff:       "1b04864c", // pool difficulty that the validator is using
+		WorkerName: "prod.s9x8", //worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
 	}
 	newValidatorString := message.ConvertMessageToString(newValidatorMessage)
 	returnMessage.Message = newValidatorString
@@ -31,11 +31,13 @@ func createTestValidator() message.Message {
 //this information is also updated via the mining.Notify stratum v1 message
 func createTestBlockHeader() blockHeader.BlockHeader {
 	return blockHeader.BlockHeader{
-		Version:           "00000001",
-		PreviousBlockHash: "000000000002d01c1fccc21636b607dfd930d31d01c3a62104612a1719011250",
-		MerkleRoot:        "f3e94742aca4b5ef85488dc37c06c3282295ffec960994b2c0d5ac2a25a95766",
-		Time:              "4d1b2237",
-		Difficulty:        "1b04864c",
+		Version:           "00000001", //bitcoin version
+		//currently big-endian but should convert to little-endian
+		PreviousBlockHash: "000000000002d01c1fccc21636b607dfd930d31d01c3a62104612a1719011250", //big-endian hash of previous block
+		//currently big-endian but should convert to little-endian
+		MerkleRoot:        "f3e94742aca4b5ef85488dc37c06c3282295ffec960994b2c0d5ac2a25a95766", //big-endian merkle root of current block
+		Time:              "4d1b2237", //timestamp, not necessay and overwritten with a submission attempt
+		Difficulty:        "1b04864c", //the difficulty target that a block needs to meet
 	}
 }
 
@@ -69,16 +71,16 @@ func createSubmitMessage(wn string, jid string, en2 string, nt string, no string
 }
 
 //creates a tabulation message which is of the same type as stratum mining.submit
-func createTabulationMessage(wn string, jid string, en2 string, nt string, no string) message.Message {
+func createTabulationMessage(wn string, jid string, en2 string, nt string, no string, MUID string) message.Message {
 	returnMessage := message.Message{}
-	mySubmit := message.HashrateTabulation{}
+	mySubmit := message.MiningSubmit{}
 	mySubmit.WorkerName = wn
 	mySubmit.JobID = jid
 	mySubmit.ExtraNonce2 = en2
 	mySubmit.NTime = nt
 	mySubmit.NOnce = no
-	returnMessage.Address = "1"
-	returnMessage.MessageType = "validate"
+	returnMessage.Address = MUID //stands for miner unique ID
+	returnMessage.MessageType = "tabulate"
 	returnMessage.Message = message.ConvertMessageToString(mySubmit)
 	fmt.Printf("%+v", returnMessage)
 	return returnMessage
@@ -160,10 +162,9 @@ func TestHashRatePerAsic(t *testing.T) {
 	3. call the function to get the calculated hashrate in the validator
 	4. compare to the expected hashrate
 	*/
-	validator := createTestValidator()
+	//validator := createTestValidator()
 }
 
-/*
 //create a validator, send a hash, confirm hash results in true, close validator
 func TestCreateValidatorValidateHashCloseValidator(t *testing.T) {
 	//creating a validator
@@ -207,7 +208,6 @@ func TestSubmit2HashesVerifyCount(t *testing.T) {
 		t.Errorf("incorrect hashcount: %v", resultingHashCount)
 	}
 }
-*/
 /*
 //create 2 validators, send each a hash, confirm hash results are true, close validators
 func TestCreateTwoValidatorValidateHashCloseValidator(t *testing.T) {
