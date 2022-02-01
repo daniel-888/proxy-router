@@ -17,7 +17,7 @@ func TestTCPSetupTestCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// addr := "127.0.0.1:12345"
-	addr := ":123456"
+	addr := ":12345"
 
 	l, e := Listen(ctx, "tcp", addr)
 	if e != nil {

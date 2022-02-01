@@ -1,4 +1,4 @@
-package lumerin
+package lumerinconnection
 
 import (
 	"bufio"
@@ -91,7 +91,7 @@ func TestDial(t *testing.T) {
 //
 //
 //
-func testListen(ctx context.Context, network LumProto, port int, ip net.IPAddr) (l *lumerinListenStruct, e error) {
+func testListen(ctx context.Context, network LumProto, port int, ip net.IPAddr) (l *LumerinListenStruct, e error) {
 
 	return Listen(ctx, network, port, ip)
 }
@@ -99,10 +99,9 @@ func testListen(ctx context.Context, network LumProto, port int, ip net.IPAddr) 
 //
 //
 //
-func testDial(ctx context.Context, network LumProto, port int, ip net.IPAddr) (s *lumerinSocketStruct) {
+func testDial(ctx context.Context, network LumProto, port int, ip net.IPAddr) (s *LumerinSocketStruct) {
 
-	addr := fmt.Sprintf("%s:%d", ip.String(), port)
-	s, e := Dial(ctx, "tcp", addr)
+	s, e := Dial(ctx, "tcp", port, ip)
 	if e != nil {
 		fmt.Printf(lumerinlib.FileLine()+" Dial Test Failed: %s\n", e)
 		panic(fmt.Sprintf(lumerinlib.FileLine()+" Dial Test Failed: %s\n", e))
@@ -114,7 +113,7 @@ func testDial(ctx context.Context, network LumProto, port int, ip net.IPAddr) (s
 //
 //
 //
-func goTestAcceptChannelEcho(l *lumerinListenStruct) {
+func goTestAcceptChannelEcho(l *LumerinListenStruct) {
 
 	fmt.Printf(lumerinlib.FileLine() + " Waiting on Connection\n")
 
