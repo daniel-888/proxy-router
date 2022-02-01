@@ -60,7 +60,7 @@ func TestSrcDial(t *testing.T) {
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
-	l.Close()
+	defer l.Close()
 
 	go goTestAcceptChannelEcho(l)
 
@@ -72,7 +72,7 @@ func TestSrcDial(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial() Failed: %s\n", e))
 	}
 
-	s.Close()
+	defer s.Close()
 
 	fmt.Printf(lumerinlib.FileLine() + " Dial completed\n")
 
@@ -116,11 +116,11 @@ func TestSrcDefDstDial(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
 
-	l.Close()
+	defer l.Close()
 
 	s := testSetupEchoConnection(t, l)
 
-	s.Close()
+	defer s.Close()
 
 	writeb := []byte(TestString)
 	writecount, e := s.DstWrite(writeb)
@@ -166,11 +166,11 @@ func TestSrcIdxDstDial(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
 
-	l.Close()
+	defer l.Close()
 
 	s := testSetupEchoConnection(t, l)
 
-	s.Close()
+	defer s.Close()
 
 	writeb := []byte(TestString)
 	writecount, e := s.IdxWrite(0, writeb)
@@ -210,18 +210,6 @@ func testListen(ctx context.Context, port int, ip net.IPAddr) (l *ConnectionList
 //
 //
 //
-//func testDial(ctx context.Context, port int, ip net.IPAddr) (s *ConnectionStruct) {
-//
-//	s, e := Dial(ctx, port, ip)
-//	if e != nil {
-//		fmt.Printf(lumerinlib.FileLine()+" Dial Test Failed: %s\n", e)
-//		panic(fmt.Sprintf(lumerinlib.FileLine()+" Dial Test Failed: %s\n", e))
-//	}
-//
-//	return s
-//}
-//
-
 func testAcceptChannelEcho(l *ConnectionListenStruct) (s *ConnectionStruct) {
 
 	fmt.Printf(lumerinlib.FileLine() + " Waiting on Connection\n")
@@ -237,6 +225,9 @@ func testAcceptChannelEcho(l *ConnectionListenStruct) (s *ConnectionStruct) {
 	return s
 }
 
+//
+//
+//
 func testSetupEchoConnection(t *testing.T, l *ConnectionListenStruct) (cs *ConnectionStruct) {
 
 	fmt.Printf(lumerinlib.FileLine() + " Waiting on Connection\n")

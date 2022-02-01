@@ -3,9 +3,11 @@ package connectionmanager
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
+	"gitlab.com/TitanInd/lumerin/lumerinlib"
 
 	_ "gitlab.com/TitanInd/lumerin/lumerinlib"
 )
@@ -149,7 +151,8 @@ func (cs *ConnectionStruct) Dial(ctx context.Context, port int, ip net.IPAddr) (
 //
 func (cs *ConnectionStruct) ReDialIdx(idx int) (e error) {
 
-	return nil
+	panic(fmt.Sprintf(lumerinlib.FileLine() + " Function Not Implemented Yet.."))
+	// return nil
 }
 
 //
