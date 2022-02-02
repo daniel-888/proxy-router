@@ -8,7 +8,7 @@ import "fmt"
 //then the result is compared to the blockHash result
 
 func TestBlock1(t *testing.T) {
-	blockHash := "000000000003ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506"
+	blockHash := "06e533fd1ada86391f3f6c343204b0d278d4aaec1c0b20aa27ba030000000000"
 
 	nonce := "274148111"
 	time := "4d1b2237"
@@ -29,7 +29,7 @@ func TestBlock1(t *testing.T) {
 }
 
 func TestBlock2(t *testing.T) {
-	blockHash := "000000000000034a7dedef4a161fa058a2d67a173a90155f3a2fe6fc132e0ebf"
+	blockHash := "bf0e2e13fce62f3a5f15903a177ad6a258a01f164aefed7d4a03000000000000"
 	nonce := "4158183488"
 	time := "505d96e7"
 	blockHeader := BlockHeader{
@@ -48,15 +48,15 @@ func TestBlock2(t *testing.T) {
 }
 
 func TestBlock3(t *testing.T) {
-	blockHash := "000000000000000082ccf8f1557c5d40b21edabb18d2d691cfbf87118bac7254"
+	blockHash := "5472ac8b1187bfcf91d6d218bbda1eb2405d7c55f1f8cc820000000000000000"
 	nonce := "222771801"
 	time := "536dc802"
 	blockHeader := BlockHeader{
-		Version:           "00000002",
-		MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3",
-		Time:              "1399703554",
-		Difficulty:        "1900896c",
-		PreviousBlockHash: "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e",
+		Version:           "00000002", //big-endian
+		MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", //big-endian
+		Time:              "1399703554", //regular time
+		Difficulty:        "1900896c", //big-endian
+		PreviousBlockHash: "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e", //big-endian
 	}
 
 	resultHash := blockHeader.HashInput(nonce, time)
@@ -67,7 +67,7 @@ func TestBlock3(t *testing.T) {
 }
 
 func TestBlock4(t *testing.T) {
-	blockHash := "000000000000000004ec466ce4732fe6f1ed1cddc2ed4b328fff5224276e3f6f"
+	blockHash := "6f3f6e272452ff8f324bedc2dd1cedf1e62f73e46c46ec040000000000000000"
 	nonce := "657220870"
 	time := "56cf2acc"
 	blockHeader := BlockHeader{
@@ -85,19 +85,41 @@ func TestBlock4(t *testing.T) {
 	}
 }
 
-//values copied from https://en.bitcoin.it/wiki/Block_hashing_algorithm but with prev-block hash and merkle little endian, while all other values are big endian
+
+func TestBlock300_000(t *testing.T) {
 /*
-func TestBlock5(t *testing.T) {
-	blockHash := "00000000000000001e8d6829a8a21adc5d38d0a473b144b6765798e61f98bd1d"
-	  nonce := "2504433986" //int
-	time := "4dd7f5c7" //big-endian
-	blockHeader := BlockHeader {
-		//bitcoin-cli returns all values as big-endian
-		Version: "00000001", //big-endian
-		MerkleRoot: "e320b6c2fffc8d750423db8b1eb942ae710e951ed797f7affc8892b0f1fc122b", //little-endian
-		Time: "4dd7f5c7", //big-endian
-		Difficulty: "1a44b9f2", //big-endian
-		PreviousBlockHash: "81cd02ab7e569e8bcd9317e2fe99f2de44d49ab2b8851ba4a308000000000000", //little-endian
+block 300000 data obtained from a raspibolt lnd node using unix command bitcoin-cli getBlockInfo $(bitcoin-cli getBlockHash 300000)
+hashes are represented in big-endian format but converted to little-endian format for testing reasons
+"hash": "000000000000000082ccf8f1557c5d40b21edabb18d2d691cfbf87118bac7254",
+"confirmations": 421369,
+"strippedsize": 128810,
+"size": 128810,
+"weight": 515240,
+"height": 300000,
+"version": 2,
+"versionHex": "00000002",
+"merkleroot": "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3",
+"tx": [
+],
+"time": 1399703554,
+"mediantime": 1399701278,
+"nonce": 222771801,
+"bits": "1900896c",
+"difficulty": 8000872135.968163,
+"chainwork": "000000000000000000000000000000000000000000005a7b3c42ea8b844374e9",
+"nTx": 237,
+"previousblockhash": "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e",
+"nextblockhash": "000000000000000049a0914d83df36982c77ac1f65ade6a52bdced2ce312aba9"
+*/
+	blockHash := "5472ac8b1187bfcf91d6d218bbda1eb2405d7c55f1f8cc820000000000000000"
+	nonce := "222771801"
+	time := "536dc802"
+	blockHeader := BlockHeader{
+		Version:           "00000002",
+		MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3",
+		Time:              "1399703554",
+		Difficulty:        "1900896c",
+		PreviousBlockHash: "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e",
 	}
 
 	resultHash := blockHeader.HashInput(nonce, time)
@@ -106,4 +128,3 @@ func TestBlock5(t *testing.T) {
 		t.Error(fmt.Printf("expected blockhash: %s\nCalculated blockhash: %x\n", blockHash, resultHash))
 	}
 }
-*/
