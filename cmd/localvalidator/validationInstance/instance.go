@@ -62,14 +62,17 @@ func (v *Validator) closeOutContract() {
 
 //receives a nonce and a hash, compares the two, and updates instance parameters
 //need to modify to check to see if the resulting hash is below the given difficulty level
+//credential is plaintext
+//nonce is hex number as a string
+//time is hex representation of time
 func (v *Validator) IncomingHash(credential string, nonce string, time string) (message.HashResult, string) {
 	var result = message.HashResult{} //initialize result here to use in error response
 	if credential != v.PoolCredentials {
 		return result, fmt.Sprintf("Hashrate Hijacking Detected. Check pool user %s", credential)
 	}
-	calcHash := v.BH.HashInput(nonce, time)
+	calcHash := v.BH.HashInput(nonce, time) //calcHash is returned as little endian
 	var hashingResult bool //temp until revised logic put in place
-	hashAsBigInt, hashingErr := blockHeader.BlockHashToBigInt(calcHash)
+	hashAsBigInt, hashingErr := blockHeader.BlockHashToBigInt(calcHash) //designed to intake as little endian
 	if hashingErr != nil {
 		return result, fmt.Sprintf("error when hashing block: %s", hashingErr)
 	}
