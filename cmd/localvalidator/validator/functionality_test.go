@@ -4,7 +4,6 @@ import "testing"
 import "example.com/message"
 import "example.com/blockHeader"
 import "strings"
-import "fmt"
 
 /*
 feature tests of the validator system.
