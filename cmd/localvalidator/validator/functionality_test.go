@@ -6,6 +6,12 @@ import "example.com/blockHeader"
 import "strings"
 import "fmt"
 
+/*
+feature tests of the validator system.
+All validators start off witt the metadata of Bitcoin block 300000
+*/
+
+
 //function to generate a new validator message
 func createTestValidator() message.Message {
 	var returnMessage = message.Message{}
@@ -17,7 +23,7 @@ func createTestValidator() message.Message {
 		BH:         blockHeader.ConvertBlockHeaderToString(createTestBlockHeader()),
 		HashRate:   "10", //arbitrary number
 		Limit:      "10", //arbitrary number
-		Diff:       "1b04864c", // pool difficulty that the validator is using
+		Diff:       "1d00ffff", //highest difficulty allowed using difficulty encoding
 		WorkerName: "prod.s9x8", //worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
 	}
 	newValidatorString := message.ConvertMessageToString(newValidatorMessage)
@@ -25,32 +31,54 @@ func createTestValidator() message.Message {
 	return returnMessage
 }
 
-//function to provide a blockheader
 //function to create a new blockheader for use in a new validator.
 //using UpdateBlockHeader type since it contains all necessary information
-//this information is also updated via the mining.Notify stratum v1 message
+//this is constructed using Bitcoin block 300000
+/*
+block 300000 data obtained from a raspibolt lnd node using unix command bitcoin-cli getBlockInfo $(bitcoin-cli getBlockHash 300000)
+hashes are represented in big-endian format but converted to little-endian format for testing reasons
+"hash": "000000000000000082ccf8f1557c5d40b21edabb18d2d691cfbf87118bac7254",
+"height": 300000,
+"versionHex": "00000002",
+"merkleroot": "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3",
+"tx": [
+],
+"time": 1399703554,
+"nonce": 222771801,
+"bits": "1900896c",
+"previousblockhash": "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e",
+*/
 func createTestBlockHeader() blockHeader.BlockHeader {
 	return blockHeader.BlockHeader{
-		Version:           "00000001", //bitcoin version
-		//currently big-endian but should convert to little-endian
-		PreviousBlockHash: "000000000002d01c1fccc21636b607dfd930d31d01c3a62104612a1719011250", //big-endian hash of previous block
-		//currently big-endian but should convert to little-endian
-		MerkleRoot:        "f3e94742aca4b5ef85488dc37c06c3282295ffec960994b2c0d5ac2a25a95766", //big-endian merkle root of current block
-		Time:              "4d1b2237", //timestamp, not necessay and overwritten with a submission attempt
-		Difficulty:        "1b04864c", //the difficulty target that a block needs to meet
+		Version:           "00000002", //bitcoin difficulty big endian
+		PreviousBlockHash: "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e", //big-endian expected
+		MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", //big-endian expected
+		Time:              "1399703554", //timestamp, not necessay and overwritten with a submission attempt
+		Difficulty:        "1900896c", //big-endian the difficulty target that a block needs to meet
 	}
 }
 
 //this returns an updated block header due to the block being attempted
 //having been mined. output should be the same as createTestBloclHeader
+/*
+block 300001 info for update messages
+  "hash": "000000000000000049a0914d83df36982c77ac1f65ade6a52bdced2ce312aba9",
+  "height": 300001,
+  "versionHex": "00000002",
+  "merkleroot": "7cbbf3148fe2407123ae248c2de7428fa067066baee245159bf4a37c37aa0aab",
+  "time": 1399704683,
+  "nonce": 3476871405,
+  "bits": "1900896c",
+  "previousblockhash": "000000000000000082ccf8f1557c5d40b21edabb18d2d691cfbf87118bac7254",
+ */
 func createBlockHeaderUpdate() blockHeader.BlockHeader{
 	//this information needs to be changed. currently it is just a copy of the information in CreateTestBlockHeader
 	return blockHeader.BlockHeader{
-		Version:           "00000001",
-		PreviousBlockHash: "000000000002d01c1fccc21636b607dfd930d31d01c3a62104612a1719011250",
-		MerkleRoot:        "f3e94742aca4b5ef85488dc37c06c3282295ffec960994b2c0d5ac2a25a95766",
-		Time:              "4d1b2237",
-		Difficulty:        "1b04864c",
+		Version:           "00000002",
+		PreviousBlockHash: "000000000000000082ccf8f1557c5d40b21edabb18d2d691cfbf87118bac7254",
+		MerkleRoot:        "7cbbf3148fe2407123ae248c2de7428fa067066baee245159bf4a37c37aa0aab",
+		Time:              "536dcc6b",
+		Difficulty:        "1900896c",
 	}
 }
 
@@ -66,7 +94,6 @@ func createSubmitMessage(wn string, jid string, en2 string, nt string, no string
 	returnMessage.Address = "123"
 	returnMessage.MessageType = "validate"
 	returnMessage.Message = message.ConvertMessageToString(mySubmit)
-	fmt.Printf("%+v", returnMessage)
 	return returnMessage
 }
 
@@ -82,7 +109,6 @@ func createTabulationMessage(wn string, jid string, en2 string, nt string, no st
 	returnMessage.Address = MUID //stands for miner unique ID
 	returnMessage.MessageType = "tabulate"
 	returnMessage.Message = message.ConvertMessageToString(mySubmit)
-	fmt.Printf("%+v", returnMessage)
 	return returnMessage
 }
 
@@ -104,15 +130,27 @@ func createNotifyMessage(JobID string, PreviousBlockHash string, GTP1 string, GT
 	return returnMessage
 }
 
+//use time and nonce from block 300000
 func createHashSubmissionMessage() message.Message {
-	returnMessage := createSubmitMessage("prod.s9x8", "d73b189a", "d9e9020000000000", "61e6f630", "11745e4a")
+	returnMessage := createSubmitMessage(
+		"prod.s9x8", //worker name
+		"d73b189a", //job ID
+		"", //extra nonce 2
+		"536dc802", //time in bits
+		"222771801") //nonce
 	return returnMessage
 }
 
 func createMinerNotifyMessage() message.Message {
-	returnMessage := createNotifyMessage("616c4a28", "17c2c0507d5b4f32aa1ca39d82b83f16dfbf75d000093fd60000000000000000", "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2803cbf90a00046cf6e6610c", "0a746974616e2f6a74677261737369650affffffff024aa07e26000000001976a9143f1ad6ada38343e55cc4c332657e30a71c86b66188ac0000000000000000266a24aa21a9ed5617dd59c856a6ae1c00b6df9c4ed26727616d4d7b59f3eaacd16d810ff6dd3400000000", `[ "e03d3ffb98db39658948c3e7e612b18d60a863b981b76d4fe17717d77818e4a3", "a3bc1f07702d7d17411fa3a7d686efc4ac6e45d7b3f3d5f6091194afcf5ce9ab", "5c60807c2e560c0ca85edc301136a4f3f442dc738fc2896cebd0088d7273d7ab", "62248c534cc4cf906f63ce71b3662bb986430c563225d7106ab1f14791ca6d90", "f957f25e5fac2ee6e1de76b3272ad5ddc751414ef2bc1d67fdcb50484eea9be7", "300c97cc0ce4179ef67dd0d974fd7f70bcb7f4d71a8b675f7f2955c780d94ecf", "243796dcef2ee48f1a5132c42abb9ab11ae47ddf87f77797390ef0cf0cdd3a3b", "5e26cbaa9f32657aac5be852e9c560e429f80019fda2da39fee69685086325f2", "df44bb117da9c9c79919d78a16255715fd4c62aa03e6b67c4667907ac897e15a", "94a8c79e827851ebb6f043e393db73111e754a7b0b55fb0c83c6cbc6235f1603", "1db100d99f37b95d429df28a11f0bef873dc63c8510787e2c9be199662236f06", "680aa7cd5a2007a9f2ae2a76ed2fb2e3231c8b6cd3ccaeea951a089a91912223" ]`, "20000000", "170b8c8b", "61e6f66c", false)
+	returnMessage := createNotifyMessage("616c4a28", "17c2c0507d5b4f32aa1ca39d82b83f16dfbf75d000093fd60000000000000000", "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2803cbf90a00046cf6e6610c", "0a746974616e2f6a74677261737369650affffffff024aa07e26000000001976a9143f1ad6ada38343e55cc4c332657e30a71c86b66188ac0000000000000000266a24aa21a9ed5617dd59c856a6ae1c00b6df9c4ed26727616d4d7b59f3eaacd16d810ff6dd3400000000", `[]`, "20000000", "170b8c8b", "61e6f66c", false)
 	return returnMessage
 }
+
+/*
+"params":["783647bc","17c2c0507d5b4f32aa1ca39d82b83f16dfbf75d000093fd60000000000000000","01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2803cbf90a00046cf6e6610c","0a746974616e2f6a74677261737369650affffffff024aa07e26000000001976a9143f1ad6ada38343e55cc4c332657e30a71c86b66188ac0000000000000000266a24aa21a9ed5617dd59c856a6ae1c00b6df9c4ed26727616d4d7b59f3eaacd16d810ff6dd3400000000","","20000000","170b8c8b","61e6f66c",false]}
+
+*/
+
 
 //create a message which asks the validator for the current hash count
 func createHashCounterRequestMessage() message.Message {
