@@ -61,7 +61,6 @@ type MiningNotify struct{
 }
 
 
-//for testing purposes for now
 //contains all the field of a stratum mining.submit message
 type MiningSubmit struct{
 	WorkerName, JobID, ExtraNonce2, NTime, NOnce string
