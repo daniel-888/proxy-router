@@ -22,6 +22,11 @@ func ConvertArray(input []byte) [32]byte {
 	return newArray
 }
 
+func BigEndianToLittleEndian(input string) string {
+	//convert a big endian to a little endian hex representation
+	return ""
+}
+
 //returns a mapping of the input message
 //assumes that the input message is of JSON format
 //creation message needs BH, HashRate, Limit, Difficulty
