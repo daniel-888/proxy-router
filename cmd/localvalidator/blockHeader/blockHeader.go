@@ -103,6 +103,5 @@ func BlockHashToBigInt(hash [32]byte) (*big.Int, error) {
 
 //expects the block difficulty as a uint32, returns a big int
 func DifficultyToBigInt(diff uint32) *big.Int {
-	//return blockchain.CalcWork(diff) //testing will need to be done to ensure this is the correct approach
-	return blockchain.CompactToBig(diff)
+	return blockchain.CompactToBig(diff) 
 }
