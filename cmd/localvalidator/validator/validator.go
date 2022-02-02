@@ -17,16 +17,15 @@ import (
 	"example.com/message"
 	"example.com/utils"
 	"example.com/validationInstance"
+	"fmt"
 	"strconv"
 	"time"
-	"fmt"
 )
 
 //creates a channel object which can be used to access created validators
 type Validator struct {
 	channel channels.Channels
 }
-
 
 //creates a validator
 //func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff uint, messages chan message.Message) error{
@@ -39,7 +38,7 @@ func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff
 			DifficultyTarget: diff,
 			ContractHashRate: hashRate,
 			ContractLimit:    limit,
-			PoolCredentials: pc, // pool login credentials
+			PoolCredentials:  pc, // pool login credentials
 		}
 		for {
 			//message is of type message, with messageType and content values
@@ -70,9 +69,9 @@ func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff
 			} else if m.MessageType == "closeValidator" {
 				close(messages)
 				return
-			} else if m.MessageType == "tabulate" { 
+			} else if m.MessageType == "tabulate" {
 				/*
-				this is similar to the validation message, but instead of returning a boolean value, it returns the current hashrate after the message is sent to it
+					this is similar to the validation message, but instead of returning a boolean value, it returns the current hashrate after the message is sent to it
 				*/
 				result := message.TabulationCount{}
 				req := message.ReceiveHashingRequest(m.Message)
@@ -95,7 +94,7 @@ func (v *Validator) SendMessageToValidator(m message.Message) *message.Message {
 		newChannel := v.channel.AddChannel(m.Address)
 		//need to extract the block header out of m.Message
 		creation := message.ReceiveNewValidatorRequest(m.Message)
-		useDiff, _ := strconv.ParseUint(creation.Diff, 16, 64) 
+		useDiff, _ := strconv.ParseUint(creation.Diff, 16, 64)
 		createValidator( //creation["BH"] is an embedded JSON object
 			blockHeader.ConvertToBlockHeader(creation.BH),
 			utils.ConvertStringToUint(creation.HashRate),

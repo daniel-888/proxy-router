@@ -3,13 +3,13 @@ package blockHeader
 import (
 	"encoding/binary"
 	"encoding/json"
-	"github.com/btcsuite/btcd/blockchain"
 	chainhash1 "example.com/chainhash"
-	_ "github.com/btcsuite/btcd/chaincfg/chainhash"
 	"example.com/wire"
-	_ "github.com/btcsuite/btcd/blockchain"
-	chainhashOnline "github.com/btcsuite/btcd/chaincfg/chainhash"
 	"fmt"
+	"github.com/btcsuite/btcd/blockchain"
+	_ "github.com/btcsuite/btcd/blockchain"
+	_ "github.com/btcsuite/btcd/chaincfg/chainhash"
+	chainhashOnline "github.com/btcsuite/btcd/chaincfg/chainhash"
 	"math/big"
 	"strconv"
 )
@@ -19,8 +19,8 @@ type BlockHeader struct {
 	PreviousBlockHash string // little endian hex format
 	MerkleRoot        string // little endian hex format
 	//time is not used, eventually need to deprecate
-	Time              string // little endian hex format
-	Difficulty        string // little endian hex format
+	Time       string // little endian hex format
+	Difficulty string // little endian hex format
 }
 
 //expects a string of the form `"Version": "001"`... etc to parse as a JSON
@@ -77,9 +77,9 @@ func (bh *BlockHeader) HashInput(nonce string, time string) [32]byte {
 		Version:    int32(sVersion),
 		PrevBlock:  chainhash1.NewHashFromStr(bh.PreviousBlockHash),
 		MerkleRoot: chainhash1.NewHashFromStr(bh.MerkleRoot),
-		Timestamp: int32(sTime),
-		Bits:      uint32(sDifficulty),
-		Nonce:     uint32(sNonce),
+		Timestamp:  int32(sTime),
+		Bits:       uint32(sDifficulty),
+		Nonce:      uint32(sNonce),
 	}
 	hash := newBlockHash.BlockHash() //little-endian
 	return hash
@@ -103,5 +103,5 @@ func BlockHashToBigInt(hash [32]byte) (*big.Int, error) {
 
 //expects the block difficulty as a uint32, returns a big int
 func DifficultyToBigInt(diff uint32) *big.Int {
-	return blockchain.CompactToBig(diff) 
+	return blockchain.CompactToBig(diff)
 }

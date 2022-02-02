@@ -52,10 +52,10 @@ func TestBlock3(t *testing.T) {
 	nonce := "222771801"
 	time := "536dc802"
 	blockHeader := BlockHeader{
-		Version:           "00000002", //big-endian
+		Version:           "00000002",                                                         //big-endian
 		MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", //big-endian
-		Time:              "1399703554", //regular time
-		Difficulty:        "1900896c", //big-endian
+		Time:              "1399703554",                                                       //regular time
+		Difficulty:        "1900896c",                                                         //big-endian
 		PreviousBlockHash: "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e", //big-endian
 	}
 
@@ -85,32 +85,31 @@ func TestBlock4(t *testing.T) {
 	}
 }
 
-
 func TestBlock300_000(t *testing.T) {
-/*
-block 300000 data obtained from a raspibolt lnd node using unix command bitcoin-cli getBlockInfo $(bitcoin-cli getBlockHash 300000)
-hashes are represented in big-endian format but converted to little-endian format for testing reasons
-"hash": "000000000000000082ccf8f1557c5d40b21edabb18d2d691cfbf87118bac7254",
-"confirmations": 421369,
-"strippedsize": 128810,
-"size": 128810,
-"weight": 515240,
-"height": 300000,
-"version": 2,
-"versionHex": "00000002",
-"merkleroot": "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3",
-"tx": [
-],
-"time": 1399703554,
-"mediantime": 1399701278,
-"nonce": 222771801,
-"bits": "1900896c",
-"difficulty": 8000872135.968163,
-"chainwork": "000000000000000000000000000000000000000000005a7b3c42ea8b844374e9",
-"nTx": 237,
-"previousblockhash": "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e",
-"nextblockhash": "000000000000000049a0914d83df36982c77ac1f65ade6a52bdced2ce312aba9"
-*/
+	/*
+	   block 300000 data obtained from a raspibolt lnd node using unix command bitcoin-cli getBlockInfo $(bitcoin-cli getBlockHash 300000)
+	   hashes are represented in big-endian format but converted to little-endian format for testing reasons
+	   "hash": "000000000000000082ccf8f1557c5d40b21edabb18d2d691cfbf87118bac7254",
+	   "confirmations": 421369,
+	   "strippedsize": 128810,
+	   "size": 128810,
+	   "weight": 515240,
+	   "height": 300000,
+	   "version": 2,
+	   "versionHex": "00000002",
+	   "merkleroot": "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3",
+	   "tx": [
+	   ],
+	   "time": 1399703554,
+	   "mediantime": 1399701278,
+	   "nonce": 222771801,
+	   "bits": "1900896c",
+	   "difficulty": 8000872135.968163,
+	   "chainwork": "000000000000000000000000000000000000000000005a7b3c42ea8b844374e9",
+	   "nTx": 237,
+	   "previousblockhash": "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e",
+	   "nextblockhash": "000000000000000049a0914d83df36982c77ac1f65ade6a52bdced2ce312aba9"
+	*/
 	blockHash := "5472ac8b1187bfcf91d6d218bbda1eb2405d7c55f1f8cc820000000000000000"
 	nonce := "222771801"
 	time := "536dc802"

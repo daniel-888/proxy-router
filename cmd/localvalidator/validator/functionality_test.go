@@ -10,7 +10,6 @@ feature tests of the validator system.
 All validators start off witt the metadata of Bitcoin block 300000
 */
 
-
 //function to generate a new validator message
 func createTestValidator() message.Message {
 	var returnMessage = message.Message{}
@@ -20,9 +19,9 @@ func createTestValidator() message.Message {
 	//need function to convert message to string and string to message
 	newValidatorMessage := message.NewValidator{
 		BH:         blockHeader.ConvertBlockHeaderToString(createTestBlockHeader()),
-		HashRate:   "10", //arbitrary number
-		Limit:      "10", //arbitrary number
-		Diff:       "1d00ffff", //highest difficulty allowed using difficulty encoding
+		HashRate:   "10",        //arbitrary number
+		Limit:      "10",        //arbitrary number
+		Diff:       "1d00ffff",  //highest difficulty allowed using difficulty encoding
 		WorkerName: "prod.s9x8", //worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
 	}
 	newValidatorString := message.ConvertMessageToString(newValidatorMessage)
@@ -49,11 +48,11 @@ hashes are represented in big-endian format but converted to little-endian forma
 */
 func createTestBlockHeader() blockHeader.BlockHeader {
 	return blockHeader.BlockHeader{
-		Version:           "00000002", //bitcoin difficulty big endian
+		Version:           "00000002",                                                         //bitcoin difficulty big endian
 		PreviousBlockHash: "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e", //big-endian expected
 		MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", //big-endian expected
-		Time:              "1399703554", //timestamp, not necessay and overwritten with a submission attempt
-		Difficulty:        "1900896c", //big-endian the difficulty target that a block needs to meet
+		Time:              "1399703554",                                                       //timestamp, not necessay and overwritten with a submission attempt
+		Difficulty:        "1900896c",                                                         //big-endian the difficulty target that a block needs to meet
 	}
 }
 
@@ -69,8 +68,8 @@ block 300001 info for update messages
   "nonce": 3476871405,
   "bits": "1900896c",
   "previousblockhash": "000000000000000082ccf8f1557c5d40b21edabb18d2d691cfbf87118bac7254",
- */
-func createBlockHeaderUpdate() blockHeader.BlockHeader{
+*/
+func createBlockHeaderUpdate() blockHeader.BlockHeader {
 	//this information needs to be changed. currently it is just a copy of the information in CreateTestBlockHeader
 	return blockHeader.BlockHeader{
 		Version:           "00000002",
@@ -133,9 +132,9 @@ func createNotifyMessage(JobID string, PreviousBlockHash string, GTP1 string, GT
 func createHashSubmissionMessage() message.Message {
 	returnMessage := createSubmitMessage(
 		"prod.s9x8", //worker name
-		"d73b189a", //job ID
-		"", //extra nonce 2
-		"536dc802", //time in bits
+		"d73b189a",  //job ID
+		"",          //extra nonce 2
+		"536dc802",  //time in bits
 		"222771801") //nonce
 	return returnMessage
 }
@@ -149,7 +148,6 @@ func createMinerNotifyMessage() message.Message {
 "params":["783647bc","17c2c0507d5b4f32aa1ca39d82b83f16dfbf75d000093fd60000000000000000","01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2803cbf90a00046cf6e6610c","0a746974616e2f6a74677261737369650affffffff024aa07e26000000001976a9143f1ad6ada38343e55cc4c332657e30a71c86b66188ac0000000000000000266a24aa21a9ed5617dd59c856a6ae1c00b6df9c4ed26727616d4d7b59f3eaacd16d810ff6dd3400000000","","20000000","170b8c8b","61e6f66c",false]}
 
 */
-
 
 //create a message which asks the validator for the current hash count
 func createHashCounterRequestMessage() message.Message {
@@ -192,12 +190,12 @@ func TestCreateValidator(t *testing.T) {
 
 func TestHashRatePerAsic(t *testing.T) {
 	/*
-	this is a test to see if a mining rig can have its hashrate tabulated to within a certain degree
-	steps:
-	1. connect an asic to the proxy server (this is ignored and instead a new validator is created with address of 1
-	2. send the same mining message to the validator every N seconds
-	3. call the function to get the calculated hashrate in the validator
-	4. compare to the expected hashrate
+		this is a test to see if a mining rig can have its hashrate tabulated to within a certain degree
+		steps:
+		1. connect an asic to the proxy server (this is ignored and instead a new validator is created with address of 1
+		2. send the same mining message to the validator every N seconds
+		3. call the function to get the calculated hashrate in the validator
+		4. compare to the expected hashrate
 	*/
 	//validator := createTestValidator()
 }
@@ -245,6 +243,7 @@ func TestSubmit2HashesVerifyCount(t *testing.T) {
 		t.Errorf("incorrect hashcount: %v", resultingHashCount)
 	}
 }
+
 /*
 //create 2 validators, send each a hash, confirm hash results are true, close validators
 func TestCreateTwoValidatorValidateHashCloseValidator(t *testing.T) {

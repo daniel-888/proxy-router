@@ -6,9 +6,9 @@ import (
 	"fmt"
 	//"math"
 	//"errors"
+	"math/big"
 	"strconv"
 	"time"
-	"math/big"
 )
 
 //an individual validator which will operate as a thread
@@ -19,7 +19,7 @@ type Validator struct {
 	DifficultyTarget uint
 	ContractHashRate uint
 	ContractLimit    uint
-	PoolCredentials string //the pool username that the hashrate is being allocated to
+	PoolCredentials  string //the pool username that the hashrate is being allocated to
 }
 
 //emits a message notifying whether or not the block was hashed correctly
@@ -33,7 +33,7 @@ func (v *Validator) blockAnalysisMessage(validHash bool) string {
 }
 
 //need to confirm if DifficultyTarget is already an INT at this point or still in condensed form
-func (v *Validator) UpdateHashrate() uint{
+func (v *Validator) UpdateHashrate() uint {
 	//determine the current duration of the contract
 	contractDuration := time.Now().Sub(v.StartTime) //returns an i64
 	//calculate the number of hashes represented by the pool difficulty target
@@ -70,8 +70,8 @@ func (v *Validator) IncomingHash(credential string, nonce string, time string) (
 	if credential != v.PoolCredentials {
 		return result, fmt.Sprintf("Hashrate Hijacking Detected. Check pool user %s", credential)
 	}
-	calcHash := v.BH.HashInput(nonce, time) //calcHash is returned as little endian
-	var hashingResult bool //temp until revised logic put in place
+	calcHash := v.BH.HashInput(nonce, time)                             //calcHash is returned as little endian
+	var hashingResult bool                                              //temp until revised logic put in place
 	hashAsBigInt, hashingErr := blockHeader.BlockHashToBigInt(calcHash) //designed to intake as little endian
 	if hashingErr != nil {
 		return result, fmt.Sprintf("error when hashing block: %s", hashingErr)
@@ -85,13 +85,14 @@ func (v *Validator) IncomingHash(credential string, nonce string, time string) (
 	}
 	if hashingResult {
 		v.HashesAnalyzed++
-	} 
+	}
 	if v.HashrateRemaining() == false {
-		v.closeOutContract() 
+		v.closeOutContract()
 	}
 	result.IsCorrect = strconv.FormatBool(hashingResult)
 	return result, ""
 }
+
 //function to update the validators block header
 func (v *Validator) UpdateBlockHeader(bh blockHeader.BlockHeader) {
 	v.BH = bh

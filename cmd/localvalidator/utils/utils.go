@@ -16,7 +16,7 @@ func ParseIncomingHash(message string) (uint, []byte) {
 //converts a varying byte array with a fixed byte array
 func ConvertArray(input []byte) [32]byte {
 	newArray := [32]byte{}
-	for i, _ := range input {
+	for i := range input {
 		newArray[i] = input[i]
 	}
 	return newArray

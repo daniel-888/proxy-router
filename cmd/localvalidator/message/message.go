@@ -55,14 +55,13 @@ type TabulationCount struct { //string will be an integer
 }
 
 //for testing purposes for now
-type MiningNotify struct{
+type MiningNotify struct {
 	JobID, PreviousBlockHash, GTP1, GTP2, MerkleList, Version, NBits, NTime string
-	CleanJobs bool
+	CleanJobs                                                               bool
 }
 
-
 //contains all the field of a stratum mining.submit message
-type MiningSubmit struct{
+type MiningSubmit struct {
 	WorkerName, JobID, ExtraNonce2, NTime, NOnce string
 }
 
