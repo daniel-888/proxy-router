@@ -78,7 +78,7 @@ func createValidator(bh blockHeader.BlockHeader, hashRate uint, limit uint, diff
 				req := message.ReceiveHashingRequest(m.Message)
 				myValidator.IncomingHash(req.WorkerName, req.NOnce, req.NTime) //this function broadcasts a message
 				hashrate := myValidator.UpdateHashrate()
-				result.HashRate = hashrate
+				result.HashCount = hashrate
 				newM := m
 				newM.Message = message.ConvertMessageToString(result)
 				messages <- newM
@@ -95,11 +95,12 @@ func (v *Validator) SendMessageToValidator(m message.Message) *message.Message {
 		newChannel := v.channel.AddChannel(m.Address)
 		//need to extract the block header out of m.Message
 		creation := message.ReceiveNewValidatorRequest(m.Message)
+		useDiff, _ := strconv.ParseUint(creation.Diff, 16, 64) 
 		createValidator( //creation["BH"] is an embedded JSON object
 			blockHeader.ConvertToBlockHeader(creation.BH),
 			utils.ConvertStringToUint(creation.HashRate),
 			utils.ConvertStringToUint(creation.Limit),
-			utils.ConvertStringToUint(creation.Diff),
+			uint(useDiff),
 			creation.WorkerName,
 			newChannel,
 		)
