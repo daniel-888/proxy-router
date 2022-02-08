@@ -3,8 +3,8 @@
 Lumerin Node (aka ProxyRouter)
 
 # Setup
-1. Install Go
-2. Install Ganache
+1. Install Go https://go.dev/dl/
+2. Install Ganache https://trufflesuite.com/ganache/
 3. Clone repo
 4. Copy `lumerinconfig.example.json` to `lumerinconfig.json`
 5. `cd` into `cmd` directory
