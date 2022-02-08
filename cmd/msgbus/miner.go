@@ -22,10 +22,12 @@ type Miner struct {
 	IP                      string
 	MAC                     string
 	State                   MinerState
-	Seller                  SellerID
+	NodeOperator            NodeOperatorID
+	Contract				ContractID // Updated by Connection Scheduler
 	Dest                    DestID // Updated by Connection Scheduler
 	InitialMeasuredHashRate int
 	CurrentHashRate         int
+	CsMinerHandlerIgnore	bool // Ignore update in Connection Scheduler Miner Handler
 }
 
 //---------------------------------------------------------------
@@ -148,6 +150,52 @@ func (ps *PubSub) MinerSetDestWait(miner MinerID, dest DestID) (err error) {
 		return err
 	} else {
 		m.Dest = dest
+		err = ps.MinerSetWait(*m)
+		if err != nil {
+			fmt.Printf(lumerinlib.FileLine()+" MinerSetWait errored out:%s\n", err)
+		}
+	}
+
+	return err
+}
+
+//---------------------------------------------------------------
+//
+//---------------------------------------------------------------
+func (ps *PubSub) MinerSetContractWait(miner MinerID, contract ContractID, csIgnore bool) (err error) {
+	event,err := ps.GetWait(ContractMsg, IDString(contract))
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLine()+" Getting contract errored out:%s\n", err)
+		return err
+	}
+	c := event.Data.(Contract)
+
+	m, err := ps.MinerGetWait(miner)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLine()+" MinerGetWait errored out:%s\n", err)
+		return err
+	} else {
+		m.Contract = contract
+		m.Dest = c.Dest
+		m.CsMinerHandlerIgnore = csIgnore
+		err = ps.MinerSetWait(*m)
+		if err != nil {
+			fmt.Printf(lumerinlib.FileLine()+" MinerSetWait errored out:%s\n", err)
+		}
+	}
+
+	return err
+}
+
+func (ps *PubSub) MinerRemoveContractWait(miner MinerID, defaultDest DestID, csIgnore bool) (err error) {
+	m, err := ps.MinerGetWait(miner)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLine()+" MinerGetWait errored out:%s\n", err)
+		return err
+	} else {
+		m.Contract = ""
+		m.Dest = defaultDest
+		m.CsMinerHandlerIgnore = csIgnore
 		err = ps.MinerSetWait(*m)
 		if err != nil {
 			fmt.Printf(lumerinlib.FileLine()+" MinerSetWait errored out:%s\n", err)

@@ -54,9 +54,12 @@ func TestBuyerRoutine(t *testing.T) {
 
 	ps.PubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractManagerConfig)
 
+	nodeOperator := msgbus.NodeOperator{
+		ID: msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
+	}
 	var cman BuyerContractManager
-	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, contractManagerConfigID)
-	err = cman.init(&contractManagerCtx, ps, contractManagerConfigID)
+	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, contractManagerConfigID, &nodeOperator)
+	err = cman.init(&contractManagerCtx, ps, contractManagerConfigID, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("contract manager init failed:%s", err))
 	}
@@ -148,10 +151,10 @@ func TestBuyerRoutine(t *testing.T) {
 	}
 
 	// contract manager sees existing contracts and states are correct
-	if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] != msgbus.ContRunningState {
+	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] != msgbus.ContRunningState {
 		t.Errorf("Contract 1 was not found or is not in correct state")
 	}
-	if _,ok := cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] ; ok {
+	if _,ok := cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] ; ok {
 		t.Errorf("Contract 2 was found by buyer node while in the available state")
 	}
 
@@ -183,7 +186,7 @@ func TestBuyerRoutine(t *testing.T) {
 		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] != msgbus.ContRunningState {
+	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] != msgbus.ContRunningState {
 		t.Errorf("Contract 2 is not in correct state")
 	}
 
@@ -234,7 +237,7 @@ func TestBuyerRoutine(t *testing.T) {
 		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	if _,ok := cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] ; ok {
+	if _,ok := cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] ; ok {
 		t.Errorf("Contract 4 was found by buyer node while in the available state")
 	}
 	PurchaseHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, hashrateContractAddress[2], cman.account, "stratum+tcp://127.0.0.1:3333/testrig")
@@ -247,7 +250,7 @@ func TestBuyerRoutine(t *testing.T) {
 		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContRunningState {
+	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContRunningState {
 		t.Errorf("Contract 4 is not in correct state")
 	}
 
@@ -320,7 +323,7 @@ func TestBuyerRoutine(t *testing.T) {
 	time.Sleep(time.Millisecond * time.Duration(sleepTime))
 
 	// check contracts map is empty now
-	if len(cman.msg.Contracts) != 0 {
+	if len(cman.nodeOperator.Contracts) != 0 {
 		t.Errorf("Contracts did not closeout after all miners were set to offline")
 	}
 

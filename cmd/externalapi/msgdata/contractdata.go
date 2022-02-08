@@ -195,7 +195,7 @@ func ConvertContractJSONtoContractMSG(contract ContractJSON) msgbus.Contract {
 	msg.IsSeller = contract.IsSeller
 	msg.ID = msgbus.ContractID(contract.ID)
 	msg.State = msgbus.ContractState(contract.State)
-	msg.Buyer = msgbus.BuyerID(contract.Buyer)
+	msg.Buyer = contract.Buyer
 	msg.Price = contract.Price 
 	msg.Limit = contract.Limit
 	msg.Speed = contract.Speed

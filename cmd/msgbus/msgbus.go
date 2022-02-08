@@ -45,8 +45,7 @@ const (
 	ConfigMsg     			 MsgType = "ConfigMsg"
 	ContractManagerConfigMsg MsgType = "ContractManagerConfigMsg"
 	DestMsg       			 MsgType = "DestMsg"
-	SellerMsg     			 MsgType = "SellerMsg"
-	BuyerMsg      			 MsgType = "BuyerMsg"
+	NodeOperatorMsg     	 MsgType = "NodeOperatorMsg"
 	ContractMsg   			 MsgType = "ContractMsg"
 	MinerMsg     			 MsgType = "MinerMsg"
 	ConnectionMsg 			 MsgType = "ConnectionMsg"
@@ -805,8 +804,7 @@ func (ps *PubSub) start() {
 	reg.data[ConfigMsg] = make(map[IDString]registryData)
 	reg.data[ContractManagerConfigMsg] = make(map[IDString]registryData)
 	reg.data[DestMsg] = make(map[IDString]registryData)
-	reg.data[SellerMsg] = make(map[IDString]registryData)
-	reg.data[BuyerMsg] = make(map[IDString]registryData)
+	reg.data[NodeOperatorMsg] = make(map[IDString]registryData)
 	reg.data[ContractMsg] = make(map[IDString]registryData)
 	reg.data[MinerMsg] = make(map[IDString]registryData)
 	reg.data[ConnectionMsg] = make(map[IDString]registryData)
@@ -814,8 +812,7 @@ func (ps *PubSub) start() {
 	reg.notify[ConfigMsg] = make(map[chan Event]interface{})
 	reg.notify[ContractManagerConfigMsg] = make(map[chan Event]interface{})
 	reg.notify[DestMsg] = make(map[chan Event]interface{})
-	reg.notify[SellerMsg] = make(map[chan Event]interface{})
-	reg.notify[BuyerMsg] = make(map[chan Event]interface{})
+	reg.notify[NodeOperatorMsg] = make(map[chan Event]interface{})
 	reg.notify[ContractMsg] = make(map[chan Event]interface{})
 	reg.notify[MinerMsg] = make(map[chan Event]interface{})
 	reg.notify[ConnectionMsg] = make(map[chan Event]interface{})

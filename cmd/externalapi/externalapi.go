@@ -17,8 +17,7 @@ type APIRepos struct {
 	Contract				*msgdata.ContractRepo 
 	Dest					*msgdata.DestRepo 
 	Miner					*msgdata.MinerRepo 
-	Seller					*msgdata.SellerRepo
-	Buyer					*msgdata.BuyerRepo
+	NodeOperator			*msgdata.NodeOperatorRepo
 }
 
 func (api *APIRepos) InitializeJSONRepos(ps *msgbus.PubSub) {
@@ -40,11 +39,8 @@ func (api *APIRepos) InitializeJSONRepos(ps *msgbus.PubSub) {
 	api.Miner = msgdata.NewMiner(ps)
 	go api.Miner.SubscribeToMinerMsgBus()
 
-	api.Seller = msgdata.NewSeller(ps)
-	go api.Seller.SubscribeToSellerMsgBus()
-
-	api.Buyer = msgdata.NewBuyer(ps)
-	go api.Buyer.SubscribeToBuyerMsgBus()
+	api.NodeOperator = msgdata.NewNodeOperator(ps)
+	go api.NodeOperator.SubscribeToNodeOperatorMsgBus()
 }
 
 func (api *APIRepos) RunAPI() {
@@ -104,22 +100,13 @@ func (api *APIRepos) RunAPI() {
 		minerRoutes.DELETE("/:id", handlers.MinerDELETE(api.Miner))
 	}
 
-	sellerRoutes := r.Group("/seller")
+	nodeOperatorRoutes := r.Group("/nodeoperator")
 	{
-		sellerRoutes.GET("/", handlers.SellersGET(api.Seller))
-		sellerRoutes.GET("/:id", handlers.SellerGET(api.Seller))
-		sellerRoutes.POST("/", handlers.SellerPOST(api.Seller))
-		sellerRoutes.PUT("/:id", handlers.SellerPUT(api.Seller))
-		sellerRoutes.DELETE("/:id", handlers.SellerDELETE(api.Seller))
-	}
-
-	buyerRoutes := r.Group("/buyer")
-	{
-		buyerRoutes.GET("/", handlers.BuyersGET(api.Buyer))
-		buyerRoutes.GET("/:id", handlers.BuyerGET(api.Buyer))
-		buyerRoutes.POST("/", handlers.BuyerPOST(api.Buyer))
-		buyerRoutes.PUT("/:id", handlers.BuyerPUT(api.Buyer))
-		buyerRoutes.DELETE("/:id", handlers.BuyerDELETE(api.Buyer))
+		nodeOperatorRoutes.GET("/", handlers.NodeOperatorsGET(api.NodeOperator))
+		nodeOperatorRoutes.GET("/:id", handlers.NodeOperatorGET(api.NodeOperator))
+		nodeOperatorRoutes.POST("/", handlers.NodeOperatorPOST(api.NodeOperator))
+		nodeOperatorRoutes.PUT("/:id", handlers.NodeOperatorPUT(api.NodeOperator))
+		nodeOperatorRoutes.DELETE("/:id", handlers.NodeOperatorDELETE(api.NodeOperator))
 	}
 
 	if err := r.Run(); err != nil {

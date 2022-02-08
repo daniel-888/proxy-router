@@ -16,21 +16,17 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 		ID:   		msgbus.DestID("DestID01"),
 		NetUrl: 	msgbus.DestNetUrl("stratum+tcp://127.0.0.1:3334/"),	
 	}
-	seller := msgbus.Seller{
-		ID:                    msgbus.SellerID("SellerID01"),
+	nodeOperator := msgbus.NodeOperator{
+		ID:                    msgbus.NodeOperatorID("NodeOperatorID01"),
 		DefaultDest:           dest.ID,
 		TotalAvailableHashRate: 0,
 		UnusedHashRate:         0,
-	}
-	buyer := msgbus.Buyer{
-		ID: 			msgbus.BuyerID("BuyerID01"),
-		DefaultDest: 	dest.ID,
 	}
 	contract := msgbus.Contract{
 		IsSeller: 				true,	
 		ID:						msgbus.ContractID("ContractID01"),
 		State: 					msgbus.ContRunningState,
-		Buyer: 					buyer.ID,
+		Buyer: 					"BuyerID01",
 		Price: 					100,
 		Limit: 					100,
 		Speed: 					100,
@@ -38,21 +34,18 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 		StartingBlockTimestamp: 100,
 		Dest:					dest.ID,
 	}
-	seller.Contracts = map[msgbus.ContractID]msgbus.ContractState{
-		contract.ID: msgbus.ContRunningState,
-	}
-	buyer.Contracts = map[msgbus.ContractID]msgbus.ContractState{
+	nodeOperator.Contracts = map[msgbus.ContractID]msgbus.ContractState{
 		contract.ID: msgbus.ContRunningState,
 	}
 	config := msgbus.ConfigInfo{
 		ID:          msgbus.ConfigID("ConfigID01"),
 		DefaultDest: dest.ID,
-		Seller:      seller.ID,
+		NodeOperator:      nodeOperator.ID,
 	}
 	miner := msgbus.Miner{
 		ID:						msgbus.MinerID("MinerID01"),
 		State: 					msgbus.OnlineState,
-		Seller:   				seller.ID,
+		NodeOperator:   				nodeOperator.ID,
 		Dest:					dest.ID,	
 		InitialMeasuredHashRate: 10000,
 		CurrentHashRate:         9000,
@@ -78,15 +71,10 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 	if api.Dest.DestJSONs[0].ID != string(dest.ID) {
 		t.Errorf("Failed to add dest to API repo after publish from msgbus")
 	}
-	ps.PubWait(msgbus.BuyerMsg, msgbus.IDString(buyer.ID), msgbus.Buyer{})
+	ps.PubWait(msgbus.NodeOperatorMsg, msgbus.IDString(nodeOperator.ID), msgbus.NodeOperator{})
 	time.Sleep(time.Millisecond*100)
-	if api.Buyer.BuyerJSONs[0].ID != string(buyer.ID) {
-		t.Errorf("Failed to add buyer to API repo after publish from msgbus")
-	}
-	ps.PubWait(msgbus.SellerMsg, msgbus.IDString(seller.ID), msgbus.Seller{})
-	time.Sleep(time.Millisecond*100)
-	if api.Seller.SellerJSONs[0].ID != string(seller.ID) {
-		t.Errorf("Failed to add seller to API repo after publish from msgbus")
+	if api.NodeOperator.NodeOperatorJSONs[0].ID != string(nodeOperator.ID) {
+		t.Errorf("Failed to add nodeOperator to API repo after publish from msgbus")
 	}
 	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract.ID), msgbus.Contract{})
 	time.Sleep(time.Millisecond*100)
@@ -110,8 +98,7 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 	}
 	fmt.Print("\nAPI Repos::\n")
 	fmt.Println("Dest Repo: ", api.Dest.DestJSONs)
-	fmt.Println("Buyer Repo: ", api.Buyer.BuyerJSONs)
-	fmt.Println("Seller Repo: ", api.Seller.SellerJSONs)
+	fmt.Println("NodeOperator Repo: ", api.NodeOperator.NodeOperatorJSONs)
 	fmt.Println("Contract Repo: ", api.Contract.ContractJSONs)
 	fmt.Println("Config Repo: ", api.Config.ConfigInfoJSONs)
 	fmt.Println("Miner Repo: ", api.Miner.MinerJSONs)
@@ -123,15 +110,10 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 	if api.Dest.DestJSONs[0] != msgdata.ConvertDestMSGtoDestJSON(dest) {
 		t.Errorf("Failed to update dest in API repo after update from msgbus")
 	}
-	ps.SetWait(msgbus.BuyerMsg, msgbus.IDString(buyer.ID), buyer)
+	ps.SetWait(msgbus.NodeOperatorMsg, msgbus.IDString(nodeOperator.ID), nodeOperator)
 	time.Sleep(time.Millisecond*100)
-	if api.Buyer.BuyerJSONs[0].DefaultDest != msgdata.ConvertBuyerMSGtoBuyerJSON(buyer).DefaultDest {
-		t.Errorf("Failed to update buyer in API repo after update from msgbus")
-	}
-	ps.SetWait(msgbus.SellerMsg, msgbus.IDString(seller.ID), seller)
-	time.Sleep(time.Millisecond*100)
-	if api.Seller.SellerJSONs[0].DefaultDest != msgdata.ConvertSellerMSGtoSellerJSON(seller).DefaultDest {
-		t.Errorf("Failed to update seller in API repo after update from msgbus")
+	if api.NodeOperator.NodeOperatorJSONs[0].DefaultDest != msgdata.ConvertNodeOperatorMSGtoNodeOperatorJSON(nodeOperator).DefaultDest {
+		t.Errorf("Failed to update nodeOperator in API repo after update from msgbus")
 	}
 	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract.ID), contract)
 	time.Sleep(time.Millisecond*100)
@@ -155,8 +137,7 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 	}
 	fmt.Print("\nAPI Repos::\n")
 	fmt.Println("Dest Repo: ", api.Dest.DestJSONs)
-	fmt.Println("Buyer Repo: ", api.Buyer.BuyerJSONs)
-	fmt.Println("Seller Repo: ", api.Seller.SellerJSONs)
+	fmt.Println("NodeOperator Repo: ", api.NodeOperator.NodeOperatorJSONs)
 	fmt.Println("Contract Repo: ", api.Contract.ContractJSONs)
 	fmt.Println("Config Repo: ", api.Config.ConfigInfoJSONs)
 	fmt.Println("Miner Repo: ", api.Miner.MinerJSONs)
@@ -169,15 +150,10 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 	if len(api.Dest.DestJSONs) > 0 {
 		t.Errorf("Failed to remove dest from API repo after unpublish from msgbus")
 	}
-	ps.UnpubWait(msgbus.BuyerMsg, msgbus.IDString(buyer.ID))
+	ps.UnpubWait(msgbus.NodeOperatorMsg, msgbus.IDString(nodeOperator.ID))
 	time.Sleep(time.Millisecond*100)
-	if len(api.Buyer.BuyerJSONs) > 0 {
-		t.Errorf("Failed to remove buyer from API repo after unpublish from msgbus")
-	}
-	ps.UnpubWait(msgbus.SellerMsg, msgbus.IDString(seller.ID))
-	time.Sleep(time.Millisecond*100)
-	if len(api.Seller.SellerJSONs) > 0 {
-		t.Errorf("Failed to remove seller from API repo after unpublish from msgbus")
+	if len(api.NodeOperator.NodeOperatorJSONs) > 0 {
+		t.Errorf("Failed to remove nodeOperator from API repo after unpublish from msgbus")
 	}
 	ps.UnpubWait(msgbus.ContractMsg, msgbus.IDString(contract.ID))
 	time.Sleep(time.Millisecond*100)
@@ -201,8 +177,7 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 	}
 	fmt.Print("\nAPI Repos::\n")
 	fmt.Println("Dest Repo: ", api.Dest.DestJSONs)
-	fmt.Println("Buyer Repo: ", api.Buyer.BuyerJSONs)
-	fmt.Println("Seller Repo: ", api.Seller.SellerJSONs)
+	fmt.Println("NodeOperator Repo: ", api.NodeOperator.NodeOperatorJSONs)
 	fmt.Println("Contract Repo: ", api.Contract.ContractJSONs)
 	fmt.Println("Config Repo: ", api.Config.ConfigInfoJSONs)
 	fmt.Println("Miner Repo: ", api.Miner.MinerJSONs)

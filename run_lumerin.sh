@@ -2,14 +2,14 @@
 
 lumerin \
 	--buyer="false" \
-	--network="ropsten" \
+	--network="custom" \
 	--mnemonic="" \
 	--ethnodeaddress="" \
 	--claimfunds="false" \
 	--accountindex="0" \
 	--listenip="127.0.0.1" \
 	--listenport=3334 \
-	--configfile="./ropstenconfig.json" \
+	--configfile="./ganacheconfig.json" \
 	--configdownload="" \
 	--logfile="/tmp/lumerin1.log" \
 	--loglevel=4 \

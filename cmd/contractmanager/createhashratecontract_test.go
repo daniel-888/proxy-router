@@ -31,8 +31,11 @@ func TestCreateHashrateContract(t *testing.T) {
 	
 	ps.PubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractManagerConfig)
 
+	nodeOperator := msgbus.NodeOperator{
+		ID: msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
+	}
 	var cman SellerContractManager
-	cman.init(&contractManagerCtx, ps, contractManagerConfigID)
+	cman.init(&contractManagerCtx, ps, contractManagerConfigID, &nodeOperator)
 
 	// subcribe to creation events emitted by clonefactory contract 
 	cfLogs, cfSub, _ := subscribeToContractEvents(cman.ethClient, cman.cloneFactoryAddress)

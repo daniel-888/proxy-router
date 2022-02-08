@@ -12,7 +12,7 @@ import (
 type ConfigInfoJSON struct {
 	ID          		string `json:"id"`
 	DefaultDest 		string `json:"defaultDest"`
-	Seller     		 	string `json:"seller"`
+	NodeOperator     		 	string `json:"nodeOperator"`
 }
 
 //Struct that stores slice of all JSON ConfigInfo structs in Repo
@@ -55,7 +55,7 @@ func (r *ConfigInfoRepo) AddConfigInfoFromMsgBus(confID msgbus.ConfigID, conf ms
 	
 	confJSON.ID = string(confID)
 	confJSON.DefaultDest = string(conf.DefaultDest)
-	confJSON.Seller = string(conf.Seller)
+	confJSON.NodeOperator = string(conf.NodeOperator)
 	
 	r.ConfigInfoJSONs = append(r.ConfigInfoJSONs, confJSON)
 }
@@ -65,7 +65,7 @@ func (r *ConfigInfoRepo) UpdateConfigInfo(id string, newConfigInfo ConfigInfoJSO
 	for i,c := range r.ConfigInfoJSONs {
 		if c.ID == id {
 			if newConfigInfo.DefaultDest != "" {r.ConfigInfoJSONs[i].DefaultDest = newConfigInfo.DefaultDest}
-			if newConfigInfo.Seller != "" {r.ConfigInfoJSONs[i].Seller = newConfigInfo.Seller}
+			if newConfigInfo.NodeOperator != "" {r.ConfigInfoJSONs[i].NodeOperator = newConfigInfo.NodeOperator}
 
 			return nil
 		}
@@ -173,7 +173,7 @@ func ConvertConfigInfoJSONtoConfigInfoMSG(conf ConfigInfoJSON) msgbus.ConfigInfo
 
 	msg.ID = msgbus.ConfigID(conf.ID)
 	msg.DefaultDest = msgbus.DestID(conf.DefaultDest)
-	msg.Seller = msgbus.SellerID(conf.Seller)
+	msg.NodeOperator = msgbus.NodeOperatorID(conf.NodeOperator)
 
 	return msg	
 }
@@ -181,7 +181,7 @@ func ConvertConfigInfoJSONtoConfigInfoMSG(conf ConfigInfoJSON) msgbus.ConfigInfo
 func ConvertConfigInfoMSGtoConfigInfoJSON(msg msgbus.ConfigInfo) (conf ConfigInfoJSON) {
 	conf.ID = string(msg.ID)
 	conf.DefaultDest = string(msg.DefaultDest)
-	conf.Seller = string(msg.Seller)
+	conf.NodeOperator = string(msg.NodeOperator)
 
 	return conf	
 }

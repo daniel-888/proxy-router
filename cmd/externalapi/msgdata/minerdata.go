@@ -15,7 +15,7 @@ type MinerJSON struct {
 	IP						string 	`json:"ip"`
 	MAC						string 	`json:"mac"`
 	State                   string 	`json:"state"`
-	Seller                  string 	`json:"seller"`
+	NodeOperator            string 	`json:"nodeOperator"`
 	Dest                   	string 	`json:"dest"`
 	InitialMeasuredHashRate int 	`json:"initialMeasuredHashRate"`
 	CurrentHashRate         int 	`json:"currentHashRate"`
@@ -61,7 +61,7 @@ func (r *MinerRepo) AddMinerFromMsgBus(minerID msgbus.MinerID, miner msgbus.Mine
 
 	minerJSON.ID = string(minerID)
 	minerJSON.State = string(miner.State)
-	minerJSON.Seller = string(miner.Seller)
+	minerJSON.NodeOperator = string(miner.NodeOperator)
 	minerJSON.Dest = string(miner.Dest)
 	minerJSON.InitialMeasuredHashRate = miner.InitialMeasuredHashRate
 	minerJSON.CurrentHashRate = miner.CurrentHashRate
@@ -74,7 +74,7 @@ func (r *MinerRepo) UpdateMiner(id string, newMiner MinerJSON) error {
 	for i,m := range r.MinerJSONs {
 		if m.ID == id {
 			if newMiner.State != "" {r.MinerJSONs[i].State = newMiner.State}
-			if newMiner.Seller != "" {r.MinerJSONs[i].Seller = newMiner.Seller}
+			if newMiner.NodeOperator != "" {r.MinerJSONs[i].NodeOperator = newMiner.NodeOperator}
 			if newMiner.Dest != "" {r.MinerJSONs[i].Dest = newMiner.Dest}
 			if newMiner.InitialMeasuredHashRate != 0 {r.MinerJSONs[i].InitialMeasuredHashRate = newMiner.InitialMeasuredHashRate}
 			if newMiner.CurrentHashRate != 0 {r.MinerJSONs[i].CurrentHashRate = newMiner.CurrentHashRate}
@@ -183,7 +183,7 @@ func ConvertMinerJSONtoMinerMSG(miner MinerJSON) msgbus.Miner {
 	
 	msg.ID = msgbus.MinerID(miner.ID)
 	msg.State = msgbus.MinerState(miner.State)
-	msg.Seller = msgbus.SellerID(miner.Seller)
+	msg.NodeOperator = msgbus.NodeOperatorID(miner.NodeOperator)
 	msg.Dest = msgbus.DestID(miner.Dest)
 	msg.InitialMeasuredHashRate = miner.InitialMeasuredHashRate
 	msg.CurrentHashRate = miner.CurrentHashRate
@@ -197,7 +197,7 @@ func ConvertMinerMSGtoMinerJSON(msg msgbus.Miner) (miner MinerJSON) {
 	miner.IP = msg.IP
 	miner.MAC = msg.MAC
 	miner.State = string(msg.State)
-	miner.Seller = string(msg.Seller)
+	miner.NodeOperator = string(msg.NodeOperator)
 	miner.Dest = string(msg.Dest)
 	miner.InitialMeasuredHashRate = msg.InitialMeasuredHashRate
 	miner.CurrentHashRate = msg.CurrentHashRate

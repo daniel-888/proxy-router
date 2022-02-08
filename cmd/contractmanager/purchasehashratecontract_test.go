@@ -28,8 +28,11 @@ func TestPurchaseHashrateContract(t *testing.T) {
 
 	ps.PubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractManagerConfig)
 
+	nodeOperator := msgbus.NodeOperator{
+		ID: msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
+	}
 	var cman BuyerContractManager
-	err = cman.init(&contractManagerCtx, ps, contractManagerConfigID)
+	err = cman.init(&contractManagerCtx, ps, contractManagerConfigID, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("contract manager failed:%s", err))
 	}

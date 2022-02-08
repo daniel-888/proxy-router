@@ -12,7 +12,7 @@ func TestAddMiner(t *testing.T) {
 	miner := MinerJSON{
 		ID:						"Test",
 		State: 					"Test",
-		Seller:   				"Test",
+		NodeOperator:   		"Test",
 		Dest:					"Test",	
 		InitialMeasuredHashRate: 100,
 		CurrentHashRate:         100,
@@ -32,7 +32,7 @@ func TestGetAllMiners(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		miner[i].ID = "Test" + fmt.Sprint(i)
 		miner[i].State = "Test"
-		miner[i].Seller = "Test"
+		miner[i].NodeOperator = "Test"
 		miner[i].Dest = "Test"
 		miner[i].InitialMeasuredHashRate = 100
 		miner[i].CurrentHashRate = 100
@@ -55,7 +55,7 @@ func TestGetMiner(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		miner[i].ID = "Test" + fmt.Sprint(i)
 		miner[i].State = "Test"
-		miner[i].Seller = "Test"
+		miner[i].NodeOperator = "Test"
 		miner[i].Dest = "Test"
 		miner[i].InitialMeasuredHashRate = 100
 		miner[i].CurrentHashRate = 100
@@ -82,7 +82,7 @@ func TestUpdateMiner(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		miner[i].ID = "Test" + fmt.Sprint(i)
 		miner[i].State = "Test"
-		miner[i].Seller = "Test"
+		miner[i].NodeOperator = "Test"
 		miner[i].Dest = "Test"
 		miner[i].InitialMeasuredHashRate = 100
 		miner[i].CurrentHashRate = 100
@@ -97,7 +97,7 @@ func TestUpdateMiner(t *testing.T) {
 	minerUpdates := MinerJSON{
 		ID:						"",
 		State: 					"Updated",
-		Seller:   				"",
+		NodeOperator:   				"",
 		Dest:					"",	
 		InitialMeasuredHashRate: 0,
 		CurrentHashRate:         0,
@@ -125,7 +125,7 @@ func TestDeleteMiner(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		miner[i].ID = "Test" + fmt.Sprint(i)
 		miner[i].State = "Test"
-		miner[i].Seller = "Test"
+		miner[i].NodeOperator = "Test"
 		miner[i].Dest = "Test"
 		miner[i].InitialMeasuredHashRate = 100
 		miner[i].CurrentHashRate = 100
@@ -157,7 +157,7 @@ func TestSubsribeToMsgBus(t *testing.T) {
 		IP: "Test",
 		MAC: "Test",
 		State: msgbus.OnlineState,
-		Seller: "Test",
+		NodeOperator: "Test",
 		Dest: "Test",
 		InitialMeasuredHashRate: 100,
 		CurrentHashRate: 100,

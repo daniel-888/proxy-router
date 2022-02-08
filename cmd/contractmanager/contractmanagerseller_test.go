@@ -60,9 +60,12 @@ func TestSellerRoutine(t *testing.T) {
 
 	ps.PubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractManagerConfig)
 
+	nodeOperator := msgbus.NodeOperator{
+		ID: msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
+	}
 	var cman SellerContractManager
-	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, contractManagerConfigID)
-	err = cman.init(&contractManagerCtx, ps, contractManagerConfigID)
+	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, contractManagerConfigID, &nodeOperator)
+	err = cman.init(&contractManagerCtx, ps, contractManagerConfigID, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("contract manager init failed:%s", err))
 	}
@@ -128,10 +131,10 @@ func TestSellerRoutine(t *testing.T) {
 	}
 	
 	// contract manager sees existing contracts and states are correct
-	if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] != msgbus.ContRunningState {
+	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] != msgbus.ContRunningState {
 		t.Errorf("Contract 1 was not found or is not in correct state")
 	}
-	if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] != msgbus.ContAvailableState {
+	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] != msgbus.ContAvailableState {
 		t.Errorf("Contract 2 was not found or is not in correct state")
 	}
 
@@ -139,13 +142,13 @@ func TestSellerRoutine(t *testing.T) {
 	// if network is ganache, create a new transaction so a new block is created 
 	if contractManagerConfig.EthNodeAddr == "ws://127.0.0.1:7545" {
 		createNewGanacheBlock(ts, cman.account, cman.privateKey, contractLength, sleepTime)
-		if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] != msgbus.ContAvailableState {
+		if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] != msgbus.ContAvailableState {
 			t.Errorf("Contract 1 did not close out correctly")
 		}
 	} else {
 		time.Sleep(time.Second * time.Duration(contractLength)) // length of contract
 		time.Sleep(time.Millisecond * time.Duration(sleepTime*2)) // length of transaction
-		if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] != msgbus.ContAvailableState {
+		if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] != msgbus.ContAvailableState {
 			t.Errorf("Contract 1 did not close out correctly")
 		}
 	}
@@ -174,7 +177,7 @@ func TestSellerRoutine(t *testing.T) {
 		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] != msgbus.ContRunningState {
+	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] != msgbus.ContRunningState {
 		t.Errorf("Contract 2 is not in correct state")
 	}
 
@@ -182,13 +185,13 @@ func TestSellerRoutine(t *testing.T) {
 	// if network is ganache, create a new transaction so a new block is created 
 	if contractManagerConfig.EthNodeAddr == "ws://127.0.0.1:7545" {
 		createNewGanacheBlock(ts, cman.account, cman.privateKey, contractLength, sleepTime)
-		if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] != msgbus.ContAvailableState {
+		if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] != msgbus.ContAvailableState {
 			t.Errorf("Contract 2 did not close out correctly")
 		}
 	} else {
 		time.Sleep(time.Second * time.Duration(contractLength*2)) // length of contract
 		time.Sleep(time.Millisecond * time.Duration(sleepTime*2)) // length of transaction
-		if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] != msgbus.ContAvailableState {
+		if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] != msgbus.ContAvailableState {
 			t.Errorf("Contract 2 did not close out correctly")
 		}
 	}
@@ -207,7 +210,7 @@ func TestSellerRoutine(t *testing.T) {
 		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContAvailableState {
+	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContAvailableState {
 		t.Errorf("Contract 3 was not found or is not in correct state")
 	}
 	// PurchaseHashrateContract(cman.ethClient, buyerAddress, buyerPrivateKey, ts.cloneFactoryAddress, hashrateContractAddress[2], buyerAddress, "stratum+tcp://127.0.0.1:3333/testrig")
@@ -221,7 +224,7 @@ func TestSellerRoutine(t *testing.T) {
 		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContRunningState {
+	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContRunningState {
 		t.Errorf("Contract 3 is not in correct state")
 	}
 
@@ -231,7 +234,7 @@ func TestSellerRoutine(t *testing.T) {
 	setContractCloseOut(cman.ethClient, buyerAddress, buyerPrivateKey, hashrateContractAddress[2], &wg, &cman.currentNonce, 0)
 	wg.Wait()
 	time.Sleep(time.Millisecond * time.Duration(sleepTime*4))
-	if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContAvailableState {
+	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContAvailableState {
 		t.Errorf("Contract 3 did not close out correctly")
 	}
 
@@ -249,7 +252,7 @@ func TestSellerRoutine(t *testing.T) {
 		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[3].Hex())] != msgbus.ContAvailableState {
+	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[3].Hex())] != msgbus.ContAvailableState {
 		t.Errorf("Contract 4 was not found or is not in correct state")
 	}
 
@@ -264,7 +267,7 @@ func TestSellerRoutine(t *testing.T) {
 		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[3].Hex())] != msgbus.ContRunningState {
+	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[3].Hex())] != msgbus.ContRunningState {
 		t.Errorf("Contract 4 is not in correct state")
 	}
 
@@ -294,13 +297,13 @@ func TestSellerRoutine(t *testing.T) {
 	// if network is ganache, create a new transaction so a new block is created 
 	if contractManagerConfig.EthNodeAddr == "ws://127.0.0.1:7545" {
 		createNewGanacheBlock(ts, cman.account, cman.privateKey, contractLength, sleepTime)
-		if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[3].Hex())] != msgbus.ContAvailableState {
+		if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[3].Hex())] != msgbus.ContAvailableState {
 			t.Errorf("Contract 4 did not close out correctly")
 		}
 	} else {
 		time.Sleep(time.Second * time.Duration(contractLength)) // length of contract
 		time.Sleep(time.Millisecond * time.Duration(sleepTime)) // length of transaction
-		if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[3].Hex())] != msgbus.ContAvailableState {
+		if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[3].Hex())] != msgbus.ContAvailableState {
 			t.Errorf("Contract 4 did not close out correctly")
 		}
 	}

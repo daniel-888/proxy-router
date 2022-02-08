@@ -39,7 +39,7 @@ func DestPOST(dest *msgdata.DestRepo) gin.HandlerFunc {
 		for i := range(requestBody) {
 			dest.AddDest(requestBody[i])
 			destMsg := msgdata.ConvertDestJSONtoDestMSG(requestBody[i])
-			_,err := dest.Ps.PubWait(msgbus.BuyerMsg, msgbus.IDString(destMsg.ID), destMsg)
+			_,err := dest.Ps.PubWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
 			if err != nil {
 				log.Printf("Dest POST request failed to update msgbus: %s", err)
 			}

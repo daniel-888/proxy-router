@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 	"context"
+	"os"
+	"os/signal"
 
 	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionmanager"
@@ -26,7 +28,9 @@ import (
 //
 // -------------------------------------------
 func main() {
-	mainContext, _ := context.WithCancel(context.Background())
+	mainContext, mainCancel := context.WithCancel(context.Background())
+	sigInt := make(chan os.Signal, 1) 
+	signal.Notify(sigInt, os.Interrupt)
 
 	var buyer bool = false
 
@@ -93,6 +97,21 @@ func main() {
 	}
 
 	//
+	// Setup Node Operator Msg
+	//
+	nodeOperator := msgbus.NodeOperator{
+		ID: msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
+		DefaultDest: dest.ID,
+	}
+	event, err = ps.PubWait(msgbus.NodeOperatorMsg, msgbus.IDString(nodeOperator.ID), nodeOperator)
+	if err != nil {
+		panic(fmt.Sprintf("Adding Node Operator Failed: %s", err))
+	}
+	if event.Err != nil {
+		panic(fmt.Sprintf("Adding Node Operator Failed: %s", event.Err))
+	}
+
+	//
 	// Fire up the connection Manager
 	//
 	if disableconnection == "false" {
@@ -111,7 +130,7 @@ func main() {
 	// Fire up schedule manager
 	//
 	if disableschedule == "false" {
-		cs, err := connectionscheduler.New(ps)
+		cs, err := connectionscheduler.New(&mainContext, ps, &nodeOperator)
 		if err != nil {
 			panic(fmt.Sprintf("schedule manager failed:%s", err))
 		}
@@ -203,10 +222,10 @@ func main() {
 
 		if buyer {
 			var buyerCM contractmanager.BuyerContractManager
-			err = contractmanager.Run(&mainContext, &buyerCM, ps, contractManagerConfigID)
+			err = contractmanager.Run(&mainContext, &buyerCM, ps, contractManagerConfigID, &nodeOperator)
 		} else {
 			var sellerCM contractmanager.SellerContractManager
-			err = contractmanager.Run(&mainContext, &sellerCM, ps, contractManagerConfigID)
+			err = contractmanager.Run(&mainContext, &sellerCM, ps, contractManagerConfigID, &nodeOperator)
 		}
 		if err != nil {
 			panic(fmt.Sprintf("contract manager failed to run:%s", err))
@@ -223,7 +242,13 @@ func main() {
 		go api.RunAPI()
 	}
 
-	<-mainContext.Done()
-
-	return
+	select {
+	case <-sigInt:
+		fmt.Println("Signal Interupt: Cancelling all contexts and shuting down program")
+		mainCancel()
+	case <-mainContext.Done():
+		time.Sleep(time.Second*5)
+		signal.Stop(sigInt)
+		return
+	}
 }

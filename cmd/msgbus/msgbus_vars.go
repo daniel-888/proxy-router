@@ -12,15 +12,14 @@ const (
 type IDString string
 type ConfigID IDString
 type ContractManagerConfigID IDString
-type SellerID IDString
-type BuyerID IDString
+type NodeOperatorID IDString
 type ContractID IDString
 
 // Do we still need this with the config package in place?
 type ConfigInfo struct {
-	ID          ConfigID
-	DefaultDest DestID
-	Seller      SellerID
+	ID          	ConfigID
+	DefaultDest 	DestID
+	NodeOperator	NodeOperatorID
 }
 
 type ContractManagerConfig struct {
@@ -35,25 +34,20 @@ type ContractManagerConfig struct {
 	ProxyAddress		string
 }
 
-type Seller struct {
-	ID                     SellerID
+type NodeOperator struct {
+	ID                     NodeOperatorID
 	DefaultDest            DestID
+	EthereumAccount		   string
 	TotalAvailableHashRate int
 	UnusedHashRate         int
 	Contracts       	   map[ContractID]ContractState
-}
-
-type Buyer struct {
-	ID                BuyerID
-	DefaultDest       DestID
-	Contracts         map[ContractID]ContractState
 }
 
 type Contract struct {
 	IsSeller               bool
 	ID                     ContractID
 	State                  ContractState
-	Buyer                  BuyerID
+	Buyer                  string
 	Price                  int
 	Limit                  int
 	Speed                  int
