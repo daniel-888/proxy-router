@@ -39,10 +39,10 @@ MsgDeque is a last in first out datastructue which can accept
 messages of any struct type and in constantly processed
 */
 type SIMPLE struct {
-	ProtocolChan chan ProtocolMessage
-	MSGChan      chan MSGBusMessage
-	LowerChan    chan LowerMessage
-	MsgDeque     []interface{}
+	ProtocolChan chan StandardMessager
+	MSGChan      chan StandardMessager
+	LowerChan    chan StandardMessager
+	MsgDeque     []StandardMessager
 }
 
 //struct to handle/accept messages from the layer 1 channel
@@ -79,6 +79,22 @@ const (
 	HashInvalid   actionResponse = "HashInvalid"
 	HashrateValue actionResponse = "HashrateValue"
 )
+
+func (pm *ProtocolMessage) Actions() []string {
+	return pm.MessageActions
+}
+
+func (mm *MSGBusMessage) Actions() []string {
+	return mm.MessageActions
+}
+
+func (lm *LowerMessage) Actions() []string {
+	return lm.MessageActions
+}
+
+type StandardMessager interface {
+	Actions() []string
+}
 
 //function to constantly monitor MsgDeque and process the last item on it
 func (s *SIMPLE) ActivateSIMPLELayer() {
@@ -121,7 +137,15 @@ Rules to follow
 2. do not break the interface of the output
 3. design functions in a maintainable manner
 */
-func processIncomingMessage(m interface{}) {
+func processIncomingMessage(m StandardMessager) {
+	for _, x := range m.Actions() {
+		switch x {
+		case "0":
+			fmt.Println("josh was here")
+		default:
+			fmt.Println("meow")
+		}
+	}
 }
 
 /*
@@ -129,11 +153,11 @@ create and return a struct with channels to listen to
 call goroutine embedded in the struct
 */
 func InitializeSIMPLELayer() SIMPLE {
-	var deque []interface{}
+	var deque []StandardMessager
 	return SIMPLE{
-		ProtocolChan: make(chan ProtocolMessage),
-		MSGChan:      make(chan MSGBusMessage),
-		LowerChan:    make(chan LowerMessage),
+		ProtocolChan: make(chan StandardMessager),
+		MSGChan:      make(chan StandardMessager),
+		LowerChan:    make(chan StandardMessager),
 		MsgDeque:     deque,
 	}
 }
