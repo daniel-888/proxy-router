@@ -16,7 +16,8 @@ const TCPAcceptChannelLen int = 2
 const TCPReadChannelLen int = 10
 const TCPReadBufferSize int = 1024
 
-var ErrSocTCPClosed = errors.New("socke TCP: socket closed")
+var ErrSocTCPClosed = errors.New("socket TCP: socket closed")
+var ErrSocTCPBadNetwork = errors.New("socket TCP: bad network protocol")
 
 //var ErrSocTCPReadCopyUnderRun = errors.New("socke TCP: Read() Copy Under Run")
 //var ErrSocTCPTargetNotResponding = errors.New("socke TCP: Target not responding")
@@ -78,9 +79,19 @@ func (r *readStruct) Buf() []byte {
 //
 func Listen(ctx context.Context, network string, addr string) (l *ListenTCPStruct, e error) {
 
-	// Error checking HERE
+	//
+	// network can be tcp, tcp4 or tcp6
+	//
+	switch network {
+	case "tcp":
+	case "tcp4":
+	case "tcp6":
+	default:
+		return l, ErrSocTCPBadNetwork
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
-	_ = cancel
+	c := cancel
 
 	listenconfig := net.ListenConfig{}
 	listener, e := listenconfig.Listen(ctx, network, addr)
@@ -94,7 +105,7 @@ func Listen(ctx context.Context, network string, addr string) (l *ListenTCPStruc
 	l = &ListenTCPStruct{
 		listener:   listener,
 		ctx:        ctx,
-		cancel:     cancel,
+		cancel:     c,
 		acceptchan: accept,
 		status: ListenerStatusStruct{
 			connectionCount: 0,
@@ -223,17 +234,26 @@ func Dial(ctx context.Context, network string, addr string) (s *SocketTCPStruct,
 
 	fmt.Printf(lumerinlib.Funcname() + " enter func\n")
 
-	// Error checking here
-	// Review the address
+	//
+	// network can be tcp, tcp4 or tcp6
+	//
+	switch network {
+	case "tcp":
+	case "tcp4":
+	case "tcp6":
+	default:
+		return s, ErrSocTCPBadNetwork
+	}
 
-	// Do we need the cancel function to be called somewhere else?
+	// Error: Review the address Here
+
 	dialctx, cancel := context.WithTimeout(ctx, time.Minute)
-	_ = cancel
 
 	var conn net.Conn
 	conn, e = d.DialContext(dialctx, network, addr)
 
 	if e != nil {
+		cancel()
 		return s, e
 	}
 

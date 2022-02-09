@@ -8,8 +8,6 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
-
-	_ "gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
 const DefaultDstSlots int = 8

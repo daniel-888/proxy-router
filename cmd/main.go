@@ -1,15 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"net"
+	"strconv"
 
 	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
+	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
 	"gitlab.com/TitanInd/lumerin/cmd/testmod"
 
 	"gitlab.com/TitanInd/lumerin/cmd/config"
-	"gitlab.com/TitanInd/lumerin/cmd/connectionmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/localvalidator"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
@@ -29,6 +32,9 @@ import (
 // -------------------------------------------
 func main() {
 	var buyer bool = false
+
+	ctx, cancel := context.WithCancel(context.Background())
+	_ = cancel
 
 	// Need something better...
 	done := make(chan int)
@@ -58,6 +64,20 @@ func main() {
 	disableschedule, err := config.ConfigGetVal(config.DisableSchedule)
 	if err != nil {
 		panic(fmt.Sprintf("Getting Disable Schedule val failed: %s\n", err))
+	}
+	disablestratumv1, err := config.ConfigGetVal(config.DisableStratumv1)
+	if err != nil {
+		panic(fmt.Sprintf("Getting Disable Schedule val failed: %s\n", err))
+	}
+
+	listenport, err := config.ConfigGetVal(config.ConfigConnectionListenPort)
+	if err != nil {
+		panic(fmt.Sprintf("Getting Listen Port val failed: %s\n", err))
+	}
+
+	listenip, err := config.ConfigGetVal(config.ConfigConnectionListenIP)
+	if err != nil {
+		panic(fmt.Sprintf("Getting Listen IP val failed: %s\n", err))
 	}
 
 	//
@@ -97,14 +117,47 @@ func main() {
 	//
 	if disableconnection == "false" {
 
-		cm, err := connectionmanager.New(ps)
+		//	cm, err := connectionmanager.New(ps)
+		//	if err != nil {
+		//		panic(fmt.Sprintf("connection manager failed:%s", err))
+		//	}
+		//	err = cm.Start()
+		//	if err != nil {
+		//		panic(fmt.Sprintf("connection manager failed to start:%s", err))
+		//	}
+	}
+
+	//
+	// Fire up the StratumV1 Potocol
+	//
+	if disablestratumv1 == "false" {
+
+		stratum, err := stratumv1.New(ctx, ps)
 		if err != nil {
-			panic(fmt.Sprintf("connection manager failed:%s", err))
+			panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
 		}
-		err = cm.Start()
+
+		srcport, e := strconv.Atoi(listenport)
+		if e != nil {
+			panic(fmt.Sprintf("Bad Src Port address:'%s'", listenport))
+		}
+		ip := net.ParseIP(listenip)
+		if ip == nil {
+			panic(fmt.Sprintf("Bad Src IP address:'%s'", listenip))
+		}
+		srcip := net.IPAddr{
+			IP: ip,
+		}
+		dstport := 33334
+		dstip := net.IPAddr{
+			IP: net.IPv4(127, 0, 0, 1),
+		}
+
+		err = stratum.Init(srcport, srcip, dstport, dstip)
 		if err != nil {
-			panic(fmt.Sprintf("connection manager failed to start:%s", err))
+			panic(fmt.Sprintf("Stratum Protocol Init() failed to start:%s", err))
 		}
+
 	}
 
 	//

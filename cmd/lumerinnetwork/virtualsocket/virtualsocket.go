@@ -56,17 +56,17 @@ func (v *VirtSocketListenStruct) Close() (e error) {
 //
 //
 //
-func (v *VirtSocketListenStruct) Status() (v VirtListenerStatusStruct, e error) {
+func (v *VirtSocketListenStruct) Status() (vlss VirtListenerStatusStruct, e error) {
 
-	return v, e
+	return vlss, e
 }
 
 //
 //
 //
-func Dial(target TargetURL) (s VirtSocketStruct, e error) {
+func Dial(target TargetURL) (vss VirtSocketStruct, e error) {
 
-	return s, e
+	return vss, e
 }
 
 //
