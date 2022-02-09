@@ -15,7 +15,7 @@ Lumerin Node (aka ProxyRouter)
 8. Run `go test -run Deployment` // will deploy contracts to Ganache
 9. Edit `lumerinconfig.json`<br/>
     a) "mnemonic" will be generated in Ganache<br/>
-    b) "cloneFactoryAddress" will be generated from Deployment test<br/>
+    b) "lumerinTokenAddress" will be generated from Deployment test<br/>
     c) "cloneFactoryAddress" will be generated from Deployment test<br/>
 10. Edit `run_lumerin.sh` (optional)
 11. Run `./run_lumerin.sh`
