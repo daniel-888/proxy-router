@@ -2,6 +2,7 @@ package msgbus
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 )
 
@@ -9,20 +10,20 @@ func TestBoilerPlateFunc(t *testing.T) {
 	ech := make(EventChan)
 
 	config := ConfigInfo{
-		ID:          	"ConfigID01",
-		DefaultDest: 	"DestID01",
-		NodeOperator:	"NOID01",
+		ID:           "ConfigID01",
+		DefaultDest:  "DestID01",
+		NodeOperator: "NOID01",
 	}
 	dest := Dest{
-		ID:       DestID(DEFAULT_DEST_ID),
-		NetUrl:   DestNetUrl("stratum+tcp://127.0.0.1:3334/"),
+		ID:     DestID(DEFAULT_DEST_ID),
+		NetUrl: DestNetUrl("stratum+tcp://127.0.0.1:3334/"),
 	}
 	nodeOp := NodeOperator{
 		ID:                     "SellerID01",
 		DefaultDest:            "DestID01",
 		TotalAvailableHashRate: 0,
 		UnusedHashRate:         0,
-		Contracts:        make(map[ContractID]ContractState),
+		Contracts:              make(map[ContractID]ContractState),
 	}
 	contract := Contract{}
 	miner := Miner{}
@@ -77,4 +78,13 @@ func TestBoilerPlateFunc(t *testing.T) {
 	ps.Get(MinerMsg, "minerMsg01", ech)
 	ps.Get(ConnectionMsg, "connectionMsg01", ech)
 
+}
+
+func TestGetRandomIDString(t *testing.T) {
+	requiredRegex := `^[0-9a-fA-F]{8}\-[0-9a-fA-F]{8}\-[0-9a-fA-F]{8}\-[0-9a-fA-F]{8}$`
+	testID := GetRandomIDString()
+
+	if matched, err := regexp.Match(requiredRegex, []byte(testID)); !matched || err != nil {
+		t.Errorf("GetRandomIDString returned an incorrectly formatted string: %v", testID)
+	}
 }
