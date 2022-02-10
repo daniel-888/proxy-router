@@ -1274,7 +1274,8 @@ func (reg *registry) removeAndClose(c *cmd) {
 
 }
 
-// GetRandomIDString uses
+// GetRandomIDString returns a random string.
+// Format: xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx
 func GetRandomIDString() (i IDString) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
