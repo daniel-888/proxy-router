@@ -1,6 +1,6 @@
 #!/bin/sh
 
-lumerin \
+./lumerin \
 	--buyer="false" \
 	--network="ropsten" \
 	--mnemonic="" \

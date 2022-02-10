@@ -1,4 +1,19 @@
+
+# Builds
 /bin
+lumerin
+cmd
+
+# Mac OS
 .DS_Store
+
+*.env
+*.environment
+
+# editors
+.vscode
+.idea
+
+# Lumerin config
 ropstenconfig.json
 ganacheconfig.json

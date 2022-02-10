@@ -4,21 +4,21 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	
+
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/handlers"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 type APIRepos struct {
-	Config					*msgdata.ConfigInfoRepo 
-	ContractManagerConfig	*msgdata.ContractManagerConfigRepo
-	Connection 				*msgdata.ConnectionRepo 
-	Contract				*msgdata.ContractRepo 
-	Dest					*msgdata.DestRepo 
-	Miner					*msgdata.MinerRepo 
-	Seller					*msgdata.SellerRepo
-	Buyer					*msgdata.BuyerRepo
+	Config                *msgdata.ConfigInfoRepo
+	ContractManagerConfig *msgdata.ContractManagerConfigRepo
+	Connection            *msgdata.ConnectionRepo
+	Contract              *msgdata.ContractRepo
+	Dest                  *msgdata.DestRepo
+	Miner                 *msgdata.MinerRepo
+	Seller                *msgdata.SellerRepo
+	Buyer                 *msgdata.BuyerRepo
 }
 
 func (api *APIRepos) InitializeJSONRepos(ps *msgbus.PubSub) {
@@ -75,6 +75,11 @@ func (api *APIRepos) RunAPI() {
 		connectionRoutes.POST("/", handlers.ConnectionPOST(api.Connection))
 		connectionRoutes.PUT("/:id", handlers.ConnectionPUT(api.Connection))
 		connectionRoutes.DELETE("/:id", handlers.ConnectionDELETE(api.Connection))
+	}
+
+	streamRoute := r.Group("/ws")
+	{
+		streamRoute.GET("/", handlers.ConnectionSTREAM(api.Connection))
 	}
 
 	contractRoutes := r.Group("/contract")
