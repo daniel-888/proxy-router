@@ -9,7 +9,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
-func TestConnectionScheduler(t *testing.T) {
+func TestSellerConnectionScheduler(t *testing.T) {
 	ps := msgbus.New(10)
 	mainCtx := context.Background()
 
@@ -29,6 +29,7 @@ func TestConnectionScheduler(t *testing.T) {
 	nodeOperator := msgbus.NodeOperator{
 		ID: msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
 		DefaultDest: defaultDest.ID,
+		IsBuyer: false,
 	}
 
 	cs, err := New(&mainCtx, ps, &nodeOperator)
@@ -50,7 +51,6 @@ func TestConnectionScheduler(t *testing.T) {
 		CurrentHashRate:	miner1Hashrate - 5, // 95
 		State: msgbus.OnlineState,
 		Dest: defaultDest.ID,
-		NodeOperator: nodeOperator.ID,
 		CsMinerHandlerIgnore: false,
 	}
 	ps.PubWait(msgbus.MinerMsg,msgbus.IDString(miner1.ID),miner1)
@@ -103,10 +103,10 @@ func TestConnectionScheduler(t *testing.T) {
 	time.Sleep(time.Second*2)
 
 	if _, ok := cs.ReadyMiners[miner1.ID]; !ok {
-		t.Errorf("Miner 1 was not removed from ready miners map")
+		t.Errorf("Miner 1 was not moved back to ready miners map")
 	}
 	if _, ok := cs.BusyMiners[miner1.ID]; ok {
-		t.Errorf("Miner 1 was not moved to busy miners map")
+		t.Errorf("Miner 1 was not removed from busy miners map")
 	}
 
 	miner1GET,err = ps.MinerGetWait(miner1.ID)
@@ -130,7 +130,6 @@ func TestConnectionScheduler(t *testing.T) {
 		CurrentHashRate:	35,
 		State: msgbus.OnlineState,
 		Dest: defaultDest.ID,
-		NodeOperator: nodeOperator.ID,
 		CsMinerHandlerIgnore: false,
 	}
 	miner3 := msgbus.Miner {
@@ -139,7 +138,6 @@ func TestConnectionScheduler(t *testing.T) {
 		CurrentHashRate:	72,
 		State: msgbus.OnlineState,
 		Dest: defaultDest.ID,
-		NodeOperator: nodeOperator.ID,
 		CsMinerHandlerIgnore: false,
 	}
 	miner4 := msgbus.Miner {
@@ -148,7 +146,6 @@ func TestConnectionScheduler(t *testing.T) {
 		CurrentHashRate:	16,
 		State: msgbus.OnlineState,
 		Dest: defaultDest.ID,
-		NodeOperator: nodeOperator.ID,
 		CsMinerHandlerIgnore: false,
 	}
 	miner5 := msgbus.Miner {
@@ -157,7 +154,6 @@ func TestConnectionScheduler(t *testing.T) {
 		CurrentHashRate:	88,
 		State: msgbus.OnlineState,
 		Dest: defaultDest.ID,
-		NodeOperator: nodeOperator.ID,
 		CsMinerHandlerIgnore: false,
 	}
 	miner6 := msgbus.Miner {
@@ -166,7 +162,6 @@ func TestConnectionScheduler(t *testing.T) {
 		CurrentHashRate:	27,
 		State: msgbus.OnlineState,
 		Dest: defaultDest.ID,
-		NodeOperator: nodeOperator.ID,
 		CsMinerHandlerIgnore: false,
 	}
 	ps.PubWait(msgbus.MinerMsg,msgbus.IDString(miner2.ID),miner2)
@@ -228,7 +223,7 @@ func TestConnectionScheduler(t *testing.T) {
 		CurrentHashRate:	20,
 		State: msgbus.OnlineState,
 		Dest: defaultDest.ID,
-		NodeOperator: nodeOperator.ID,
+		//NodeOperator: nodeOperator.ID,
 	}
 	ps.SetWait(msgbus.MinerMsg,msgbus.IDString(miner5.ID),miner5)
 	ps.PubWait(msgbus.MinerMsg,msgbus.IDString(miner7.ID),miner7)
@@ -325,4 +320,137 @@ func TestConnectionScheduler(t *testing.T) {
 	fmt.Println("Ready Miners: ", cs.ReadyMiners)
 	fmt.Println("Busy Miners: ", cs.BusyMiners)
 	time.Sleep(time.Second*2)
+}
+
+func TestBuyerConnectionScheduler(t *testing.T) {
+	ps := msgbus.New(10)
+	mainCtx := context.Background()
+
+	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"
+	defaultDest := msgbus.Dest{
+		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
+		NetUrl: msgbus.DestNetUrl(defaultpooladdr),
+	}
+	event, err := ps.PubWait(msgbus.DestMsg, msgbus.IDString(msgbus.DEFAULT_DEST_ID), defaultDest)
+	if err != nil {
+		panic(fmt.Sprintf("Adding Default Dest Failed: %s", err))
+	}
+	if event.Err != nil {
+		panic(fmt.Sprintf("Adding Default Dest Failed: %s", event.Err))
+	}
+
+	nodeOperator := msgbus.NodeOperator{
+		ID: msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
+		DefaultDest: defaultDest.ID,
+		IsBuyer: true,
+	}
+
+	cs, err := New(&mainCtx, ps, &nodeOperator)
+	if err != nil {
+		panic(fmt.Sprintf("schedule manager failed:%s", err))
+	}
+	err = cs.Start()
+	if err != nil {
+		panic(fmt.Sprintf("schedule manager failed to start:%s", err))
+	}
+
+	//
+	// Publish multiple miners with varying hashrate
+	//
+	miner1 := msgbus.Miner {
+		ID:		msgbus.MinerID("MinerID01"),
+		IP: 	"IpAddress1",
+		CurrentHashRate:	27,
+		State: msgbus.OnlineState,
+		Dest: defaultDest.ID,
+		CsMinerHandlerIgnore: false,
+	}
+	miner2 := msgbus.Miner {
+		ID:		msgbus.MinerID("MinerID02"),
+		IP: 	"IpAddress2",
+		CurrentHashRate:	35,
+		State: msgbus.OnlineState,
+		Dest: defaultDest.ID,
+		CsMinerHandlerIgnore: false,
+	}
+	miner3 := msgbus.Miner {
+		ID:		msgbus.MinerID("MinerID03"),
+		IP: 	"IpAddress3",
+		CurrentHashRate:	72,
+		State: msgbus.OnlineState,
+		Dest: defaultDest.ID,
+		CsMinerHandlerIgnore: false,
+	}
+	miner4 := msgbus.Miner {
+		ID:		msgbus.MinerID("MinerID04"),
+		IP: 	"IpAddress4",
+		CurrentHashRate:	16,
+		State: msgbus.OnlineState,
+		Dest: defaultDest.ID,
+		CsMinerHandlerIgnore: false,
+	}
+	miner5 := msgbus.Miner {
+		ID:		msgbus.MinerID("MinerID05"),
+		IP: 	"IpAddress5",
+		CurrentHashRate:	88,
+		State: msgbus.OnlineState,
+		Dest: defaultDest.ID,
+		CsMinerHandlerIgnore: false,
+	}
+	ps.PubWait(msgbus.MinerMsg,msgbus.IDString(miner1.ID),miner1)
+	ps.PubWait(msgbus.MinerMsg,msgbus.IDString(miner2.ID),miner2)
+	ps.PubWait(msgbus.MinerMsg,msgbus.IDString(miner3.ID),miner3)
+	ps.PubWait(msgbus.MinerMsg,msgbus.IDString(miner4.ID),miner4)
+	ps.PubWait(msgbus.MinerMsg,msgbus.IDString(miner5.ID),miner5)
+
+	time.Sleep(time.Second*2)
+
+	contract1 := msgbus.Contract {
+		IsSeller: false,
+		ID: msgbus.ContractID("ContractID01"),
+		State: msgbus.ContRunningState,
+		Price: 0,
+		Limit: 0,
+		Speed: 100,
+	}
+	ps.PubWait(msgbus.ContractMsg,msgbus.IDString(contract1.ID),contract1)
+
+	time.Sleep(time.Second*2)
+
+	contract2 := msgbus.Contract {
+		IsSeller: false,
+		ID: msgbus.ContractID("ContractID02"),
+		State: msgbus.ContRunningState,
+		Price: 0,
+		Limit: 0,
+		Speed: 100,
+	}
+	ps.PubWait(msgbus.ContractMsg,msgbus.IDString(contract2.ID),contract2)
+
+	time.Sleep(time.Second*2)
+
+	contract3 := msgbus.Contract {
+		IsSeller: false,
+		ID: msgbus.ContractID("ContractID03"),
+		State: msgbus.ContRunningState,
+		Price: 0,
+		Limit: 0,
+		Speed: 100,
+	}
+	ps.PubWait(msgbus.ContractMsg,msgbus.IDString(contract3.ID),contract3)
+
+	time.Sleep(time.Second*2)
+
+	miner1.CurrentHashRate = 2
+	miner2.CurrentHashRate = 2
+	miner3.CurrentHashRate = 2
+	miner4.CurrentHashRate = 2
+	miner5.CurrentHashRate = 2
+	ps.SetWait(msgbus.MinerMsg,msgbus.IDString(miner1.ID),miner1)
+	ps.SetWait(msgbus.MinerMsg,msgbus.IDString(miner2.ID),miner2)
+	ps.SetWait(msgbus.MinerMsg,msgbus.IDString(miner3.ID),miner3)
+	ps.SetWait(msgbus.MinerMsg,msgbus.IDString(miner4.ID),miner4)
+	ps.SetWait(msgbus.MinerMsg,msgbus.IDString(miner5.ID),miner5)
+
+	time.Sleep(time.Second*5)
 }

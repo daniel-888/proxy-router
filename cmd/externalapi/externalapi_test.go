@@ -45,7 +45,6 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 	miner := msgbus.Miner{
 		ID:						msgbus.MinerID("MinerID01"),
 		State: 					msgbus.OnlineState,
-		NodeOperator:   				nodeOperator.ID,
 		Dest:					dest.ID,	
 		InitialMeasuredHashRate: 10000,
 		CurrentHashRate:         9000,

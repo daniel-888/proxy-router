@@ -22,7 +22,6 @@ type Miner struct {
 	IP                      string
 	MAC                     string
 	State                   MinerState
-	NodeOperator            NodeOperatorID
 	Contract				ContractID // Updated by Connection Scheduler
 	Dest                    DestID // Updated by Connection Scheduler
 	InitialMeasuredHashRate int
@@ -162,21 +161,14 @@ func (ps *PubSub) MinerSetDestWait(miner MinerID, dest DestID) (err error) {
 //---------------------------------------------------------------
 //
 //---------------------------------------------------------------
-func (ps *PubSub) MinerSetContractWait(miner MinerID, contract ContractID, csIgnore bool) (err error) {
-	event,err := ps.GetWait(ContractMsg, IDString(contract))
-	if err != nil {
-		fmt.Printf(lumerinlib.FileLine()+" Getting contract errored out:%s\n", err)
-		return err
-	}
-	c := event.Data.(Contract)
-
+func (ps *PubSub) MinerSetContractWait(miner MinerID, contract ContractID, targetDest DestID, csIgnore bool) (err error) {
 	m, err := ps.MinerGetWait(miner)
 	if err != nil {
 		fmt.Printf(lumerinlib.FileLine()+" MinerGetWait errored out:%s\n", err)
 		return err
 	} else {
 		m.Contract = contract
-		m.Dest = c.Dest
+		m.Dest = targetDest
 		m.CsMinerHandlerIgnore = csIgnore
 		err = ps.MinerSetWait(*m)
 		if err != nil {

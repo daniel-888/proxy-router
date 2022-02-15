@@ -36,6 +36,7 @@ type ContractManagerConfig struct {
 
 type NodeOperator struct {
 	ID                     NodeOperatorID
+	IsBuyer                bool
 	DefaultDest            DestID
 	EthereumAccount		   string
 	TotalAvailableHashRate int

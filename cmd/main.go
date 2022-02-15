@@ -101,6 +101,7 @@ func main() {
 	//
 	nodeOperator := msgbus.NodeOperator{
 		ID: msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
+		IsBuyer: buyer,
 		DefaultDest: dest.ID,
 	}
 	event, err = ps.PubWait(msgbus.NodeOperatorMsg, msgbus.IDString(nodeOperator.ID), nodeOperator)
@@ -164,6 +165,7 @@ func main() {
 			contractManagerConfig.LumerinTokenAddress = "0x84E00a18a36dFa31560aC216da1A9bef2164647D"
 			contractManagerConfig.ValidatorAddress = "0x508CD3988E2b4B8f1d243b961a855347349f6F63"
 			contractManagerConfig.ProxyAddress = "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3"
+			fmt.Println("Connecting to Custom Network")
 		case "mainnet":
 			contractManagerConfig.CloneFactoryAddress = "0x15BdE7774F4A69A7d1fdb66CE94CDF26FCd8F45e"
 			contractManagerConfig.LumerinTokenAddress = "0x84E00a18a36dFa31560aC216da1A9bef2164647D"

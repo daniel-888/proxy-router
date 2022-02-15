@@ -2,9 +2,9 @@ package contractmanager
 
 import (
 	"context"
-	//"crypto/ecdsa"
-	//"crypto/rand"
-	//"errors"
+	// "crypto/ecdsa"
+	// "crypto/rand"
+	// "errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -18,8 +18,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-
 	//"github.com/ethereum/go-ethereum/crypto/ecies"
+
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
