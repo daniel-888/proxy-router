@@ -91,7 +91,8 @@ messages of any struct type and in constantly processed
 type SIMPLE struct {
 	ProtocolChan chan ProtocolMessage
 	MSGChan      chan MSGBusMessage
-	LowerChan    chan ConnectionMessage
+	ConnectionChan    chan ConnectionMessage
+	done chan string
 	MsgDeque     []workerStruct
 }
 
@@ -135,6 +136,14 @@ const (
 	HashrateValue actionResponse = "HashrateValue"
 )
 
+//this is a public function, being provided to convert a worker struct into 
+//a connection struct
+/*
+func WorkerStructToConnectionStruct(w workerStruct) (ConnectionStruct) {
+}
+*/
+
+//this takes a ProtocolMessage struct and moves the data into a workerStruct
 func (pm *ProtocolMessage) Actions(x uint) workerStruct {
 	return workerStruct{
 		msg:    pm.MessageContents,
@@ -142,6 +151,7 @@ func (pm *ProtocolMessage) Actions(x uint) workerStruct {
 	}
 }
 
+//this takes a MSGBusMessage struct and moves the data into a workerStruct
 func (mm *MSGBusMessage) Actions(x uint) workerStruct {
 	return workerStruct{
 		msg:    mm.MessageContents,
@@ -149,11 +159,51 @@ func (mm *MSGBusMessage) Actions(x uint) workerStruct {
 	}
 }
 
+//this takes a ConnectionMessage struct and moves the data into a workerStruct
 func (lm *ConnectionMessage) Actions(x uint) workerStruct {
 	return workerStruct{
 		msg:    lm.MessageContents,
 		action: x,
 	}
+}
+
+// takes the byte array destined for the protocol layer and unmarshals it into a ProtocolMessage struct
+// then it pushes the ProtocolMessage onto the ProtocolChan 
+func (s *SIMPLE) msgToProtocol(b []byte) {
+	//create an in-memory temporary struct to pass to the ProtocolChan
+	tempStruct := ProtocolMessage {
+		WorkerName: "", //this field will probably be removed
+		MessageContents: b, //msg content to be passed back from msg
+		MessageActions: []uint{}, //empty array to keep compiler happy
+	}
+	//pass the struct to the protocol chan
+	s.ProtocolChan <- tempStruct
+}
+
+// takes the byte array destined for the protocol layer and unmarshals it into a MSGBusMessage struct
+// then it pushes the MSGBusMessage onto the MSGChan 
+func (s *SIMPLE) msgToMSGBus(b []byte) {
+	//create an in-memory temporary struct to pass to the MSGChan
+	tempStruct := MSGBusMessage {
+		WorkerName: "", //this field will probably be removed
+		MessageContents: b, //msg content to be passed back from msg
+		MessageActions: []uint{}, //empty array to keep compiler happy
+	}
+	//pass the struct to the protocol chan
+	s.MSGChan <- tempStruct
+}
+
+// takes the byte array destined for the protocol layer and unmarshals it into a ConnectionMessage struct
+// then it pushes the ConnectionMessage onto the ConnectionChan 
+func (s *SIMPLE) msgToConnection(b []byte) {
+	//create an in-memory temporary struct to pass to the ConnectionChan
+	tempStruct := ConnectionMessage {
+		WorkerName: "",//this field will probably be removed
+		MessageContents: b, //msg content to be passed back from msg
+		MessageActions: []uint{}, //empty array to keep compiler happy
+	}
+	//pass the struct to the protocol chan
+	s.ConnectionChan <- tempStruct
 }
 
 type StandardMessager interface {
@@ -163,14 +213,16 @@ type StandardMessager interface {
 //function to constantly monitor MsgDeque and process the last item on it
 func (s *SIMPLE) ActivateSIMPLELayer() {
 	go func() {
+		for {
 		if len(s.MsgDeque) > 0 {
 			//msg is the last element in the msg deque and is processed
 			//newDeque is to rewrite the MsgDeque in lieu of another popping method
 			msg, newDeque := s.MsgDeque[0], s.MsgDeque[1:]
-			processIncomingMessage(msg)
+			s.processIncomingMessage(msg)
 			s.MsgDeque = newDeque
 
 		}
+	}
 	}()
 }
 
@@ -184,14 +236,16 @@ func (s *SIMPLE) ListenForIncomingMessages() {
 				for _, x := range pc.MessageActions {
 					s.MsgDeque = append(s.MsgDeque, pc.Actions(x))
 				}
-			case mc := <-s.ProtocolChan:
+			case mc := <-s.MSGChan:
 				for _, x := range mc.MessageActions {
 					s.MsgDeque = append(s.MsgDeque, mc.Actions(x))
 				}
-			case lc := <-s.ProtocolChan:
+			case lc := <-s.ConnectionChan:
 				for _, x := range lc.MessageActions {
 					s.MsgDeque = append(s.MsgDeque, lc.Actions(x))
 				}
+			case <- s.done:
+				return
 			}
 		}
 	}()
@@ -207,12 +261,16 @@ Rules to follow
 2. do not break the interface of the output
 3. design functions in a maintainable manner
 */
-func processIncomingMessage(m workerStruct) {
+func (s *SIMPLE) processIncomingMessage(m workerStruct) {
 	switch m.action {
-	case 0:
-		fmt.Println("josh was here")
+	case 0: //route message to protocol channel
+		s.msgToProtocol(m.msg)
+	case 1: //route message to msgbus channel
+		s.msgToMSGBus(m.msg)
+	case 2: //route message to connection channel
+		s.msgToConnection(m.msg)
 	default:
-		fmt.Println("meow")
+		fmt.Println("lord bogdanoff demands elon tank the price of dogecoin")
 	}
 }
 
@@ -220,14 +278,19 @@ func processIncomingMessage(m workerStruct) {
 create and return a struct with channels to listen to
 call goroutine embedded in the struct
 */
-func InitializeSIMPLELayer() SIMPLE {
+func New() SIMPLE {
 	var deque []workerStruct
 	return SIMPLE{
 		ProtocolChan: make(chan ProtocolMessage),
 		MSGChan:      make(chan MSGBusMessage),
-		LowerChan:    make(chan ConnectionMessage),
+		ConnectionChan:    make(chan ConnectionMessage),
+		done: make(chan string),
 		MsgDeque:     deque,
 	}
+}
+
+func (s *SIMPLE) Close() {
+	s.done <- ""
 }
 
 //create a listener for the msg bus
