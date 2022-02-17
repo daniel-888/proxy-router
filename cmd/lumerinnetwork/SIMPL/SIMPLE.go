@@ -151,6 +151,11 @@ func (pm *ProtocolMessage) Actions(x uint) workerStruct {
 	}
 }
 
+//this takes a ProtocolMessage struct and moves the data into a workerStruct
+func (pm *ProtocolMessage) Message() []byte {
+		return pm.MessageContents
+}
+
 //this takes a MSGBusMessage struct and moves the data into a workerStruct
 func (mm *MSGBusMessage) Actions(x uint) workerStruct {
 	return workerStruct{
@@ -159,12 +164,22 @@ func (mm *MSGBusMessage) Actions(x uint) workerStruct {
 	}
 }
 
+//this takes a ProtocolMessage struct and moves the data into a workerStruct
+func (pm *MSGBusMessage) Message() []byte {
+		return pm.MessageContents
+}
+
 //this takes a ConnectionMessage struct and moves the data into a workerStruct
 func (lm *ConnectionMessage) Actions(x uint) workerStruct {
 	return workerStruct{
 		msg:    lm.MessageContents,
 		action: x,
 	}
+}
+
+//this takes a ProtocolMessage struct and moves the data into a workerStruct
+func (pm *ConnectionMessage) Message() []byte {
+		return pm.MessageContents
 }
 
 // takes the byte array destined for the protocol layer and unmarshals it into a ProtocolMessage struct
@@ -208,6 +223,7 @@ func (s *SIMPLE) msgToConnection(b []byte) {
 
 type StandardMessager interface {
 	Actions() []string
+	Message() []byte
 }
 
 //function to constantly monitor MsgDeque and process the last item on it
