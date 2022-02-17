@@ -29,7 +29,7 @@ func TestTemplate(t *testing.T) {
 func protocolMessage(actions []uint) ProtocolMessage {
 	return ProtocolMessage{
 		WorkerName:      "Josh's magic money laundering machine",
-		MessageContents: []byte("I wish I was as cool as Josh"), //create a byte stringb
+		MessageContents: []byte("Test Sentence"), //create a byte stringb
 		MessageActions:  actions,
 	}
 }
@@ -37,7 +37,7 @@ func protocolMessage(actions []uint) ProtocolMessage {
 func msgbusMessage(actions []uint) MSGBusMessage {
 	return MSGBusMessage{
 		WorkerName:      "Josh's magic money laundering machine",
-		MessageContents: []byte("I wish I was as cool as Josh"), //create a byte stringb
+		MessageContents: []byte("Test Sentence"), //create a byte stringb
 		MessageActions:  actions,
 	}
 }
@@ -45,7 +45,7 @@ func msgbusMessage(actions []uint) MSGBusMessage {
 func connectionMessage(actions []uint) ConnectionMessage {
 	return ConnectionMessage{
 		WorkerName:      "Josh's magic money laundering machine",
-		MessageContents: []byte("I wish I was as cool as Josh"), //create a byte stringb
+		MessageContents: []byte("Test Sentence"), //create a byte stringb
 		MessageActions:  actions,
 	}
 }
@@ -53,6 +53,64 @@ func connectionMessage(actions []uint) ConnectionMessage {
 /*
 below are the actual tests
 */
+
+func (s *SIMPLE) listenToProtocolChan() []byte {
+	var pm ProtocolMessage
+	go func() {
+		count := 0
+		for {
+			temp := <-s.ProtocolChan
+			if string(temp.MessageContents) == "Test Sentence" {
+				pm = temp
+				break
+			} else if count > 10 {
+				break
+			}
+			time.Sleep(time.Second * 1)
+			count++
+		}
+	}()
+	return pm.MessageContents
+}
+
+func (s *SIMPLE) listenToMSGChan() []byte {
+	var pm MSGBusMessage
+	go func() {
+		count := 0
+		for {
+			temp := <-s.MSGChan
+			if string(temp.MessageContents) == "Test Sentence" {
+				pm = temp
+				break
+			} else if count > 10 {
+				break
+			}
+			time.Sleep(time.Second * 1)
+			count++
+		}
+	}()
+	return pm.MessageContents
+}
+
+func (s *SIMPLE) listenToConnectionChan() []byte {
+	var pm ConnectionMessage
+	go func() {
+		count := 0
+		for {
+			temp := <-s.ConnectionChan
+			if string(temp.MessageContents) == "Test Sentence" {
+				pm = temp
+				break
+			} else if count > 10 {
+				break
+			}
+			time.Sleep(time.Second * 1)
+			count++
+		}
+	}()
+	return pm.MessageContents
+}
+
 
 func TestSendMessageFromProtocol(t *testing.T) {
 	simple := New()                       //creation of simple layer which provides entry/exit points
@@ -94,35 +152,45 @@ func TestPushMessageToProtocol(t *testing.T) {
 	go simple.ActivateSIMPLELayer()       //creates a for loop that checks the deque for new messages
 	cm := connectionMessage([]uint{0})    //creates a connection message
 	simple.ConnectionChan <- cm           //pushing the connection message to the connection chan
-	var pm ProtocolMessage
-	/*
-		break this out into its own function for other tests to use
-	*/
-	go func() {
-
-		count := 0
-		for {
-			temp := <-simple.ProtocolChan
-			if string(temp.MessageContents) == "I Wish I was as cool as Josh" {
-				pm = temp
-				break
-			} else if count > 10 {
-				break
-			}
-			time.Sleep(time.Second * 1)
-			count++
-		}
-	}()
-	if string(pm.MessageContents) != "I wish I was as cool as Josh" {
-		t.Errorf("messages not being sent to protocol chan.\nActual:%s\nExpected:%s", pm.MessageContents, "I Wish I was as cool as Josh")
+	pm := simple.listenToProtocolChan()
+	if string(pm) != "Test Sentence" {
+		t.Errorf("messages not being sent to protocol chan.\nActual:%s\nExpected:%s", pm, "Test Sentence")
 	}
-	//simple.Close()
+	simple.Close()
 }
 
-func TestPushMessageToConnectionLayer(t *testing.T) {
-}
-
+// function to route a message from the protocol layer to the msgbus
+// this function creates a ConnectionMessage and specifies that it wants to push
+// it to the protocol layer
+// will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
 func TestPushMessageToMSGBus(t *testing.T) {
+	simple := New()                       //creation of simple layer which provides entry/exit points
+	go simple.ListenForIncomingMessages() //creates a for loop that listens to all channels
+	go simple.ActivateSIMPLELayer()       //creates a for loop that checks the deque for new messages
+	cm := protocolMessage([]uint{1})    //creates a connection message
+	simple.ProtocolChan <- cm           //pushing the connection message to the connection chan
+	pm := simple.listenToMSGChan()
+	if string(pm) != "Test Sentence" {
+		t.Errorf("messages not being sent to protocol chan.\nActual:%s\nExpected:%s", pm, "Test Sentence")
+	}
+	simple.Close()
+}
+
+// function to route a message from the protocol layer to the connection layer
+// this function creates a ConnectionMessage and specifies that it wants to push
+// it to the protocol layer
+// will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
+func TestPushMessageToConnectionLayer(t *testing.T) {
+	simple := New()                       //creation of simple layer which provides entry/exit points
+	go simple.ListenForIncomingMessages() //creates a for loop that listens to all channels
+	go simple.ActivateSIMPLELayer()       //creates a for loop that checks the deque for new messages
+	cm := protocolMessage([]uint{2})    //creates a connection message
+	simple.ProtocolChan <- cm           //pushing the connection message to the connection chan
+	pm := simple.listenToConnectionChan()
+	if string(pm) != "Test Sentence" {
+		t.Errorf("messages not being sent to protocol chan.\nActual:%s\nExpected:%s", pm, "Test Sentence")
+	}
+	simple.Close()
 }
 
 func TestHashrateCountMessage(t *testing.T) {
@@ -131,17 +199,38 @@ func TestHashrateCountMessage(t *testing.T) {
 func TestValidationRequestMessage(t *testing.T) {
 }
 
+//send the following messages
+// 1. message from connection layer to protocol layer
+// 2. message from msg.bus to protocol layer
+// 3. message from protocol layer to msgbus
+// this test will be considered successful if the messages 
+// are processed in order and also make it to their final destination
 func TestMessageFrom3Sources(t *testing.T) {
 }
 
+//send the following messages
+// 1. message from protocol to connection layer
+// 2. message from protocol to msgbus
+// this test will be considered successful if the messages are processed in order
+// and make it to their intended destinations
 func TestMultipleMessagesFromProtocol(t *testing.T) {
 }
 
+//send the following messages
+// 1. message from protocol to connection layer
+// 2. message from protocol to msgbus
+// this test will be considered successful if the messages are processed in order
+// and make it to their intended destinations
 func TestMultipleMessagesFromConnectionLayer(t *testing.T) {
 }
 
+// test to send a corrupted message through the SIMPLE layer
+// the corrputed message should go through as expected since 
+// the simple layer doesn't check for message integrity
 func TestCorruptMessage(t *testing.T) {
 }
 
+//send a message from the connection channel with an option of 100
+//this will not be picked up by any cases in the processIncomingMessage function
 func TestMessageWithInvalidActions(t *testing.T) {
 }
