@@ -89,11 +89,11 @@ MsgDeque is a last in first out datastructue which can accept
 messages of any struct type and in constantly processed
 */
 type SIMPLE struct {
-	ProtocolChan chan ProtocolMessage
-	MSGChan      chan MSGBusMessage
-	ConnectionChan    chan ConnectionMessage
-	done chan string
-	MsgDeque     []workerStruct
+	ProtocolChan   chan ProtocolMessage
+	MSGChan        chan MSGBusMessage
+	ConnectionChan chan ConnectionMessage
+	done           chan string
+	MsgDeque       []workerStruct
 }
 
 type workerStruct struct {
@@ -136,7 +136,7 @@ const (
 	HashrateValue actionResponse = "HashrateValue"
 )
 
-//this is a public function, being provided to convert a worker struct into 
+//this is a public function, being provided to convert a worker struct into
 //a connection struct
 /*
 func WorkerStructToConnectionStruct(w workerStruct) (ConnectionStruct) {
@@ -168,39 +168,39 @@ func (lm *ConnectionMessage) Actions(x uint) workerStruct {
 }
 
 // takes the byte array destined for the protocol layer and unmarshals it into a ProtocolMessage struct
-// then it pushes the ProtocolMessage onto the ProtocolChan 
+// then it pushes the ProtocolMessage onto the ProtocolChan
 func (s *SIMPLE) msgToProtocol(b []byte) {
 	//create an in-memory temporary struct to pass to the ProtocolChan
-	tempStruct := ProtocolMessage {
-		WorkerName: "", //this field will probably be removed
-		MessageContents: b, //msg content to be passed back from msg
-		MessageActions: []uint{}, //empty array to keep compiler happy
+	tempStruct := ProtocolMessage{
+		WorkerName:      "",       //this field will probably be removed
+		MessageContents: b,        //msg content to be passed back from msg
+		MessageActions:  []uint{}, //empty array to keep compiler happy
 	}
 	//pass the struct to the protocol chan
 	s.ProtocolChan <- tempStruct
 }
 
 // takes the byte array destined for the protocol layer and unmarshals it into a MSGBusMessage struct
-// then it pushes the MSGBusMessage onto the MSGChan 
+// then it pushes the MSGBusMessage onto the MSGChan
 func (s *SIMPLE) msgToMSGBus(b []byte) {
 	//create an in-memory temporary struct to pass to the MSGChan
-	tempStruct := MSGBusMessage {
-		WorkerName: "", //this field will probably be removed
-		MessageContents: b, //msg content to be passed back from msg
-		MessageActions: []uint{}, //empty array to keep compiler happy
+	tempStruct := MSGBusMessage{
+		WorkerName:      "",       //this field will probably be removed
+		MessageContents: b,        //msg content to be passed back from msg
+		MessageActions:  []uint{}, //empty array to keep compiler happy
 	}
 	//pass the struct to the protocol chan
 	s.MSGChan <- tempStruct
 }
 
 // takes the byte array destined for the protocol layer and unmarshals it into a ConnectionMessage struct
-// then it pushes the ConnectionMessage onto the ConnectionChan 
+// then it pushes the ConnectionMessage onto the ConnectionChan
 func (s *SIMPLE) msgToConnection(b []byte) {
 	//create an in-memory temporary struct to pass to the ConnectionChan
-	tempStruct := ConnectionMessage {
-		WorkerName: "",//this field will probably be removed
-		MessageContents: b, //msg content to be passed back from msg
-		MessageActions: []uint{}, //empty array to keep compiler happy
+	tempStruct := ConnectionMessage{
+		WorkerName:      "",       //this field will probably be removed
+		MessageContents: b,        //msg content to be passed back from msg
+		MessageActions:  []uint{}, //empty array to keep compiler happy
 	}
 	//pass the struct to the protocol chan
 	s.ConnectionChan <- tempStruct
@@ -212,43 +212,40 @@ type StandardMessager interface {
 
 //function to constantly monitor MsgDeque and process the last item on it
 func (s *SIMPLE) ActivateSIMPLELayer() {
-	go func() {
-		for {
+	for {
 		if len(s.MsgDeque) > 0 {
 			//msg is the last element in the msg deque and is processed
 			//newDeque is to rewrite the MsgDeque in lieu of another popping method
-			msg, newDeque := s.MsgDeque[0], s.MsgDeque[1:]
+			msg := s.MsgDeque[0]
+			newDeque := s.MsgDeque[1:]
 			s.processIncomingMessage(msg)
 			s.MsgDeque = newDeque
 
 		}
 	}
-	}()
 }
 
 //listens for messages coming in through the various channels
 //oldest item will always be index 0
 func (s *SIMPLE) ListenForIncomingMessages() {
-	go func() {
-		for {
-			select {
-			case pc := <-s.ProtocolChan:
-				for _, x := range pc.MessageActions {
-					s.MsgDeque = append(s.MsgDeque, pc.Actions(x))
-				}
-			case mc := <-s.MSGChan:
-				for _, x := range mc.MessageActions {
-					s.MsgDeque = append(s.MsgDeque, mc.Actions(x))
-				}
-			case lc := <-s.ConnectionChan:
-				for _, x := range lc.MessageActions {
-					s.MsgDeque = append(s.MsgDeque, lc.Actions(x))
-				}
-			case <- s.done:
-				return
+	for {
+		select {
+		case pc := <-s.ProtocolChan:
+			for _, x := range pc.MessageActions {
+				s.MsgDeque = append(s.MsgDeque, pc.Actions(x))
 			}
+		case mc := <-s.MSGChan:
+			for _, x := range mc.MessageActions {
+				s.MsgDeque = append(s.MsgDeque, mc.Actions(x))
+			}
+		case lc := <-s.ConnectionChan:
+			for _, x := range lc.MessageActions {
+				s.MsgDeque = append(s.MsgDeque, lc.Actions(x))
+			}
+		case <-s.done:
+			return
 		}
-	}()
+	}
 }
 
 /*
@@ -281,16 +278,19 @@ call goroutine embedded in the struct
 func New() SIMPLE {
 	var deque []workerStruct
 	return SIMPLE{
-		ProtocolChan: make(chan ProtocolMessage),
-		MSGChan:      make(chan MSGBusMessage),
-		ConnectionChan:    make(chan ConnectionMessage),
-		done: make(chan string),
-		MsgDeque:     deque,
+		ProtocolChan:   make(chan ProtocolMessage),
+		MSGChan:        make(chan MSGBusMessage),
+		ConnectionChan: make(chan ConnectionMessage),
+		done:           make(chan string),
+		MsgDeque:       deque,
 	}
 }
 
 func (s *SIMPLE) Close() {
-	s.done <- ""
+	close(s.done)
+	close(s.ProtocolChan)
+	close(s.MSGChan)
+	close(s.ConnectionChan)
 }
 
 //create a listener for the msg bus
