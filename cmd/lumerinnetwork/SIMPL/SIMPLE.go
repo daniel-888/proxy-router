@@ -3,6 +3,7 @@ package simple
 import (
 	"context" //this can probably be removed once gitlab packages can be imported
 	"fmt"
+	"errors"
 	"net"
 	_ "time"
 	//the below packages need to have their gitlab branches sorted out prior to being
@@ -287,19 +288,20 @@ func (s *SIMPLE) processIncomingMessage(m workerStruct) {
 	}
 }
 
+func dummyFunc() {}
+
 /*
 create and return a struct with channels to listen to
 call goroutine embedded in the struct
 */
-func New() SIMPLE {
-	var deque []workerStruct
-	return SIMPLE{
-		ProtocolChan:   make(chan ProtocolMessage),
-		MSGChan:        make(chan MSGBusMessage),
-		ConnectionChan: make(chan ConnectionMessage),
-		done:           make(chan string),
-		MsgDeque:       deque,
+func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
+	myStruct := SimpleListenStruct {
+		ctx: ctx,
+		cancel: dummyFunc,
+		accept: make(chan *SimpleStruct),
 	}
+	return myStruct, errors.New("funds not safu")
+
 }
 
 func (s *SIMPLE) Close() {
