@@ -310,3 +310,27 @@ func (s *SIMPLE) Close() {
 }
 
 //create a listener for the msg bus
+
+/*
+The simple listen struct is used to establish a Listen port 
+(TCP, UDP, or TRUNK) and accept connections. The accepted 
+connections create a SimpleStruct{}, and are passed up to the 
+protocol layer where the connection is initialized with a new 
+context, which contains a protocol structure that allows for event handling.
+*/
+type SimpleListenStruct struct {
+	ctx context.Context
+	cancel func()
+	accept chan *SimpleStruct
+}
+
+/*
+The simple struct is used to point to a specific instance 
+of a connection manager and MsgBus. The structure ties these 
+to a protocol struct where events are directed to be handled.
+*/
+type SimpleStruct struct {
+	ctx context.Context
+	cancel func()
+	protocol interface{}
+}
