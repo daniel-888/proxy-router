@@ -22,68 +22,20 @@ lower down the stack
 to the message bus
 It is also designed to return messages from the msg bus to the protocol
 layer.
-Refer to proxy router document section 7.7.2.2 (update to reflect location in confluence)
+Refer to proxy router document 
+https://titanind.atlassian.net/wiki/spaces/PR/pages/5570561/Lumerin+Node
 */
 
 type messageAction string
 type actionResponse string
+type ConnUniqueID uint
+type URL string
+type MsgType string
+type ID string
+type Data string
+type EventHandler string
+type SearchString string
 
-//
-//
-//
-//
-//
-//
-//the following structs are temporary
-//
-//
-//
-//
-//
-
-//
-// Listen Struct for new SRC connections coming in
-//
-type ConnectionListenStruct struct {
-	listen *LumerinListenStruct
-	ctx    context.Context
-	port   int
-	ip     net.IPAddr
-	//  cancel func()
-}
-
-//
-// Struct for existing SRC connections and the associated outgoing DST connections
-type ConnectionStruct struct {
-	src    *LumerinSocketStruct
-	dst    []*LumerinSocketStruct
-	defidx int
-	ctx    context.Context
-	cancel func()
-}
-
-//
-// This will contain a regular socket or virtual socket structure
-//
-type LumerinListenStruct struct {
-	listener interface{}
-}
-
-type LumerinSocketStruct struct {
-	socket interface{}
-}
-
-//
-//
-//
-//
-//
-// end temporary structs
-//
-//
-//
-//
-//
 
 /*
 MsgDeque is a last in first out datastructue which can accept
@@ -97,6 +49,7 @@ type SIMPLE struct {
 	MsgDeque       []workerStruct
 }
 
+// this may be deprecated with the revised approach of the SimpleStruct
 type workerStruct struct {
 	msg    []byte
 	action uint
@@ -123,19 +76,6 @@ type ConnectionMessage struct {
 	MessageActions  []uint
 }
 
-//define available actions
-const (
-	//constants to define requested incoming messages
-	HashSubmit    messageAction = "HashSubmit"
-	HashrateCount messageAction = "HashrateCount"
-)
-
-//define available return messages
-const (
-	HashValid     actionResponse = "HashValid"
-	HashInvalid   actionResponse = "HashInvalid"
-	HashrateValue actionResponse = "HashrateValue"
-)
 
 //this is a public function, being provided to convert a worker struct into
 //a connection struct
@@ -267,13 +207,6 @@ func (s *SIMPLE) ListenForIncomingMessages() {
 
 /*
 this function is where the majority of the work for the SIMPLE layer will be done
-Each message coming in will have a [task] field which tells the SIMPLE layer
-how to process the message. The idea here is that anybody can create a [task] and
-associated function and add to the processing request.
-Rules to follow
-1. this is a function, so for every input there's only 1 output
-2. do not break the interface of the output
-3. design functions in a maintainable manner
 */
 func (s *SIMPLE) processIncomingMessage(m workerStruct) {
 	switch m.action {
@@ -334,8 +267,6 @@ It is assumed that Run() can only be called once
 func (s *SimpleStruct) Run(c context.Context) {
 }
 
-type ConnUniqueID uint
-type URL string
 
 /*
 Calls the connection context cancel function which closes out the 
@@ -407,11 +338,6 @@ msg bus functions
 
 */
 
-type MsgType string
-type ID string
-type Data string
-type EventHandler string
-type SearchString string
 
 func (s *SimpleStruct) Pub (MsgType, ID, Data)(error) {return errors.New("")}
 func (s *SimpleStruct) Unpub (MsgType, ID)(error) {return errors.New("")}
