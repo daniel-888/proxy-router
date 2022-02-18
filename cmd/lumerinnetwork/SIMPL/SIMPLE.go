@@ -301,17 +301,127 @@ func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
 		accept: make(chan *SimpleStruct),
 	}
 	return myStruct, errors.New("funds not safu")
-
 }
 
-func (s *SIMPLE) Close() {
-	close(s.done)
-	close(s.ProtocolChan)
-	close(s.MSGChan)
-	close(s.ConnectionChan)
+
+func (s *SimpleListenStruct) Run() error {
+	go func() {
+		// continuously listen for messages coming in on the accept channel
+		for {
+			x := <- s.accept //receive a value from the accept
+			fmt.Printf("%+v", x)
+		}
+	}()
+	return errors.New("meow")
 }
 
-//create a listener for the msg bus
+// Calls the listen context cancel function, which closes out the listener routine
+func (s *SimpleListenStruct) Close() {
+	//need to find a good way to close the context on the SimpleListenStruct
+}
+
+
+/*
+Start a new go routine to handle the new connection context 
+after initialization by the protocol layer. There will be a 
+variable in the context that points to the protocol structure 
+containing all of the pertinent data for the state of the protocol 
+and event handler routines
+All of the SimpleStruct functions that follow can be called 
+before and after Run() is called
+It is assumed that Run() can only be called once
+*/
+func (s *SimpleStruct) Run(c context.Context) {
+}
+
+type ConnUniqueID uint
+type URL string
+
+/*
+Calls the connection context cancel function which closes out the 
+currently established SRC connection and all of the associated DST connections
+*/
+func (s *SimpleStruct) Close() {}
+
+// Set IO buffer parameters
+func (s *SimpleStruct) SetBuffer() {}
+
+// Set message buffering to a certain delimiter, for example a newline character: ‘\n’
+func (s *SimpleStruct) SetMessageDelimiterDefault() {}
+
+// Set message buffering to be of a certain size
+func (s *SimpleStruct) SetMessageSizeDefault() {}
+
+// TODO not part of stage 1
+// Set encryption parameters
+func (s *SimpleStruct) SetEncryptionDefault() {}
+
+// TODO not part of stage 1
+// Set Compression parameters
+func (s *SimpleStruct) SetCompressionDefault() {}
+
+// Dial the a destination address (DST)
+func (s *SimpleStruct) Dial(u URL) ConnUniqueID{ return 1} //return of 1 to appease compiler
+
+// Reconnect dropped connection
+func (s *SimpleStruct) Redial(u ConnUniqueID) {} //return of 1 to appease compiler
+
+// Used later to direct the default route
+func (s *SimpleStruct) SetRoute(u ConnUniqueID) {} //return of 1 to appease compiler
+
+// Used later to direct the default route
+func (s *SimpleStruct) GetRoute() {} //return of 1 to appease compiler
+
+// Used later to direct the default route
+func (s *SimpleStruct) GetLocalAddr(ConnUniqueID) {} //return of 1 to appease compiler
+
+/*
+
+network connection functions
+
+*/
+
+// Used later to direct the default route
+func (s *SimpleStruct) GetRemoteAddr(ConnUniqueID) {} //return of 1 to appease compiler
+
+func (s *SimpleStruct) SetDefaultReadHandler() {}
+
+// Supply a handler function for incoming data reads for the connection ID
+func (s *SimpleStruct) SetReadHandler() {}
+
+// Writes buffer to the specified connection
+func (s *SimpleStruct) Write(ConnUniqueID, []byte) {}
+
+// Automatic duplication of writes to a MsgBus data channel
+func (s *SimpleStruct) DupWrite() {}
+
+// Flushes all IO Buffers
+func (s *SimpleStruct) Flush() {}
+
+// Reads low level connection status information
+func (s *SimpleStruct) Status() {}
+
+/*
+
+msg bus functions
+
+*/
+
+type MsgType string
+type ID string
+type Data string
+type EventHandler string
+type SearchString string
+
+func (s *SimpleStruct) Pub (MsgType, ID, Data)(error) {return errors.New("")}
+func (s *SimpleStruct) Unpub (MsgType, ID)(error) {return errors.New("")}
+func (s *SimpleStruct) Sub (MsgType, ID, EventHandler)(error) {return errors.New("")}
+func (s *SimpleStruct) Unsub (MsgType, ID, EventHandler)(error){return errors.New("")}
+func (s *SimpleStruct) Get (MsgType, ID, EventHandler)(error){return errors.New("")}
+func (s *SimpleStruct) Set (MsgType, ID, Data)(error){return errors.New("")}
+func (s *SimpleStruct) SearchIP (MsgType, SearchString)(error){return errors.New("")}
+func (s *SimpleStruct) SearchMac (MsgType, SearchString)(error){return errors.New("")}
+func (s *SimpleStruct) SearchName (MsgType, SearchString)(error){return errors.New("")}
 
 /*
 The simple listen struct is used to establish a Listen port 
