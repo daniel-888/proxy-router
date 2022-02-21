@@ -26,8 +26,6 @@ Refer to proxy router document
 https://titanind.atlassian.net/wiki/spaces/PR/pages/5570561/Lumerin+Node
 */
 
-type messageAction string
-type actionResponse string
 type ConnUniqueID uint
 type URL string
 type MsgType string
@@ -125,41 +123,23 @@ func (pm *ConnectionMessage) Message() []byte {
 
 // takes the byte array destined for the protocol layer and unmarshals it into a ProtocolMessage struct
 // then it pushes the ProtocolMessage onto the ProtocolChan
-func (s *SIMPLE) msgToProtocol(b []byte) {
+func (s *SimpleStruct) msgToProtocol(b []byte) {
 	//create an in-memory temporary struct to pass to the ProtocolChan
-	tempStruct := ProtocolMessage{
-		WorkerName:      "",       //this field will probably be removed
-		MessageContents: b,        //msg content to be passed back from msg
-		MessageActions:  []uint{}, //empty array to keep compiler happy
-	}
 	//pass the struct to the protocol chan
-	s.ProtocolChan <- tempStruct
 }
 
 // takes the byte array destined for the protocol layer and unmarshals it into a MSGBusMessage struct
 // then it pushes the MSGBusMessage onto the MSGChan
-func (s *SIMPLE) msgToMSGBus(b []byte) {
+func (s *SimpleStruct) msgToMSGBus(b []byte) {
 	//create an in-memory temporary struct to pass to the MSGChan
-	tempStruct := MSGBusMessage{
-		WorkerName:      "",       //this field will probably be removed
-		MessageContents: b,        //msg content to be passed back from msg
-		MessageActions:  []uint{}, //empty array to keep compiler happy
-	}
 	//pass the struct to the protocol chan
-	s.MSGChan <- tempStruct
 }
 
 // takes the byte array destined for the protocol layer and unmarshals it into a ConnectionMessage struct
 // then it pushes the ConnectionMessage onto the ConnectionChan
-func (s *SIMPLE) msgToConnection(b []byte) {
+func (s *SimpleStruct) msgToConnection(b []byte) {
 	//create an in-memory temporary struct to pass to the ConnectionChan
-	tempStruct := ConnectionMessage{
-		WorkerName:      "",       //this field will probably be removed
-		MessageContents: b,        //msg content to be passed back from msg
-		MessageActions:  []uint{}, //empty array to keep compiler happy
-	}
 	//pass the struct to the protocol chan
-	s.ConnectionChan <- tempStruct
 }
 
 type StandardMessager interface {
@@ -170,14 +150,14 @@ type StandardMessager interface {
 /*
 this function is where the majority of the work for the SIMPLE layer will be done
 */
-func (s *SIMPLE) processIncomingMessage(m workerStruct) {
-	switch m.action {
+func (s *SimpleStruct) processIncomingMessage(m uint) {
+	switch m {
 	case 0: //route message to protocol channel
-		s.msgToProtocol(m.msg)
+		s.msgToProtocol([]byte{})
 	case 1: //route message to msgbus channel
-		s.msgToMSGBus(m.msg)
+		s.msgToMSGBus([]byte{})
 	case 2: //route message to connection channel
-		s.msgToConnection(m.msg)
+		s.msgToConnection([]byte{})
 	default:
 		fmt.Println("lord bogdanoff demands elon tank the price of dogecoin")
 	}
