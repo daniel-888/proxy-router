@@ -26,8 +26,6 @@ Refer to proxy router document
 https://titanind.atlassian.net/wiki/spaces/PR/pages/5570561/Lumerin+Node
 */
 
-type messageAction string
-type actionResponse string
 type ConnUniqueID uint
 type URL string
 type MsgType string
@@ -37,185 +35,41 @@ type EventHandler string
 type SearchString string
 
 
-/*
-MsgDeque is a last in first out datastructue which can accept
-messages of any struct type and in constantly processed
-*/
-type SIMPLE struct {
-	ProtocolChan   chan ProtocolMessage
-	MSGChan        chan MSGBusMessage
-	ConnectionChan chan ConnectionMessage
-	done           chan string
-	MsgDeque       []workerStruct
-}
 
-// this may be deprecated with the revised approach of the SimpleStruct
-type workerStruct struct {
-	msg    []byte
-	action uint
-}
-
-//struct to handle/accept messages from the layer 1 channel
-type ProtocolMessage struct {
-	WorkerName      string
-	MessageContents []byte
-	MessageActions  []uint
-}
-
-// struct to handle/accept messages from the message bus
-type MSGBusMessage struct {
-	WorkerName      string
-	MessageContents []byte
-	MessageActions  []uint
-}
-
-// struct to handle messages from further down in the stack
-type ConnectionMessage struct {
-	WorkerName      string
-	MessageContents []byte
-	MessageActions  []uint
-}
-
-
-//this is a public function, being provided to convert a worker struct into
-//a connection struct
-/*
-func WorkerStructToConnectionStruct(w workerStruct) (ConnectionStruct) {
-}
-*/
-
-//this takes a ProtocolMessage struct and moves the data into a workerStruct
-func (pm *ProtocolMessage) Actions(x uint) workerStruct {
-	return workerStruct{
-		msg:    pm.MessageContents,
-		action: x,
-	}
-}
-
-//this takes a ProtocolMessage struct and moves the data into a workerStruct
-func (pm *ProtocolMessage) Message() []byte {
-		return pm.MessageContents
-}
-
-//this takes a MSGBusMessage struct and moves the data into a workerStruct
-func (mm *MSGBusMessage) Actions(x uint) workerStruct {
-	return workerStruct{
-		msg:    mm.MessageContents,
-		action: x,
-	}
-}
-
-//this takes a ProtocolMessage struct and moves the data into a workerStruct
-func (pm *MSGBusMessage) Message() []byte {
-		return pm.MessageContents
-}
-
-//this takes a ConnectionMessage struct and moves the data into a workerStruct
-func (lm *ConnectionMessage) Actions(x uint) workerStruct {
-	return workerStruct{
-		msg:    lm.MessageContents,
-		action: x,
-	}
-}
-
-//this takes a ProtocolMessage struct and moves the data into a workerStruct
-func (pm *ConnectionMessage) Message() []byte {
-		return pm.MessageContents
-}
 
 // takes the byte array destined for the protocol layer and unmarshals it into a ProtocolMessage struct
 // then it pushes the ProtocolMessage onto the ProtocolChan
-func (s *SIMPLE) msgToProtocol(b []byte) {
+func (s *SimpleStruct) msgToProtocol(b []byte) {
 	//create an in-memory temporary struct to pass to the ProtocolChan
-	tempStruct := ProtocolMessage{
-		WorkerName:      "",       //this field will probably be removed
-		MessageContents: b,        //msg content to be passed back from msg
-		MessageActions:  []uint{}, //empty array to keep compiler happy
-	}
 	//pass the struct to the protocol chan
-	s.ProtocolChan <- tempStruct
 }
 
 // takes the byte array destined for the protocol layer and unmarshals it into a MSGBusMessage struct
 // then it pushes the MSGBusMessage onto the MSGChan
-func (s *SIMPLE) msgToMSGBus(b []byte) {
+func (s *SimpleStruct) msgToMSGBus(b []byte) {
 	//create an in-memory temporary struct to pass to the MSGChan
-	tempStruct := MSGBusMessage{
-		WorkerName:      "",       //this field will probably be removed
-		MessageContents: b,        //msg content to be passed back from msg
-		MessageActions:  []uint{}, //empty array to keep compiler happy
-	}
 	//pass the struct to the protocol chan
-	s.MSGChan <- tempStruct
 }
 
 // takes the byte array destined for the protocol layer and unmarshals it into a ConnectionMessage struct
 // then it pushes the ConnectionMessage onto the ConnectionChan
-func (s *SIMPLE) msgToConnection(b []byte) {
+func (s *SimpleStruct) msgToConnection(b []byte) {
 	//create an in-memory temporary struct to pass to the ConnectionChan
-	tempStruct := ConnectionMessage{
-		WorkerName:      "",       //this field will probably be removed
-		MessageContents: b,        //msg content to be passed back from msg
-		MessageActions:  []uint{}, //empty array to keep compiler happy
-	}
 	//pass the struct to the protocol chan
-	s.ConnectionChan <- tempStruct
 }
 
-type StandardMessager interface {
-	Actions() []string
-	Message() []byte
-}
-
-//function to constantly monitor MsgDeque and process the last item on it
-func (s *SIMPLE) ActivateSIMPLELayer() {
-	for {
-		if len(s.MsgDeque) > 0 {
-			//msg is the last element in the msg deque and is processed
-			//newDeque is to rewrite the MsgDeque in lieu of another popping method
-			msg := s.MsgDeque[0]
-			newDeque := s.MsgDeque[1:]
-			s.processIncomingMessage(msg)
-			s.MsgDeque = newDeque
-
-		}
-	}
-}
-
-//listens for messages coming in through the various channels
-//oldest item will always be index 0
-func (s *SIMPLE) ListenForIncomingMessages() {
-	for {
-		select {
-		case pc := <-s.ProtocolChan:
-			for _, x := range pc.MessageActions {
-				s.MsgDeque = append(s.MsgDeque, pc.Actions(x))
-			}
-		case mc := <-s.MSGChan:
-			for _, x := range mc.MessageActions {
-				s.MsgDeque = append(s.MsgDeque, mc.Actions(x))
-			}
-		case lc := <-s.ConnectionChan:
-			for _, x := range lc.MessageActions {
-				s.MsgDeque = append(s.MsgDeque, lc.Actions(x))
-			}
-		case <-s.done:
-			return
-		}
-	}
-}
 
 /*
 this function is where the majority of the work for the SIMPLE layer will be done
 */
-func (s *SIMPLE) processIncomingMessage(m workerStruct) {
-	switch m.action {
+func (s *SimpleStruct) processIncomingMessage(m uint) {
+	switch m {
 	case 0: //route message to protocol channel
-		s.msgToProtocol(m.msg)
+		s.msgToProtocol([]byte{})
 	case 1: //route message to msgbus channel
-		s.msgToMSGBus(m.msg)
+		s.msgToMSGBus([]byte{})
 	case 2: //route message to connection channel
-		s.msgToConnection(m.msg)
+		s.msgToConnection([]byte{})
 	default:
 		fmt.Println("lord bogdanoff demands elon tank the price of dogecoin")
 	}
