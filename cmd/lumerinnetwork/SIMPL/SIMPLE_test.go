@@ -95,7 +95,7 @@ func TestPushMessageToConnectionLayer(t *testing.T) {
 	simple.ProtocolChan <- cm           //pushing the connection message to the connection chan
 	pm := simple.listenToConnectionChan()
 	if string(pm) != "Test Sentence" {
-		t.Errorf("messages not being sent to protocol chan.\nActual:%s\nExpected:%s", pm, "Test Sentence")
+		t.Errorf("messages not being sent to protocol layer.\nActual:%s\nExpected:%s", pm, "Test Sentence")
 	}
 	simple.Close()
 }
