@@ -25,97 +25,9 @@ can be quickly implemented
 func TestTemplate(t *testing.T) {
 }
 */
-
-func protocolMessage(actions []uint) ProtocolMessage {
-	return ProtocolMessage{
-		WorkerName:      "Josh's magic money laundering machine",
-		MessageContents: []byte("Test Sentence"), //create a byte stringb
-		MessageActions:  actions,
-	}
-}
-
-func msgbusMessage(actions []uint) MSGBusMessage {
-	return MSGBusMessage{
-		WorkerName:      "Josh's magic money laundering machine",
-		MessageContents: []byte("Test Sentence"), //create a byte stringb
-		MessageActions:  actions,
-	}
-}
-
-func connectionMessage(actions []uint) ConnectionMessage {
-	return ConnectionMessage{
-		WorkerName:      "Josh's magic money laundering machine",
-		MessageContents: []byte("Test Sentence"), //create a byte stringb
-		MessageActions:  actions,
-	}
-}
-
-/*
-below are the actual tests
-*/
-
-func (s *SIMPLE) listenToProtocolChan() []byte {
-	var pm ProtocolMessage
-	go func() {
-		count := 0
-		for {
-			temp := <-s.ProtocolChan
-			if string(temp.MessageContents) == "Test Sentence" {
-				pm = temp
-				break
-			} else if count > 10 {
-				break
-			}
-			time.Sleep(time.Second * 1)
-			count++
-		}
-	}()
-	return pm.MessageContents
-}
-
-func (s *SIMPLE) listenToMSGChan() []byte {
-	var pm MSGBusMessage
-	go func() {
-		count := 0
-		for {
-			temp := <-s.MSGChan
-			if string(temp.MessageContents) == "Test Sentence" {
-				pm = temp
-				break
-			} else if count > 10 {
-				break
-			}
-			time.Sleep(time.Second * 1)
-			count++
-		}
-	}()
-	return pm.MessageContents
-}
-
-func (s *SIMPLE) listenToConnectionChan() []byte {
-	var pm ConnectionMessage
-	go func() {
-		count := 0
-		for {
-			temp := <-s.ConnectionChan
-			if string(temp.MessageContents) == "Test Sentence" {
-				pm = temp
-				break
-			} else if count > 10 {
-				break
-			}
-			time.Sleep(time.Second * 1)
-			count++
-		}
-	}()
-	return pm.MessageContents
-}
-
-
 func TestSendMessageFromProtocol(t *testing.T) {
 	simple := New()                       //creation of simple layer which provides entry/exit points
-	go simple.ActivateSIMPLELayer()       //creates a for loop that checks the deque for new messages
-	go simple.ListenForIncomingMessages() //creates a for loop that listens to all channels
+	go simple.Run()       //creates a for loop that checks the deque for new messages
 	pMessage := protocolMessage([]uint{0, 1})
 	simple.ProtocolChan <- pMessage
 	time.Sleep(time.Second * 3)
@@ -124,8 +36,7 @@ func TestSendMessageFromProtocol(t *testing.T) {
 
 func TestSendMessageFromConnectionLayer(t *testing.T) {
 	simple := New()                       //creation of simple layer which provides entry/exit points
-	go simple.ActivateSIMPLELayer()       //creates a for loop that checks the deque for new messages
-	go simple.ListenForIncomingMessages() //creates a for loop that listens to all channels
+	go simple.Run()       //creates a for loop that checks the deque for new messages
 	lMessage := connectionMessage([]uint{0, 1})
 	simple.ConnectionChan <- lMessage
 	time.Sleep(time.Second * 3)
@@ -134,8 +45,7 @@ func TestSendMessageFromConnectionLayer(t *testing.T) {
 
 func TestReceiveMessageFromMSGBus(t *testing.T) {
 	simple := New()                       //creation of simple layer which provides entry/exit points
-	go simple.ActivateSIMPLELayer()       //creates a for loop that checks the deque for new messages
-	go simple.ListenForIncomingMessages() //creates a for loop that listens to all channels
+	go simple.Run()       //creates a for loop that checks the deque for new messages
 	mMessage := msgbusMessage([]uint{0, 1})
 	simple.MSGChan <- mMessage
 	time.Sleep(time.Second * 3)
@@ -148,8 +58,7 @@ func TestReceiveMessageFromMSGBus(t *testing.T) {
 // will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
 func TestPushMessageToProtocol(t *testing.T) {
 	simple := New()                       //creation of simple layer which provides entry/exit points
-	go simple.ListenForIncomingMessages() //creates a for loop that listens to all channels
-	go simple.ActivateSIMPLELayer()       //creates a for loop that checks the deque for new messages
+	go simple.Run()       //creates a for loop that checks the deque for new messages
 	cm := connectionMessage([]uint{0})    //creates a connection message
 	simple.ConnectionChan <- cm           //pushing the connection message to the connection chan
 	pm := simple.listenToProtocolChan()
@@ -165,8 +74,7 @@ func TestPushMessageToProtocol(t *testing.T) {
 // will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
 func TestPushMessageToMSGBus(t *testing.T) {
 	simple := New()                       //creation of simple layer which provides entry/exit points
-	go simple.ListenForIncomingMessages() //creates a for loop that listens to all channels
-	go simple.ActivateSIMPLELayer()       //creates a for loop that checks the deque for new messages
+	go simple.Run()       //creates a for loop that checks the deque for new messages
 	cm := protocolMessage([]uint{1})    //creates a connection message
 	simple.ProtocolChan <- cm           //pushing the connection message to the connection chan
 	pm := simple.listenToMSGChan()
@@ -182,8 +90,7 @@ func TestPushMessageToMSGBus(t *testing.T) {
 // will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
 func TestPushMessageToConnectionLayer(t *testing.T) {
 	simple := New()                       //creation of simple layer which provides entry/exit points
-	go simple.ListenForIncomingMessages() //creates a for loop that listens to all channels
-	go simple.ActivateSIMPLELayer()       //creates a for loop that checks the deque for new messages
+	go simple.Run()       //creates a for loop that checks the deque for new messages
 	cm := protocolMessage([]uint{2})    //creates a connection message
 	simple.ProtocolChan <- cm           //pushing the connection message to the connection chan
 	pm := simple.listenToConnectionChan()
