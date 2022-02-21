@@ -167,44 +167,6 @@ type StandardMessager interface {
 	Message() []byte
 }
 
-//function to constantly monitor MsgDeque and process the last item on it
-func (s *SIMPLE) ActivateSIMPLELayer() {
-	for {
-		if len(s.MsgDeque) > 0 {
-			//msg is the last element in the msg deque and is processed
-			//newDeque is to rewrite the MsgDeque in lieu of another popping method
-			msg := s.MsgDeque[0]
-			newDeque := s.MsgDeque[1:]
-			s.processIncomingMessage(msg)
-			s.MsgDeque = newDeque
-
-		}
-	}
-}
-
-//listens for messages coming in through the various channels
-//oldest item will always be index 0
-func (s *SIMPLE) ListenForIncomingMessages() {
-	for {
-		select {
-		case pc := <-s.ProtocolChan:
-			for _, x := range pc.MessageActions {
-				s.MsgDeque = append(s.MsgDeque, pc.Actions(x))
-			}
-		case mc := <-s.MSGChan:
-			for _, x := range mc.MessageActions {
-				s.MsgDeque = append(s.MsgDeque, mc.Actions(x))
-			}
-		case lc := <-s.ConnectionChan:
-			for _, x := range lc.MessageActions {
-				s.MsgDeque = append(s.MsgDeque, lc.Actions(x))
-			}
-		case <-s.done:
-			return
-		}
-	}
-}
-
 /*
 this function is where the majority of the work for the SIMPLE layer will be done
 */
