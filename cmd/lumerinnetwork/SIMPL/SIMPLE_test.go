@@ -2,9 +2,10 @@ package simple
 
 import (
 	"testing"
-	"time"
 	//"fmt"
 	_ "reflect"
+	"context"
+	"net"
 )
 
 /*
@@ -25,30 +26,43 @@ can be quickly implemented
 func TestTemplate(t *testing.T) {
 }
 */
+
+type testAddr struct {
+	x string
+}
+
+func (t testAddr) Network() string {
+	return t.x
+}
+
+func (t testAddr) String() string {
+	return t.x
+}
+
+func generateTestContext() (context.Context) {
+	returnContext := context.TODO()
+	return returnContext
+}
+
+func generateTestAddr() net.Addr {
+	return testAddr{x:"1"}
+}
+
 func TestSendMessageFromProtocol(t *testing.T) {
-	simple := New()                       //creation of simple layer which provides entry/exit points
+	simple, _ := New(generateTestContext(), generateTestAddr())                       //creation of simple layer which provides entry/exit points
 	go simple.Run()       //creates a for loop that checks the deque for new messages
-	pMessage := protocolMessage([]uint{0, 1})
-	simple.ProtocolChan <- pMessage
-	time.Sleep(time.Second * 3)
 	simple.Close()
 }
 
 func TestSendMessageFromConnectionLayer(t *testing.T) {
-	simple := New()                       //creation of simple layer which provides entry/exit points
+	simple, _ := New(generateTestContext(),generateTestAddr())                       //creation of simple layer which provides entry/exit points
 	go simple.Run()       //creates a for loop that checks the deque for new messages
-	lMessage := connectionMessage([]uint{0, 1})
-	simple.ConnectionChan <- lMessage
-	time.Sleep(time.Second * 3)
 	simple.Close()
 }
 
 func TestReceiveMessageFromMSGBus(t *testing.T) {
-	simple := New()                       //creation of simple layer which provides entry/exit points
+	simple, _ := New(generateTestContext(),generateTestAddr())                       //creation of simple layer which provides entry/exit points
 	go simple.Run()       //creates a for loop that checks the deque for new messages
-	mMessage := msgbusMessage([]uint{0, 1})
-	simple.MSGChan <- mMessage
-	time.Sleep(time.Second * 3)
 	simple.Close()
 }
 
@@ -57,14 +71,8 @@ func TestReceiveMessageFromMSGBus(t *testing.T) {
 // it to the protocol layer
 // will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
 func TestPushMessageToProtocol(t *testing.T) {
-	simple := New()                       //creation of simple layer which provides entry/exit points
+	simple, _ := New(generateTestContext(),generateTestAddr())                       //creation of simple layer which provides entry/exit points
 	go simple.Run()       //creates a for loop that checks the deque for new messages
-	cm := connectionMessage([]uint{0})    //creates a connection message
-	simple.ConnectionChan <- cm           //pushing the connection message to the connection chan
-	pm := simple.listenToProtocolChan()
-	if string(pm) != "Test Sentence" {
-		t.Errorf("messages not being sent to protocol chan.\nActual:%s\nExpected:%s", pm, "Test Sentence")
-	}
 	simple.Close()
 }
 
@@ -73,14 +81,8 @@ func TestPushMessageToProtocol(t *testing.T) {
 // it to the protocol layer
 // will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
 func TestPushMessageToMSGBus(t *testing.T) {
-	simple := New()                       //creation of simple layer which provides entry/exit points
+	simple, _ := New(generateTestContext(),generateTestAddr())                       //creation of simple layer which provides entry/exit points
 	go simple.Run()       //creates a for loop that checks the deque for new messages
-	cm := protocolMessage([]uint{1})    //creates a connection message
-	simple.ProtocolChan <- cm           //pushing the connection message to the connection chan
-	pm := simple.listenToMSGChan()
-	if string(pm) != "Test Sentence" {
-		t.Errorf("messages not being sent to protocol chan.\nActual:%s\nExpected:%s", pm, "Test Sentence")
-	}
 	simple.Close()
 }
 
@@ -89,14 +91,8 @@ func TestPushMessageToMSGBus(t *testing.T) {
 // it to the protocol layer
 // will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
 func TestPushMessageToConnectionLayer(t *testing.T) {
-	simple := New()                       //creation of simple layer which provides entry/exit points
+	simple, _ := New(generateTestContext(),generateTestAddr())                       //creation of simple layer which provides entry/exit points
 	go simple.Run()       //creates a for loop that checks the deque for new messages
-	cm := protocolMessage([]uint{2})    //creates a connection message
-	simple.ProtocolChan <- cm           //pushing the connection message to the connection chan
-	pm := simple.listenToConnectionChan()
-	if string(pm) != "Test Sentence" {
-		t.Errorf("messages not being sent to protocol layer.\nActual:%s\nExpected:%s", pm, "Test Sentence")
-	}
 	simple.Close()
 }
 
