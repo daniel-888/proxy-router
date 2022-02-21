@@ -142,10 +142,6 @@ func (s *SimpleStruct) msgToConnection(b []byte) {
 	//pass the struct to the protocol chan
 }
 
-type StandardMessager interface {
-	Actions() []string
-	Message() []byte
-}
 
 /*
 this function is where the majority of the work for the SIMPLE layer will be done
