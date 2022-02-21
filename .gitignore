@@ -1,2 +1,6 @@
 /bin
 .DS_Store
+/cmd/cmd
+*go.mod
+*json
+*txt

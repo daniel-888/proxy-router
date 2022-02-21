@@ -10,6 +10,13 @@ import (
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
+//
+// Lumerinconnection is a package that can interpret connection requests to see if
+// there is already a Lumerin Protocol Trunk in place with the target node
+// and redirect the connection across the trunk instead of a new direct connection.
+//
+//
+
 const LumerinAcceptChannelLen int = 2
 const LumerinReadChannelLen int = 10
 

@@ -12,6 +12,12 @@ import (
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
+//
+// Socket TCP
+// Manages TCP socket connections acting as standard IO Read/Write package
+//
+//
+
 const TCPAcceptChannelLen int = 2
 const TCPReadChannelLen int = 10
 const TCPReadBufferSize int = 1024
@@ -226,9 +232,9 @@ func (l *ListenTCPStruct) Status() (ltss ListenerStatusStruct, e error) {
 }
 
 //
+// Dial() creates a new TCP connection to the target address
+// or returns an error
 //
-//
-// func Dial(ctx context.Context, network string, addr string) (s SocketTCPStruct, e error) {
 func Dial(ctx context.Context, network string, addr string) (s *SocketTCPStruct, e error) {
 	var d net.Dialer
 
@@ -376,7 +382,7 @@ func (s *SocketTCPStruct) goRead() {
 }
 
 //
-//
+// Readready() Non-blocking call to see if a call to Read() would block or not
 //
 func (s *SocketTCPStruct) ReadReady() (ready bool) {
 
@@ -392,7 +398,7 @@ func (s *SocketTCPStruct) ReadReady() (ready bool) {
 }
 
 //
-// Read
+// Read()
 // Manages the read buffer, adding to it from the readchannel if the channel is ready
 // and filling the return buffer with what ever will fit from the read buffer.
 // The subroutine will block if there is nothing in the readchannel and the read buffer.
@@ -515,14 +521,14 @@ func (s *SocketTCPStruct) Close() error {
 }
 
 //
-//
+// Returns the local address of the socket
 //
 func (s *SocketTCPStruct) LocalAddrString() string {
 	return s.socket.LocalAddr().String()
 }
 
 //
-//
+// Returns the remote address of the socket
 //
 func (s *SocketTCPStruct) RemoteAddrString() string {
 	return s.socket.RemoteAddr().String()

@@ -1,4 +1,4 @@
-package connectionmanager
+package stratumv1
 
 //
 // ToDo
@@ -11,6 +11,7 @@ package connectionmanager
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
@@ -39,8 +40,8 @@ const (
 )
 
 const (
-	CLIENT_MINING_AUTHORIZE stratumMethods = "mining.authorize"
-	//	CLIENT_MINING_CAPABILITIES       stratumMethods = "mining.capabilities"
+	CLIENT_MINING_AUTHORIZE          stratumMethods = "mining.authorize"
+	CLIENT_MINING_CAPABILITIES       stratumMethods = "mining.capabilities"
 	CLIENT_MINING_EXTRANONCE         stratumMethods = "mining.extranonce.subscribe"
 	CLIENT_MINING_SUBMIT             stratumMethods = "mining.submit"
 	CLIENT_MINING_SUBSCRIBE          stratumMethods = "mining.subscribe"
@@ -52,12 +53,10 @@ const (
 	SERVER_RECONNECT                 stratumMethods = "client.reconnect"
 	SERVER_SHOW_MESSAGE              stratumMethods = "client.show_message"
 	SERVER_MINING_NOTIFY             stratumMethods = "mining.notify"
-	// Not sure about this method, got it once
-	SERVER_MINING_PING           stratumMethods = "mining.ping"
-	SERVER_MINING_SET_DIFFICULTY stratumMethods = "mining.set_difficulty"
-	SERVER_MINING_SET_EXTRANONCE stratumMethods = "mining.set_extranonce"
-
-//	SERVER_MINING_SET_GOAL           stratumMethods = "mining.set_goal"
+	SERVER_MINING_PING               stratumMethods = "mining.ping"
+	SERVER_MINING_SET_DIFFICULTY     stratumMethods = "mining.set_difficulty"
+	SERVER_MINING_SET_EXTRANONCE     stratumMethods = "mining.set_extranonce"
+	SERVER_MINING_SET_GOAL           stratumMethods = "mining.set_goal"
 )
 
 //
@@ -95,11 +94,22 @@ type noticeMiningSetDifficulty struct {
 	Params []int   `json:"params"`
 }
 
+type noticeMiningNotifyParams struct {
+	jobID          string
+	prevBlockHash  string
+	gen1           string
+	gen2           string
+	merkelBranches []string
+	blockVersion   string
+	nBits          string
+	nTime          string
+	CleanJob       bool
+}
 type noticeMiningNotify struct {
-	ID      *string       `json:"id"`
-	Jsonrpc *string       `json:"jsonrpc"`
-	Method  string        `json:"method"`
-	Params  []interface{} `json:"params"`
+	ID      *string                  `json:"id"`
+	Jsonrpc *string                  `json:"jsonrpc"`
+	Method  string                   `json:"method"`
+	Params  noticeMiningNotifyParams `json:"params"`
 }
 
 type responce struct {
@@ -154,6 +164,8 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 					msg.Error = value.(string)
 				case nil:
 					msg.Error = nil
+				case interface{}:
+					msg.Error = fmt.Sprintf(" Error: %f, %s", vtype.([]interface{})[0], vtype.([]interface{})[1])
 				default:
 					panic(fmt.Sprintf("Value Type: %t", vtype))
 				}
@@ -187,7 +199,8 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 			if msg.Error == nil {
 				r.Error = nil
 			} else {
-				r.Error = msg.Error.(*string)
+				e := msg.Error.(string)
+				r.Error = &e
 			}
 			if msg.Reject == nil {
 				r.Reject = nil
@@ -267,7 +280,7 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 //------------------------------------------------------
 func getStratumMsg(msg []byte) (ret interface{}, err error) {
 
-	fmt.Printf(lumerinlib.FileLine()+"Stratum Msg: %s\n", msg)
+	// fmt.Printf(lumerinlib.FileLine()+"Stratum Msg: %s\n", msg)
 
 	ret, err = unmarshalMsg(msg)
 
@@ -275,7 +288,7 @@ func getStratumMsg(msg []byte) (ret interface{}, err error) {
 		panic(fmt.Sprintf(lumerinlib.FileLine() + "Error unmarshaling Notice msg\n"))
 	}
 
-	fmt.Printf(lumerinlib.FileLine()+"unmarshaled Stratum %T, Msg: %v\n", ret, ret)
+	// fmt.Printf(lumerinlib.FileLine()+"unmarshaled Stratum %T, Msg: %v\n", ret, ret)
 
 	return ret, err
 }
@@ -287,10 +300,10 @@ func getStratumMsg(msg []byte) (ret interface{}, err error) {
 func (r *request) getAuthName() (name string, err error) {
 
 	if r.Method != string(CLIENT_MINING_AUTHORIZE) {
-		return "", fmt.Errorf("wrong method, expetected mining.authorize")
+		return "", fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.authorize, got: %s", r.Method)
 	}
 
-	fmt.Printf(" type:%T", r.Params)
+	// fmt.Printf(" type:%T", r.Params)
 
 	// name = r.Params[0]
 	name = r.Params[0].(string)
@@ -299,72 +312,147 @@ func (r *request) getAuthName() (name string, err error) {
 }
 
 //------------------------------------------------------
-// extracts the mining.submit information being sent from the miner to the pool
+//
+// {"id":0,"jsonrpc":"2.0","method":"mining.set_difficulty","params":[65535]}
 //------------------------------------------------------
-func (r *request) getSubmit() (userName string, jobId string, ExtraNonce2 string, nTime string, nonce string, err error) {
+func (r *request) getSetDifficulty() (difficulty float64, err error) {
 
-	if r.Method != string(CLIENT_MINING_SUBMIT) {
-		return "", "","","","", fmt.Errorf("wrong method, expetected mining.submit")
+	difficulty = 0.0
+
+	if r.Method != string(SERVER_MINING_SET_DIFFICULTY) {
+		err = fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.set_difficulty, got: %s", r.Method)
+	} else {
+
+		switch t := r.Params[0].(type) {
+		case string:
+			if s, err := strconv.ParseFloat(r.Params[0].(string), 64); err == nil {
+				difficulty = s
+			}
+		case float32:
+			difficulty = r.Params[0].(float64)
+		case float64:
+			difficulty = r.Params[0].(float64)
+		default:
+			err = fmt.Errorf(lumerinlib.FileLine()+" Error bad type:%T\n", t)
+		}
 	}
 
-	fmt.Printf(" type:%T", r.Params)
-
-	userName = r.Params[0]
-	jobId = r.Params[1]
-	ExtraNonce2 = r.Params[2]
-	nTime = r.Params[3]
-	nonce = r.Params[4]
-
-	return userName, jobId, ExtraNonce2, nTime, nonce, err
+	return difficulty, err
 }
 
 //------------------------------------------------------
-// extracts the mining.notify information from the pool to the miner
-// returns a []byte to be used in parent function to construct a block header
+//
+// {
+//	"id": null,
+//	"method": "mining.notify",
+//	"params": [
+//		"bf",  -- JOB ID
+//		"4d16b6f85af6e2198f44ae2a6de67f78487ae5611b77c6c0440b921e00000000", -- HEX-ENCODED PREV BLOCK HASH
+// 		"01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff20020862062f503253482f04b8864e5008", -- HEX-ENCODED PREFIX
+//		"072f736c7573682f000000000100f2052a010000001976a914d23fcdf86f7e756a64a7a9688ef9903327048ed988ac00000000", -- HEX-ENCODED SUFFIX
+//		[], -- MERKEL ROOT
+//		"00000002", -- HEX-ENCODED BLOCK VERSION
+//		"1c2ac4af", -- HEX-ENCODED NETWORK DIFFICULTY REQUIRED
+//		"504e86b9", -- HEX-ENCODED CURRENT TIME FOR THE BLOCK
+//		false --
+//	]
+// }
 //------------------------------------------------------
-func (n *notice) getNotify() (msg []byte, err error) {
+func (r *request) getMiningNotifyJobID() (jobid string, err error) {
 
-	if n.Method != string(CLIENT_MINING_SUBMIT) {
-		return []byte(""), fmt.Errorf("wrong method, expetected mining.notify")
+	if r.Method != string(SERVER_MINING_NOTIFY) {
+		err = fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.notify, got: %s", r.Method)
+	} else {
+		jobid = r.Params[0].(string)
 	}
 
-	fmt.Printf(" type:%T", n.Params)
+	return jobid, err
 
-	/*
-	code to obtain msg info and convert into a string
-	*/
-
-	return []byte(""), err
 }
 
 //------------------------------------------------------
-// extracts the mining.set_difficulty information from the pool to the miner
-// returns a string which can be used to update the validators target difficulty
+//
+// -->> {"id":0,"jsonrpc":"2.0","method":"mining.set_difficulty","params":[65535]}
 //------------------------------------------------------
-func (n *notice) getDifficulty() (msg string, err error) {
+func (n *notice) getSetDifficulty() (difficulty float64, err error) {
+
+	difficulty = 0.0
 
 	if n.Method != string(SERVER_MINING_SET_DIFFICULTY) {
-		return "", fmt.Errorf("wrong method, expetected mining.set_difficulty")
+		err = fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.set_difficulty, got: %s", n.Method)
+	} else {
+
+		switch t := n.Params.(type) {
+		case string:
+			if s, err := strconv.ParseFloat(n.Params.(string), 64); err == nil {
+				difficulty = s
+			}
+		case int:
+			difficulty = n.Params.(float64)
+		case float32:
+			difficulty = n.Params.(float64)
+		case float64:
+			difficulty = n.Params.(float64)
+			// This is what is used.
+		case interface{}:
+			v := n.Params
+			arr := v.([]interface{})
+			difficulty = arr[0].(float64)
+		default:
+			err = fmt.Errorf(lumerinlib.FileLine()+" Error bad type:%T\n", t)
+		}
 	}
 
-	fmt.Printf(" type:%T", n.Params)
+	return difficulty, err
+}
 
-	/*
-	difficulty = n.Params[0]
-	code to obtain the difficulty and return as a string
-	*/
+//------------------------------------------------------
+//
+// {
+//	"id": null,
+//	"method": "mining.notify",
+//	"params": [
+//		"bf",  -- JOB ID
+//		"4d16b6f85af6e2198f44ae2a6de67f78487ae5611b77c6c0440b921e00000000", -- HEX-ENCODED PREV BLOCK HASH
+// 		"01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff20020862062f503253482f04b8864e5008", -- HEX-ENCODED PREFIX
+//		"072f736c7573682f000000000100f2052a010000001976a914d23fcdf86f7e756a64a7a9688ef9903327048ed988ac00000000", -- HEX-ENCODED SUFFIX
+//		[], -- MERKEL ROOT
+//		"00000002", -- HEX-ENCODED BLOCK VERSION
+//		"1c2ac4af", -- HEX-ENCODED NETWORK DIFFICULTY REQUIRED
+//		"504e86b9", -- HEX-ENCODED CURRENT TIME FOR THE BLOCK
+//		false --
+//	]
+// }
+//------------------------------------------------------
+func (n *notice) getMiningNotifyJobID() (jobid string, err error) {
 
-	return "", err
+	if n.Method != string(SERVER_MINING_NOTIFY) {
+		err = fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.notify, got: %s", n.Method)
+	} else {
+
+		switch t := n.Params.(type) {
+		case string:
+			jobid = "string"
+		case interface{}:
+			v := n.Params
+			arr := v.([]interface{})
+			jobid = arr[0].(string)
+		default:
+			err = fmt.Errorf(lumerinlib.FileLine()+" Error bad type:%T\n", t)
+		}
+	}
+
+	return jobid, err
+
 }
 
 //------------------------------------------------------
 //
 //------------------------------------------------------
-
 func (r *request) createRequestMsg() (msg []byte, err error) {
 
 	err = nil
-	fmt.Printf("Create Stratum Request: %v\n", r)
+	// fmt.Printf("Create Stratum Request: %v\n", r)
 
 	msg, err = json.Marshal(r)
 	if err != nil {
@@ -396,7 +484,7 @@ func (r *responce) getAuthResult() (ret bool, err error) {
 func (r *responce) createResponceMsg() (msg []byte, err error) {
 
 	err = nil
-	fmt.Printf("Create Stratum Responce: %v\n", r)
+	// fmt.Printf("Create Stratum Responce: %v\n", r)
 
 	msg, err = json.Marshal(r)
 	if err != nil {
@@ -413,7 +501,7 @@ func (r *responce) createResponceMsg() (msg []byte, err error) {
 func (n *notice) createNoticeMsg() (msg []byte, err error) {
 
 	err = nil
-	fmt.Printf("Create Stratum Notice: %v\n", n)
+	// fmt.Printf("Create Stratum Notice: %v\n", n)
 
 	switch n.Method {
 	case string(SERVER_MINING_SET_DIFFICULTY):
@@ -437,7 +525,7 @@ func (n *notice) createNoticeMsg() (msg []byte, err error) {
 //------------------------------------------------------
 func (n *notice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
 
-	fmt.Printf(lumerinlib.Funcname()+": %v\n", n)
+	// fmt.Printf(lumerinlib.Funcname()+": %v\n", n)
 
 	err = nil
 
@@ -498,8 +586,6 @@ func (n *notice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
 //------------------------------------------------------
 func (n *notice) createNoticeMiningNotify() (msg []byte, err error) {
 
-	fmt.Printf(lumerinlib.Funcname()+": %v\n", n)
-
 	err = nil
 
 	var nsd noticeMiningNotify
@@ -510,42 +596,37 @@ func (n *notice) createNoticeMiningNotify() (msg []byte, err error) {
 		panic("")
 	}
 
-	nsd.Params = make([]interface{}, 9)
+	// nsd.Params = make(noticeMiningNotifyParams)
 
 	// nsd.Params = append(nsd.Params, a)
 	for i, v := range n.Params.([]interface{}) {
 		switch i {
 		case 0:
-			fallthrough
+			nsd.Params.jobID = v.(string)
 		case 1:
-			fallthrough
+			nsd.Params.prevBlockHash = v.(string)
 		case 2:
+			nsd.Params.gen1 = v.(string)
 			fallthrough
 		case 3:
-			nsd.Params[i] = v.(string)
+			nsd.Params.gen2 = v.(string)
 
 		case 4:
-			arr := make([]string, 0)
+			nsd.Params.merkelBranches = make([]string, 0)
 			if len(v.([]interface{})) > 0 {
 				for _, w := range v.([]interface{}) {
-					arr = append(arr, w.(string))
+					nsd.Params.merkelBranches = append(nsd.Params.merkelBranches, w.(string))
 				}
 			}
-			nsd.Params[i] = arr
 
 		case 5:
-			fallthrough
+			nsd.Params.blockVersion = v.(string)
 		case 6:
-			fallthrough
+			nsd.Params.nBits = v.(string)
 		case 7:
-			nsd.Params[i] = v.(string)
-
+			nsd.Params.nTime = v.(string)
 		case 8:
-			if v == "true" {
-				nsd.Params[i] = true
-			} else if v == "false" {
-				nsd.Params[i] = false
-			}
+			nsd.Params.CleanJob = (v == "true")
 		}
 	}
 
@@ -556,4 +637,107 @@ func (n *notice) createNoticeMiningNotify() (msg []byte, err error) {
 	}
 
 	return msg, err
+}
+
+//------------------------------------------------------
+//
+//------------------------------------------------------
+func (r *request) createNoticeMiningNotifyStruct() (nsd noticeMiningNotify, err error) {
+
+	fmt.Printf(lumerinlib.Funcname()+": %v\n", r)
+
+	err = nil
+
+	// nsd.ID = r.ID
+	nsd.Method = r.Method
+
+	params := r.Params
+
+	if len(params) != 9 {
+		panic(fmt.Sprintf(lumerinlib.FileLine() + " Not enough parameter for Notify\n"))
+	}
+
+	for i, v := range params {
+		switch i {
+		case 0:
+			nsd.Params.jobID = v.(string)
+		case 1:
+			nsd.Params.prevBlockHash = v.(string)
+		case 2:
+			nsd.Params.gen1 = v.(string)
+			fallthrough
+		case 3:
+			nsd.Params.gen2 = v.(string)
+
+		case 4:
+			nsd.Params.merkelBranches = make([]string, 0)
+			if len(v.([]interface{})) > 0 {
+				for _, w := range v.([]interface{}) {
+					nsd.Params.merkelBranches = append(nsd.Params.merkelBranches, w.(string))
+				}
+			}
+
+		case 5:
+			nsd.Params.blockVersion = v.(string)
+		case 6:
+			nsd.Params.nBits = v.(string)
+		case 7:
+			nsd.Params.nTime = v.(string)
+		case 8:
+			nsd.Params.CleanJob = (v == "true")
+		}
+	}
+
+	return nsd, err
+}
+
+//------------------------------------------------------
+//
+//------------------------------------------------------
+func (n *notice) createNoticeMiningNotifyStruct() (nsd noticeMiningNotify, err error) {
+
+	fmt.Printf(lumerinlib.Funcname()+": %v\n", n)
+
+	err = nil
+
+	nsd.Method = n.Method
+
+	params := n.Params.([]interface{})
+
+	if len(params) != 9 {
+		panic(fmt.Sprintf(lumerinlib.FileLine() + " Not enough parameter for Notify\n"))
+	}
+
+	for i, v := range params {
+		switch i {
+		case 0:
+			nsd.Params.jobID = v.(string)
+		case 1:
+			nsd.Params.prevBlockHash = v.(string)
+		case 2:
+			nsd.Params.gen1 = v.(string)
+			fallthrough
+		case 3:
+			nsd.Params.gen2 = v.(string)
+
+		case 4:
+			nsd.Params.merkelBranches = make([]string, 0)
+			if len(v.([]interface{})) > 0 {
+				for _, w := range v.([]interface{}) {
+					nsd.Params.merkelBranches = append(nsd.Params.merkelBranches, w.(string))
+				}
+			}
+
+		case 5:
+			nsd.Params.blockVersion = v.(string)
+		case 6:
+			nsd.Params.nBits = v.(string)
+		case 7:
+			nsd.Params.nTime = v.(string)
+		case 8:
+			nsd.Params.CleanJob = (v == "true")
+		}
+	}
+
+	return nsd, err
 }
