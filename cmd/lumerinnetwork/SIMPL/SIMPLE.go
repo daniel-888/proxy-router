@@ -221,6 +221,7 @@ func (s *SIMPLE) processIncomingMessage(m workerStruct) {
 	}
 }
 
+// this is a temporary function used to initialize a SimpleListenStruct
 func dummyFunc() {}
 
 /*
@@ -233,7 +234,8 @@ func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
 		cancel: dummyFunc,
 		accept: make(chan *SimpleStruct),
 	}
-	return myStruct, errors.New("funds not safu")
+	// determine if a more robust error message is needed
+	return myStruct, errors.New("unable to create a SimpleListenStruct")
 }
 
 
@@ -360,6 +362,8 @@ type SimpleListenStruct struct {
 	ctx context.Context
 	cancel func()
 	accept chan *SimpleStruct
+	notifyConnection chan *SimpleStruct
+	notifyProtocol chan *SimpleStruct
 }
 
 /*
