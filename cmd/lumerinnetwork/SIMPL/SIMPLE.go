@@ -362,8 +362,6 @@ type SimpleListenStruct struct {
 	ctx context.Context
 	cancel func()
 	accept chan *SimpleStruct
-	notifyConnection chan *SimpleStruct
-	notifyProtocol chan *SimpleStruct
 }
 
 /*
@@ -375,4 +373,10 @@ type SimpleStruct struct {
 	ctx context.Context
 	cancel func()
 	protocol interface{}
+}
+
+
+type ProtocolStruct struct {
+	notifyConnection chan *SimpleStruct
+	notifyProtocol chan *SimpleStruct
 }
