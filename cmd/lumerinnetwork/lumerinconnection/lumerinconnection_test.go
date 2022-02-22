@@ -18,11 +18,17 @@ func TestSetupListenCancel(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	ip := net.IPAddr{
-		IP: net.IP(net.IPv4(127, 0, 0, 1)),
+	testaddr := &testAddr{
+		network: "tcp",
+		ipaddr:  "127.0.0.1:12345",
 	}
 
-	l, e := testListen(ctx, TCP, 12345, ip)
+	//ip := net.IPAddr{
+	//	IP: net.IP(net.IPv4(127, 0, 0, 1)),
+	//}
+
+	// l, e := testListen(ctx, TCP, 12345, ip)
+	l, e := testListen(ctx, testaddr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
@@ -50,18 +56,24 @@ func TestDial(t *testing.T) {
 	_ = cancel
 	var TestString = "This is a test string\n"
 
-	ip := net.IPAddr{
-		IP: net.IP(net.IPv4(127, 0, 0, 1)),
+	testaddr := &testAddr{
+		network: "tcp",
+		ipaddr:  "127.0.0.1:12345",
 	}
+	//ip := net.IPAddr{
+	//	IP: net.IP(net.IPv4(127, 0, 0, 1)),
+	//}
 
-	l, e := testListen(ctx, TCP, 12345, ip)
+	// l, e := testListen(ctx, TCP, 12345, ip)
+	l, e := testListen(ctx, testaddr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
 
 	go goTestAcceptChannelEcho(l)
 
-	s := testDial(ctx, "tcp", 12345, ip)
+	// s := testDial(ctx, "tcp", 12345, ip)
+	s := testDial(ctx, testaddr)
 
 	fmt.Printf(lumerinlib.FileLine() + " Dial completed\n")
 
@@ -91,17 +103,19 @@ func TestDial(t *testing.T) {
 //
 //
 //
-func testListen(ctx context.Context, network LumProto, port int, ip net.IPAddr) (l *LumerinListenStruct, e error) {
+func testListen(ctx context.Context, addr net.Addr) (l *LumerinListenStruct, e error) {
 
-	return Listen(ctx, network, port, ip)
+	return Listen(ctx, addr)
 }
 
 //
 //
 //
-func testDial(ctx context.Context, network LumProto, port int, ip net.IPAddr) (s *LumerinSocketStruct) {
+// func testDial(ctx context.Context, network LumProto, port int, ip net.IPAddr) (s *LumerinSocketStruct) {
+func testDial(ctx context.Context, addr net.Addr) (s *LumerinSocketStruct) {
 
-	s, e := Dial(ctx, "tcp", port, ip)
+	// s, e := Dial(ctx, network, port, ip)
+	s, e := Dial(ctx, addr)
 	if e != nil {
 		fmt.Printf(lumerinlib.FileLine()+" Dial Test Failed: %s\n", e)
 		panic(fmt.Sprintf(lumerinlib.FileLine()+" Dial Test Failed: %s\n", e))
@@ -150,4 +164,17 @@ func goTestAcceptChannelEcho(l *LumerinListenStruct) {
 			}
 		}
 	}
+}
+
+type testAddr struct {
+	ipaddr  string
+	network string
+}
+
+func (t *testAddr) Network() string {
+	return t.network
+}
+
+func (t *testAddr) String() string {
+	return t.ipaddr
 }
