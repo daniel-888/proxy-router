@@ -106,7 +106,8 @@ func (s *SimpleListenStruct) Run() error {
 
 // Calls the listen context cancel function, which closes out the listener routine
 func (s *SimpleListenStruct) Close() {
-	//need to find a good way to close the context on the SimpleListenStruct
+	_, cancel := context.WithCancel(s.ctx)
+	cancel() //cancel is a function which terminates the associated goroutine
 }
 
 
@@ -121,6 +122,12 @@ before and after Run() is called
 It is assumed that Run() can only be called once
 */
 func (s *SimpleStruct) Run(c context.Context) {
+	msgDeque := []byte{}
+	go func() {
+		for {
+			fmt.Printf("%+v", msgDeque)
+		}
+	}()
 }
 
 
@@ -215,7 +222,8 @@ context, which contains a protocol structure that allows for event handling.
 type SimpleListenStruct struct {
 	ctx context.Context
 	cancel func()
-	accept chan *SimpleStruct
+	accept chan *SimpleStruct //channel to accept simple structs and process their message
+	deliver chan *SimpleStruct //channel for a simple struct to communicate with the connection layer
 }
 
 /*
@@ -231,6 +239,5 @@ type SimpleStruct struct {
 
 
 type ProtocolStruct struct {
-	notifyConnection chan *SimpleStruct
 	notifyProtocol chan *SimpleStruct
 }
