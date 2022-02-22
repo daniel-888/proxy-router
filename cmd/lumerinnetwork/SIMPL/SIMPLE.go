@@ -98,7 +98,6 @@ func (s *SimpleListenStruct) Run() error {
 		// continuously listen for messages coming in on the accept channel
 		for {
 			x := <- s.accept //receive a value from the accept
-			fmt.Printf("%+v", x)
 		}
 	}()
 	return errors.New("meow")
@@ -233,7 +232,7 @@ to a protocol struct where events are directed to be handled.
 */
 type SimpleStruct struct {
 	ctx context.Context
-	cancel func()
+	cancel func() //it might make sense to use the WithCancel function instead
 	protocol interface{}
 }
 
