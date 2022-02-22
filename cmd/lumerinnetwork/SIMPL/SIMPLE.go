@@ -218,11 +218,14 @@ connections create a SimpleStruct{}, and are passed up to the
 protocol layer where the connection is initialized with a new 
 context, which contains a protocol structure that allows for event handling.
 */
+/*
+accept chan should have a SimpleStruct pushed into it when creating a 
+new SimpleStruct for an individual connection
+*/
 type SimpleListenStruct struct {
 	ctx context.Context
 	cancel func()
 	accept chan *SimpleStruct //channel to accept simple structs and process their message
-	deliver chan *SimpleStruct //channel for a simple struct to communicate with the connection layer
 }
 
 /*
@@ -233,14 +236,10 @@ to a protocol struct where events are directed to be handled.
 type SimpleStruct struct {
 	ctx context.Context
 	cancel func() //it might make sense to use the WithCancel function instead
-	eventHandler interface{}
-	protocol *SimpleProtocolInterface
+	eventHandler interface{} //this is a SimpleEvent struct
+	protocol *SimpleProtocolInterface // pointer to the entry point of the SimpleEvent struct
 }
 
-
-type ProtocolStruct struct {
-	notifyProtocol chan *SimpleStruct
-}
 
 /*
 
@@ -258,7 +257,7 @@ type SimpleEvent struct {
 }
 
 type SimpleProtocolInterface interface {
-	EventHandler()
+	EventHandler(*SimpleEvent)
 }
 
 
