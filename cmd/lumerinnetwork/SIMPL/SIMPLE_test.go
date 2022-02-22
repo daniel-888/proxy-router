@@ -48,6 +48,24 @@ func generateTestAddr() net.Addr {
 	return testAddr{x:"1"}
 }
 
+//function to simulate the protocol layer which will be able to listen for and
+//send events to the SIMPL layer
+//should run in a go-routine to simulate actual protocol layer
+type ProtocolLayer struct {
+	ListenStruct SimpleListenStruct
+	SimpleStruct SimpleStruct
+}
+
+func (p *ProtocolLayer) EventHandler(s *SimpleEvent) {
+	//pass the event into the simple struct in the protocol
+	//layer to be processed by the SimpleStruct
+	p.SimpleStruct.EventHandler(s) 
+}
+
+type ProtocolInterface interface {
+	EventHandler(*SimpleEvent)
+}
+
 func TestSendMessageFromProtocol(t *testing.T) {
 	simple, _ := New(generateTestContext(), generateTestAddr())                       //creation of simple layer which provides entry/exit points
 	go simple.Run()       //creates a for loop that checks the deque for new messages
