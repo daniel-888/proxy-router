@@ -19,20 +19,19 @@ type ProtocolListenStruct struct {
 	simplelisten *simple.SimpleListenStruct
 }
 
-type ProtocolStruct interface {
+type ProtocolInterface interface {
 	EventHandler(*simple.SimpleStruct)
 }
 
 //
 // New() Create a new ProtocolListenStruct
 //
-func New(ctx context.Context) (pls *ProtocolListenStruct, e error) {
+func New(ctx context.Context, newprotofunc simple.NewProtoFunc) (pls *ProtocolListenStruct, e error) {
 
 	var ok bool
 
 	eh := ctx.Value(simple.SimpleEventHandler)
-	_, ok = eh.(*ProtocolStruct)
-	if !ok {
+	if eh == nil {
 		lumerinlib.PanicHere("")
 	}
 
@@ -56,7 +55,7 @@ func New(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	sls, err := simple.New(ctx, listen.(net.Addr))
+	sls, err := simple.Listen(ctx, listen.(net.Addr), newprotofunc)
 	if err != nil {
 		lumerinlib.PanicHere("")
 	}

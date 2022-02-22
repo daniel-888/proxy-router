@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strconv"
 
 	"gitlab.com/TitanInd/lumerin/cmd/accountingmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/configurationmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
 	"gitlab.com/TitanInd/lumerin/cmd/testmod"
+	"gitlab.com/TitanInd/lumerin/lumerinlib"
 
 	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
@@ -132,31 +132,22 @@ func main() {
 	//
 	if disablestratumv1 == "false" {
 
-		stratum, err := stratumv1.New(ctx, ps)
+		src, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", listenip, listenport))
+		if err != nil {
+			lumerinlib.PanicHere("")
+		}
+
+		dst, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "127.0.0.1", "3334"))
+		if err != nil {
+			lumerinlib.PanicHere("")
+		}
+
+		stratum, err := stratumv1.New(ctx, ps, src, dst)
 		if err != nil {
 			panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
 		}
 
-		srcport, e := strconv.Atoi(listenport)
-		if e != nil {
-			panic(fmt.Sprintf("Bad Src Port address:'%s'", listenport))
-		}
-		ip := net.ParseIP(listenip)
-		if ip == nil {
-			panic(fmt.Sprintf("Bad Src IP address:'%s'", listenip))
-		}
-		srcip := net.IPAddr{
-			IP: ip,
-		}
-		dstport := 33334
-		dstip := net.IPAddr{
-			IP: net.IPv4(127, 0, 0, 1),
-		}
-
-		err = stratum.Init(srcport, srcip, dstport, dstip)
-		if err != nil {
-			panic(fmt.Sprintf("Stratum Protocol Init() failed to start:%s", err))
-		}
+		stratum.Run()
 
 	}
 

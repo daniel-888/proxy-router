@@ -18,11 +18,16 @@ func TestSetupListenCancel(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	ip := net.IPAddr{
-		IP: net.IP(net.IPv4(127, 0, 0, 1)),
+	//ip := net.IPAddr{
+	//	IP: net.IP(net.IPv4(127, 0, 0, 1)),
+	//}
+
+	testaddr := &testAddr{
+		network: "tcp",
+		ipaddr:  "127.0.0.1:12345",
 	}
 
-	l, e := testListen(ctx, 12345, ip)
+	l, e := testListen(ctx, testaddr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
@@ -52,11 +57,12 @@ func TestSrcDial(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_ = cancel
 
-	ip := net.IPAddr{
-		IP: net.IP(net.IPv4(127, 0, 0, 1)),
+	testaddr := &testAddr{
+		network: "tcp",
+		ipaddr:  "127.0.0.1:12345",
 	}
 
-	l, e := testListen(ctx, 12345, ip)
+	l, e := testListen(ctx, testaddr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
@@ -67,7 +73,8 @@ func TestSrcDial(t *testing.T) {
 	//
 	// Dial (using lumerinconnection) the listener, write test data, recieve same test data
 	//
-	s, e := lumerinconnection.Dial(ctx, lumerinconnection.TCP, 12345, ip)
+	// s, e := lumerinconnection.Dial(ctx, lumerinconnection.TCP, 12345, ip)
+	s, e := lumerinconnection.Dial(ctx, testaddr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial() Failed: %s\n", e))
 	}
@@ -107,11 +114,15 @@ func TestSrcDefDstDial(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_ = cancel
 
-	ip := net.IPAddr{
-		IP: net.IP(net.IPv4(127, 0, 0, 1)),
+	//ip := net.IPAddr{
+	//	IP: net.IP(net.IPv4(127, 0, 0, 1)),
+	//}
+	testaddr := &testAddr{
+		network: "tcp",
+		ipaddr:  "127.0.0.1:12345",
 	}
 
-	l, e := testListen(ctx, 12345, ip)
+	l, e := testListen(ctx, testaddr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
@@ -157,11 +168,15 @@ func TestSrcIdxDstDial(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_ = cancel
 
-	ip := net.IPAddr{
-		IP: net.IP(net.IPv4(127, 0, 0, 1)),
+	//ip := net.IPAddr{
+	//	IP: net.IP(net.IPv4(127, 0, 0, 1)),
+	//}
+	testaddr := &testAddr{
+		network: "tcp",
+		ipaddr:  "127.0.0.1:12345",
 	}
 
-	l, e := testListen(ctx, 12345, ip)
+	l, e := testListen(ctx, testaddr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
@@ -203,8 +218,9 @@ func TestSrcIdxDstDial(t *testing.T) {
 //
 //
 //
-func testListen(ctx context.Context, port int, ip net.IPAddr) (l *ConnectionListenStruct, e error) {
-	return Listen(ctx, port, ip)
+// func testListen(ctx context.Context, port int, ip net.IPAddr) (l *ConnectionListenStruct, e error) {
+func testListen(ctx context.Context, addr net.Addr) (l *ConnectionListenStruct, e error) {
+	return Listen(ctx, addr)
 }
 
 //
@@ -232,7 +248,7 @@ func testSetupEchoConnection(t *testing.T, l *ConnectionListenStruct) (cs *Conne
 
 	fmt.Printf(lumerinlib.FileLine() + " Waiting on Connection\n")
 
-	lss, e := lumerinconnection.Dial(l.ctx, lumerinconnection.TCP, l.getPort(), l.getIp())
+	lss, e := lumerinconnection.Dial(l.ctx, l.addr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial() Failed: %s\n", e))
 	}
@@ -303,4 +319,17 @@ func (s *ConnectionStruct) goSrcChannelEcho() {
 			}
 		}
 	}
+}
+
+type testAddr struct {
+	ipaddr  string
+	network string
+}
+
+func (t *testAddr) Network() string {
+	return t.network
+}
+
+func (t *testAddr) String() string {
+	return t.ipaddr
 }

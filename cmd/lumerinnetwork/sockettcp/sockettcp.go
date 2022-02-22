@@ -51,11 +51,11 @@ type ListenerStatusStruct struct {
 //
 
 type ListenTCPStruct struct {
-	listener   net.Listener
-	ctx        context.Context
-	cancel     func()
-	acceptchan chan *SocketTCPStruct
-	status     ListenerStatusStruct
+	listener net.Listener
+	ctx      context.Context
+	cancel   func()
+	accept   chan *SocketTCPStruct
+	status   ListenerStatusStruct
 }
 
 type SocketTCPStruct struct {
@@ -109,10 +109,10 @@ func Listen(ctx context.Context, network string, addr string) (l *ListenTCPStruc
 	accept := make(chan *SocketTCPStruct, TCPAcceptChannelLen)
 
 	l = &ListenTCPStruct{
-		listener:   listener,
-		ctx:        ctx,
-		cancel:     c,
-		acceptchan: accept,
+		listener: listener,
+		ctx:      ctx,
+		cancel:   c,
+		accept:   accept,
 		status: ListenerStatusStruct{
 			connectionCount: 0,
 		},
@@ -148,7 +148,7 @@ func (l *ListenTCPStruct) goWaitOnCancel() {
 // goAccept() go routine to accept connections and return new socket structs to the Accept() function
 //
 func (l *ListenTCPStruct) goAccept() {
-	defer close(l.acceptchan)
+	defer close(l.accept)
 
 	for !l.closed() {
 		conn, e := l.listener.Accept()
@@ -170,7 +170,7 @@ func (l *ListenTCPStruct) goAccept() {
 
 		newsoc := createNewSocket(l.ctx, conn)
 
-		l.acceptchan <- newsoc
+		l.accept <- newsoc
 	}
 
 }
@@ -181,7 +181,7 @@ func (l *ListenTCPStruct) goAccept() {
 func (l *ListenTCPStruct) Accept() (s *SocketTCPStruct, e error) {
 
 	select {
-	case s := <-l.acceptchan:
+	case s := <-l.accept:
 		l.status.connectionCount++
 		return s, e
 	case <-l.ctx.Done():
