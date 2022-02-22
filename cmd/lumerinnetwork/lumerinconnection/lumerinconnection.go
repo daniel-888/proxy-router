@@ -66,19 +66,25 @@ var ErrLumSocClosed = errors.New("lumerin socket: virt socket closed")
 // Setup listening on the port/IP and on the Lumerin Port
 // -- setsup the listening routine with cancel context
 //
-func Listen(ctx context.Context, p LumProto, port int, ip net.IPAddr) (l *LumerinListenStruct, e error) {
+// Needs to be replaced with net.Addr
+//
+// func Listen(ctx context.Context, p LumProto, port int, ip net.IPAddr) (l *LumerinListenStruct, e error) {
+func Listen(ctx context.Context, addr net.Addr) (l *LumerinListenStruct, e error) {
 
-	ipaddr := fmt.Sprintf("%s:%d", ip.String(), port)
+	proto := addr.Network()
+	ipaddr := addr.String()
 
-	// Parse different kinds of listeners here
+	// Lots of error checking here
 
-	switch p {
+	lumproto := LumProto(proto)
+
+	switch lumproto {
 	case TCP:
 		fallthrough
 	case TCP4:
 		fallthrough
 	case TCP6:
-		tcp, e := sockettcp.Listen(ctx, string(p), ipaddr)
+		tcp, e := sockettcp.Listen(ctx, proto, ipaddr)
 		if e == nil {
 			l = &LumerinListenStruct{
 				listener: tcp,
@@ -98,10 +104,10 @@ func Listen(ctx context.Context, p LumProto, port int, ip net.IPAddr) (l *Lumeri
 	case UDPTRUNK:
 		fallthrough
 	case ANYAVAILABLE:
-		panic(fmt.Sprintf(lumerinlib.FileLine()+" Protocol not implemented:%s", string(p)))
+		panic(fmt.Sprintf(lumerinlib.FileLine()+" Protocol not implemented:%s", string(lumproto)))
 
 	default:
-		panic(fmt.Sprintf(lumerinlib.FileLine()+":"+lumerinlib.Funcname()+" Proto:'%s' not supported\n", p))
+		panic(fmt.Sprintf(lumerinlib.FileLine()+":"+lumerinlib.Funcname()+" Proto:'%s' not supported\n", lumproto))
 
 	}
 
@@ -147,18 +153,24 @@ func (ll *LumerinListenStruct) Close() (e error) {
 //
 //
 //
-func Dial(ctx context.Context, p LumProto, port int, ip net.IPAddr) (lci *LumerinSocketStruct, e error) {
+// func Dial(ctx context.Context, p LumProto, port int, ip net.IPAddr) (lci *LumerinSocketStruct, e error) {
+func Dial(ctx context.Context, addr net.Addr) (lci *LumerinSocketStruct, e error) {
 
-	ipaddr := fmt.Sprintf("%s:%d", ip.String(), port)
+	proto := addr.Network()
+	ipaddr := addr.String()
 
-	switch p {
+	// Lots of error checking here
+
+	lumproto := LumProto(proto)
+
+	switch lumproto {
 	case TCP:
 		fallthrough
 	case TCP4:
 		fallthrough
 	case TCP6:
 		var tcp *sockettcp.SocketTCPStruct
-		tcp, e = sockettcp.Dial(ctx, string(p), ipaddr)
+		tcp, e = sockettcp.Dial(ctx, string(lumproto), ipaddr)
 		if e == nil {
 			lci = &LumerinSocketStruct{
 				socket: tcp,
@@ -178,10 +190,10 @@ func Dial(ctx context.Context, p LumProto, port int, ip net.IPAddr) (lci *Lumeri
 	case UDPTRUNK:
 		fallthrough
 	case ANYAVAILABLE:
-		panic(fmt.Sprintf(lumerinlib.FileLine()+" Protocol not implemented:%s", string(p)))
+		panic(fmt.Sprintf(lumerinlib.FileLine()+" Protocol not implemented:%s", string(lumproto)))
 
 	default:
-		panic(fmt.Sprintf(lumerinlib.FileLine()+":"+lumerinlib.Funcname()+" Proto:'%s' not supported\n", p))
+		panic(fmt.Sprintf(lumerinlib.FileLine()+":"+lumerinlib.Funcname()+" Proto:'%s' not supported\n", lumproto))
 	}
 
 	return lci, e

@@ -23,7 +23,8 @@ type ConnectionListenStruct struct {
 	listen *lumerinconnection.LumerinListenStruct
 	ctx    context.Context
 	port   int
-	ip     net.IPAddr
+	addr   net.Addr
+	// ip     net.IPAddr
 	//  cancel func()
 }
 
@@ -40,9 +41,10 @@ type ConnectionStruct struct {
 //
 //
 //
-func Listen(ctx context.Context, port int, ip net.IPAddr) (cls *ConnectionListenStruct, e error) {
+// func Listen(ctx context.Context, port int, ip net.IPAddr) (cls *ConnectionListenStruct, e error) {
+func Listen(ctx context.Context, addr net.Addr) (cls *ConnectionListenStruct, e error) {
 
-	l, e := lumerinconnection.Listen(ctx, lumerinconnection.TCP, port, ip)
+	l, e := lumerinconnection.Listen(ctx, addr)
 	if e != nil {
 		return cls, e
 	}
@@ -50,8 +52,9 @@ func Listen(ctx context.Context, port int, ip net.IPAddr) (cls *ConnectionListen
 	cls = &ConnectionListenStruct{
 		listen: l,
 		ctx:    ctx,
-		port:   port,
-		ip:     ip,
+		addr:   addr,
+		//		port:   port,
+		//		ip:     ip,
 	}
 
 	return cls, e
@@ -61,14 +64,16 @@ func Listen(ctx context.Context, port int, ip net.IPAddr) (cls *ConnectionListen
 //
 //
 func (cls *ConnectionListenStruct) getPort() (port int) {
-	return cls.port
+	panic("not implemented")
+	return 0
+	// return cls.port
 }
 
 //
 //
 //
-func (cls *ConnectionListenStruct) getIp() (ip net.IPAddr) {
-	return cls.ip
+func (cls *ConnectionListenStruct) getIp() net.Addr {
+	return cls.addr
 }
 
 //
@@ -115,10 +120,12 @@ func (cls *ConnectionListenStruct) newConnectionStruct(srclss *lumerinconnection
 // Dial() opens up a new dst connection and inserts it into the first avalable dst slot
 // If this is the 0th slow, the default dst is set as well
 //
-func (cs *ConnectionStruct) Dial(ctx context.Context, port int, ip net.IPAddr) (idx int, e error) {
+// func (cs *ConnectionStruct) Dial(ctx context.Context, port int, ip net.IPAddr) (idx int, e error) {
+func (cs *ConnectionStruct) Dial(ctx context.Context, addr net.Addr) (idx int, e error) {
 	idx = -1
 
-	dst, e := lumerinconnection.Dial(ctx, lumerinconnection.TCP, port, ip)
+	// dst, e := lumerinconnection.Dial(ctx, lumerinconnection.TCP, port, ip)
+	dst, e := lumerinconnection.Dial(ctx, addr)
 	if e != nil {
 		return idx, e
 	}
