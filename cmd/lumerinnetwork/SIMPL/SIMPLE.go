@@ -233,10 +233,34 @@ to a protocol struct where events are directed to be handled.
 type SimpleStruct struct {
 	ctx context.Context
 	cancel func() //it might make sense to use the WithCancel function instead
-	protocol interface{}
+	eventHandler interface{}
+	protocol *SimpleProtocolInterface
 }
 
 
 type ProtocolStruct struct {
 	notifyProtocol chan *SimpleStruct
+}
+
+/*
+
+
+event handler related functionality
+
+
+*/
+
+type EventType string
+type SimpleEvent struct {
+	eventType EventType
+	Data interface{}
+
+}
+
+type SimpleProtocolInterface interface {
+	EventHandler()
+}
+
+
+func (s *SimpleEvent) EventHandler() {
 }
