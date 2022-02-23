@@ -48,6 +48,7 @@ func generateTestAddr() net.Addr {
 	return testAddr{x:"1"}
 }
 
+
 //function to simulate the protocol layer which will be able to listen for and
 //send events to the SIMPL layer
 //should run in a go-routine to simulate actual protocol layer
@@ -56,20 +57,43 @@ type ProtocolLayer struct {
 	SimpleStruct SimpleStruct
 }
 
-func (p *ProtocolLayer) EventHandler(s *SimpleEvent) {
-	//pass the event into the simple struct in the protocol
-	//layer to be processed by the SimpleStruct
-	p.SimpleStruct.EventHandler(s) 
-}
 
 type ProtocolInterface interface {
 	EventHandler(*SimpleEvent)
 }
 
+//generate a simplestruct for testing purposes
+func generateSimpleListenStruct() SimpleListenStruct {
+	myContext := generateTestContext()
+	myAddr := generateTestAddr()
+	myStruct, _ := New(myContext, myAddr)
+	return myStruct
+}
+
+//generate a protocol layer for testing purposes
+func generateProtocolLayer() ProtocolLayer {
+	listenStruct := generateSimpleListenStruct()
+	simpleStruct, _ := NewSimpleStruct(generateTestContext())
+	return ProtocolLayer {
+		ListenStruct: listenStruct,
+		SimpleStruct: simpleStruct,
+	}
+}
+
+//var eventOne EventType = "eventOne"
+
+//send a message from the protocol layer to the simple layer
+//test is considered to have passed when ...
 func TestSendMessageFromProtocol(t *testing.T) {
-	simple, _ := New(generateTestContext(), generateTestAddr())                       //creation of simple layer which provides entry/exit points
-	go simple.Run()       //creates a for loop that checks the deque for new messages
-	simple.Close()
+	pc := generateProtocolLayer()
+	go pc.SimpleStruct.EventHandler()
+	event := SimpleEvent { //create a simpleEvent to pass into event chan
+		eventType: eventOne,
+		Data: []byte{},
+	}
+	pc.SimpleStruct.eventChan <- event //sending data to event handler
+	pc.SimpleStruct.Close()
+	
 }
 
 func TestSendMessageFromConnectionLayer(t *testing.T) {

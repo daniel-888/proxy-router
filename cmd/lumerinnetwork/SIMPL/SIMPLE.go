@@ -78,6 +78,17 @@ func (s *SimpleStruct) processIncomingMessage(m uint) {
 // this is a temporary function used to initialize a SimpleListenStruct
 func dummyFunc() {}
 
+// this is a dummy interface
+type dummyInterface interface {
+	dummy()
+}
+
+type dummyStruct struct {
+}
+
+func (d *dummyStruct) dummy() {
+}
+
 /*
 create and return a struct with channels to listen to
 call goroutine embedded in the struct
@@ -92,12 +103,24 @@ func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
 	return myStruct, errors.New("unable to create a SimpleListenStruct")
 }
 
+func NewSimpleStruct(ctx context.Context) (SimpleStruct, error) {
+	myStruct := SimpleStruct {
+		ctx: ctx,
+		cancel: dummyFunc,
+		eventHandler: dummyStruct{},
+		eventChan: make(chan SimpleEvent),
+	}
+	// determine if a more robust error message is needed
+	return myStruct, errors.New("unable to create a SimpleListenStruct")
+}
+
 
 func (s *SimpleListenStruct) Run() error {
 	go func() {
 		// continuously listen for messages coming in on the accept channel
 		for {
 			x := <- s.accept //receive a value from the accept
+			fmt.Printf("%+v", x)
 		}
 	}()
 	return errors.New("meow")
@@ -237,7 +260,7 @@ type SimpleStruct struct {
 	ctx context.Context
 	cancel func() //it might make sense to use the WithCancel function instead
 	eventHandler interface{} //this is a SimpleEvent struct
-	protocol *SimpleProtocolInterface // pointer to the entry point of the SimpleEvent struct
+	eventChan chan SimpleEvent //channel to listen for simple events
 }
 
 
@@ -250,6 +273,7 @@ event handler related functionality
 */
 
 type EventType string
+var eventOne EventType = "eventOne"
 type SimpleEvent struct {
 	eventType EventType
 	Data interface{}
@@ -261,5 +285,15 @@ type SimpleProtocolInterface interface {
 }
 
 
-func (s *SimpleEvent) EventHandler() {
+//event handler function for the SimpleStruct which is viewable from the protocol layer
+func (s *SimpleStruct) EventHandler() {
+	for {
+		x := <- s.eventChan 
+		switch x.eventType {
+		case eventOne:
+			fallthrough
+		default:
+			return
+		}
+	}
 }
