@@ -97,7 +97,7 @@ func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
 	myStruct := SimpleListenStruct {
 		ctx: ctx,
 		cancel: dummyFunc,
-		accept: make(chan *SimpleStruct),
+		accept: make(chan SimpleStruct),
 	}
 	// determine if a more robust error message is needed
 	return myStruct, errors.New("unable to create a SimpleListenStruct")
@@ -119,11 +119,24 @@ func (s *SimpleListenStruct) Run() error {
 	go func() {
 		// continuously listen for messages coming in on the accept channel
 		for {
+			//consider moving event handler login into here
 			x := <- s.accept //receive a value from the accept
 			fmt.Printf("%+v", x)
 		}
 	}()
 	return errors.New("meow")
+}
+
+func (s *SimpleListenStruct) NewSimpleStruct(ctx context.Context) {
+	go func() {
+	myStruct := SimpleStruct { //generate a new SimpleStruct
+		ctx: ctx,
+		cancel: dummyFunc,
+		eventHandler: dummyStruct{},
+		eventChan: make(chan SimpleEvent),
+	}
+	s.accept <- myStruct //push a SimpleStruct onto the SimpleListenStruct's accept channel
+}()
 }
 
 // Calls the listen context cancel function, which closes out the listener routine
@@ -248,7 +261,7 @@ new SimpleStruct for an individual connection
 type SimpleListenStruct struct {
 	ctx context.Context
 	cancel func()
-	accept chan *SimpleStruct //channel to accept simple structs and process their message
+	accept chan SimpleStruct //channel to accept simple structs and process their message
 }
 
 /*

@@ -2,7 +2,7 @@ package simple
 
 import (
 	"testing"
-	//"fmt"
+	"fmt"
 	_ "reflect"
 	"context"
 	"net"
@@ -83,16 +83,31 @@ func generateProtocolLayer() ProtocolLayer {
 //var eventOne EventType = "eventOne"
 
 //send a message from the protocol layer to the simple layer
-//test is considered to have passed when ...
 func TestSendMessageFromProtocol(t *testing.T) {
+	/*
+	test steps
+	1. create simulated protocol layer
+	2. call function on listening struct to create a new simple struct
+	3. listen for simple struct on listen structs accept channel
+	4. initialize the event handler on the simple struct
+	5. create a dummy SimpleEvent (this could be extentiated outside of the test)
+	6. pass the SimpleEvent into the eventChan channel
+	7. close both structs
+
+	TODO check to see value of SimpleEvent within connection layer
+	*/
 	pc := generateProtocolLayer()
-	go pc.SimpleStruct.EventHandler()
+	listenStruct := pc.ListenStruct
+	listenStruct.NewSimpleStruct(generateTestContext())
+	simpleStruct := <- listenStruct.accept
+	go simpleStruct.EventHandler()
 	event := SimpleEvent { //create a simpleEvent to pass into event chan
 		eventType: eventOne,
 		Data: []byte{},
 	}
-	pc.SimpleStruct.eventChan <- event //sending data to event handler
-	pc.SimpleStruct.Close()
+	simpleStruct.eventChan <- event //sending data to event handler
+	simpleStruct.Close()
+	listenStruct.Close()
 	
 }
 
