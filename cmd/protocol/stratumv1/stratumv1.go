@@ -4,7 +4,7 @@ import (
 	"context"
 	"net"
 
-	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/simple"
+	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
@@ -35,9 +35,9 @@ func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr) (s 
 	ctx = context.WithValue(ctx, simple.SimpleSrcAddrValue, src)
 	ctx = context.WithValue(ctx, simple.SimpleDstAddrValue, dst)
 
-	var newprotointerface interface{} = NewProtocol
+	// var newprotointerface interface{} = NewProtocol
 
-	protocollisten, err := protocol.New(ctx, newprotointerface)
+	protocollisten, err := protocol.New(ctx)
 	if err != nil {
 		lumerinlib.PanicHere("")
 	}
@@ -69,7 +69,7 @@ func (s *StratumV1ListenStruct) Cancel() {
 // Event Handler
 func (*StratumV1Struct) EventHandler(event *simple.SimpleEvent) {
 
-	switch event.Event {
+	switch event.EventType {
 	case simple.NoEvent:
 		return
 

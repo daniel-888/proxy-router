@@ -34,6 +34,30 @@ type Data string
 type EventHandler string
 type SearchString string
 
+type ContextValue string
+type EventType string
+
+const SimpleMsgBusValue ContextValue = "MSGBUS"
+const SimpleSrcAddrValue ContextValue = "SRCADDR"
+const SimpleDstAddrValue ContextValue = "DSTADDR"
+
+const NoEvent EventType = "noevent"
+const MsgUpdateEvent EventType = "msgupdate"
+const MsgDeleteEvent EventType = "msgdelete"
+const MsgGetEvent EventType = "msgget"
+const MsgGetIndexEvent EventType = "msgindex"
+const MsgSearchEvent EventType = "msgsearch"
+const MsgSearchIndexEvent EventType = "msgsearchindex"
+const MsgPublishEvent EventType = "msgpublish"
+const MsgUnpublishEvent EventType = "msgunpublish"
+const MsgSubscribedEvent EventType = "msgsubscribe"
+const MsgUnsubscribedEvent EventType = "msgunsubscribe"
+const MsgRemovedEvent EventType = "msgremoved"
+const ConnReadEvent EventType = "connread"
+const ConnEOFEvent EventType = "conneof"
+const ConnErrorEvent EventType = "connerror"
+const ErrorEvent EventType = "error"
+
 // takes the byte array destined for the protocol layer and unmarshals it into a ProtocolMessage struct
 // then it pushes the ProtocolMessage onto the ProtocolChan
 func (s *SimpleStruct) msgToProtocol(b []byte) {
@@ -281,12 +305,12 @@ event handler related functionality
 
 */
 
-type EventType string
+// type EventType string
 
 var eventOne EventType = "eventOne"
 
 type SimpleEvent struct {
-	eventType EventType
+	EventType EventType
 	Data      interface{}
 }
 
@@ -298,7 +322,7 @@ type SimpleProtocolInterface interface {
 func (s *SimpleStruct) EventHandler() {
 	for {
 		x := <-s.eventChan
-		switch x.eventType {
+		switch x.EventType {
 		case eventOne:
 			fallthrough
 		default:
