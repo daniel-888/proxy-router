@@ -115,6 +115,7 @@ func NewSimpleStruct(ctx context.Context) (SimpleStruct, error) {
 		cancel:       dummyFunc,
 		eventHandler: dummyStruct{},
 		eventChan:    make(chan SimpleEvent),
+		commChan: make(chan []byte),
 	}
 	// determine if a more robust error message is needed
 	return myStruct, errors.New("unable to create a SimpleListenStruct")
@@ -164,13 +165,19 @@ All of the SimpleStruct functions that follow can be called
 before and after Run() is called
 It is assumed that Run() can only be called once
 */
-func (s *SimpleStruct) Run(c context.Context) {
-	msgDeque := []byte{}
-	go func() {
-		for {
-			fmt.Printf("%+v", msgDeque)
-		}
-	}()
+func (s *SimpleStruct) Run(c context.Context) (error) {
+	// loop to continuously listen for messages coming in
+	// on the channels assigned to the connection layer
+	// and the msgbus
+
+	for {
+	select {
+	case  x := <- s.commChan:
+		fmt.Printf("%+v", x)
+	default:
+		return errors.New("error in receiving commchan value")
+	}
+	}
 }
 
 /*
@@ -278,8 +285,11 @@ to a protocol struct where events are directed to be handled.
 type SimpleStruct struct {
 	ctx          context.Context
 	cancel       func()           //it might make sense to use the WithCancel function instead
+	//the event handler portion can be removed since the 
+	//EventHandler method in implemented on the SimpleStruct 
 	eventHandler interface{}      //this is a SimpleEvent struct
 	eventChan    chan SimpleEvent //channel to listen for simple events
+	commChan    chan []byte //channel to listen for simple events
 }
 
 /*
