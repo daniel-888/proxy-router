@@ -2,7 +2,7 @@ package simple
 
 import (
 	"testing"
-	"fmt"
+	_"fmt"
 	_ "reflect"
 	"context"
 	"net"
@@ -80,10 +80,27 @@ func generateProtocolLayer() ProtocolLayer {
 	}
 }
 
-//var eventOne EventType = "eventOne"
+// this is a basic test to create a SimpleListenEvent
+// then have the connection layer request a SimpleStruct
+// then have the SimpleStruct initialize a ProtocolStruct
+// success will be determined by ensuring the communication layer
+// simple struct, and protocol layer know about eachother
+/*
+test steps
+1. protocol layer will initialize a SimpleListenStruct
+2. protocol layer calls the New function in the SIMPLE package
+	a context and an Addr are passed into New
+3. protocol layer calls run method on SimpleListenStruct
+
+*/
+func TestInitializeSimpleListenStruct(t *testing.T) {
+	listenStruct, _ := New(generateTestContext(), generateTestAddr())
+	listenStruct.Run()
+
+}
 
 //send a message from the protocol layer to the simple layer
-func TestSendMessageFromProtocol(t *testing.T) {
+func TestSendMessageFromProtocolToConnectionLayer(t *testing.T) {
 	/*
 	test steps
 	1. create simulated protocol layer
@@ -102,7 +119,7 @@ func TestSendMessageFromProtocol(t *testing.T) {
 	simpleStruct := <- listenStruct.accept
 	go simpleStruct.EventHandler()
 	event := SimpleEvent { //create a simpleEvent to pass into event chan
-		eventType: eventOne,
+		EventType: eventOne,
 		Data: []byte{},
 	}
 	simpleStruct.eventChan <- event //sending data to event handler
@@ -112,15 +129,9 @@ func TestSendMessageFromProtocol(t *testing.T) {
 }
 
 func TestSendMessageFromConnectionLayer(t *testing.T) {
-	simple, _ := New(generateTestContext(),generateTestAddr())                       //creation of simple layer which provides entry/exit points
-	go simple.Run()       //creates a for loop that checks the deque for new messages
-	simple.Close()
 }
 
 func TestReceiveMessageFromMSGBus(t *testing.T) {
-	simple, _ := New(generateTestContext(),generateTestAddr())                       //creation of simple layer which provides entry/exit points
-	go simple.Run()       //creates a for loop that checks the deque for new messages
-	simple.Close()
 }
 
 // function to route a message from the connection layer to the protocol layer
@@ -128,9 +139,6 @@ func TestReceiveMessageFromMSGBus(t *testing.T) {
 // it to the protocol layer
 // will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
 func TestPushMessageToProtocol(t *testing.T) {
-	simple, _ := New(generateTestContext(),generateTestAddr())                       //creation of simple layer which provides entry/exit points
-	go simple.Run()       //creates a for loop that checks the deque for new messages
-	simple.Close()
 }
 
 // function to route a message from the protocol layer to the msgbus
@@ -138,9 +146,6 @@ func TestPushMessageToProtocol(t *testing.T) {
 // it to the protocol layer
 // will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
 func TestPushMessageToMSGBus(t *testing.T) {
-	simple, _ := New(generateTestContext(),generateTestAddr())                       //creation of simple layer which provides entry/exit points
-	go simple.Run()       //creates a for loop that checks the deque for new messages
-	simple.Close()
 }
 
 // function to route a message from the protocol layer to the connection layer
@@ -148,9 +153,6 @@ func TestPushMessageToMSGBus(t *testing.T) {
 // it to the protocol layer
 // will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
 func TestPushMessageToConnectionLayer(t *testing.T) {
-	simple, _ := New(generateTestContext(),generateTestAddr())                       //creation of simple layer which provides entry/exit points
-	go simple.Run()       //creates a for loop that checks the deque for new messages
-	simple.Close()
 }
 
 func TestHashrateCountMessage(t *testing.T) {
