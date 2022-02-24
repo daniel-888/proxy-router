@@ -8,6 +8,10 @@ const TCP6 NetworkType = "tcp6"
 const UDP NetworkType = "udp"
 const UDP4 NetworkType = "udp4"
 const UDP6 NetworkType = "udp6"
+const TRUNK NetworkType = "trunk"
+const TCPTRUNK NetworkType = "tcptrunk"
+const UDPTRUNK NetworkType = "udptrunk"
+const ANYAVAILABLE NetworkType = "anyavailable"
 
 type NetAddr struct {
 	ipaddr  string

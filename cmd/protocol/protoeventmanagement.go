@@ -100,8 +100,8 @@ func (pls *ProtocolListenStruct) goAccept() {
 		select {
 		case <-pls.ctx.Done():
 			return
-		case accept := <-pls.simplelisten.Accept():
-			accept.Run(pls.ctx)
+		case newSimpleStruct := <-pls.simplelisten.Accept():
+			newSimpleStruct.Run(pls.ctx)
 		}
 	}()
 	pls.simplelisten.Run()
