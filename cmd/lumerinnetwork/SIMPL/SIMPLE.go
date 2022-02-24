@@ -79,21 +79,6 @@ func (s *SimpleStruct) msgToConnection(b []byte) {
 	//pass the struct to the protocol chan
 }
 
-/*
-this function is where the majority of the work for the SIMPLE layer will be done
-*/
-func (s *SimpleStruct) processIncomingMessage(m uint) {
-	switch m {
-	case 0: //route message to protocol channel
-		s.msgToProtocol([]byte{})
-	case 1: //route message to msgbus channel
-		s.msgToMSGBus([]byte{})
-	case 2: //route message to connection channel
-		s.msgToConnection([]byte{})
-	default:
-		fmt.Println("lord bogdanoff demands elon tank the price of dogecoin")
-	}
-}
 
 // this is a temporary function used to initialize a SimpleListenStruct
 func dummyFunc() {}
