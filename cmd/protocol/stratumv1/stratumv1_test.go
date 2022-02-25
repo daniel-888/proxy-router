@@ -17,9 +17,15 @@ func TestNewProto(t *testing.T) {
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, "127.0.0.1:12345")
 
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, simple.SimpleMsgBusValue, ps)
-	ctx = context.WithValue(ctx, simple.SimpleSrcAddrValue, src)
-	ctx = context.WithValue(ctx, simple.SimpleDstAddrValue, dst)
+
+	sc := simple.SimpleContextStruct{
+		Protocol: NewProtocol,
+		MsgBus:   ps,
+		Src:      src,
+		Dst:      dst,
+	}
+
+	ctx = context.WithValue(ctx, simple.SimpleContext, sc)
 
 	sls, err := New(ctx, ps, src, dst)
 	if err != nil {

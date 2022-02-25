@@ -3,18 +3,10 @@ package protocol
 import (
 	"context"
 	"fmt"
-	"net"
 
 	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
-
-//type ContextValue string
-//
-//const SimpleMsgBusValue ContextValue = "MSGBUS"
-//const SimpleSrcAddrValue ContextValue = "SRCADDR"
-//const SimpleDstAddrValue ContextValue = "DSTADDR"
 
 //
 // Top layer protocol template functions that a new protocol will use to access the SIMPLe layer
@@ -37,32 +29,29 @@ func New(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 
 	var ok bool
 
-	eh := ctx.Value(simple.SimpleEventHandler)
-	if eh == nil {
+	sc := ctx.Value(simple.SimpleContext)
+	if sc == nil {
 		lumerinlib.PanicHere("")
 	}
 
-	mb := ctx.Value(simple.SimpleMsgBusValue)
-	_, ok = mb.(*msgbus.PubSub)
+	sc, ok = sc.(simple.SimpleContextStruct)
 	if !ok {
-		lumerinlib.PanicHere("Missing SimpleMsgBusValue")
+		lumerinlib.PanicHere("")
 	}
-
-	dst := ctx.Value(simple.SimpleDstAddrValue)
-	_, ok = dst.(net.Addr)
-	if !ok {
-		lumerinlib.PanicHere("Missing SimpleDstAddrValue")
+	if sc.(simple.SimpleContextStruct).MsgBus == nil {
+		lumerinlib.PanicHere("")
 	}
-
-	listen := ctx.Value(simple.SimpleSrcAddrValue)
-	_, ok = listen.(net.Addr)
-	if !ok {
-		lumerinlib.PanicHere("Missing SimpleSrcAddrValue")
+	if sc.(simple.SimpleContextStruct).Dst == nil {
+		lumerinlib.PanicHere("")
+	}
+	if sc.(simple.SimpleContextStruct).Src == nil {
+		lumerinlib.PanicHere("")
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	sls, err := simple.New(ctx, listen.(net.Addr))
+	listenaddr := sc.(simple.SimpleContextStruct).Src
+	sls, err := simple.New(ctx, listenaddr)
 	if err != nil {
 		lumerinlib.PanicHere(fmt.Sprintf("Error:%s", err))
 	}

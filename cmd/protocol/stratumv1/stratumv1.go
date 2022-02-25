@@ -42,9 +42,11 @@ func NewProtocol(ss *simple.SimpleStruct) (s *StratumV1Struct) {
 		connections: make(map[int]connectionStruct, 0),
 	}
 
-	dst := ss.ctx.ContextValue(simple.SimpleDstAddrValue)
+	scs := ss.Ctx().Value(simple.SimpleContext)
+	dst := scs.(simple.SimpleContextStruct).Dst
 
-	ConnID, err := ss.Dial(dst)
+	_, err := ss.Dial(dst)
+	//ConnID, err := ss.Dial(dst)
 	if err != nil {
 		panic("")
 	}
@@ -59,12 +61,21 @@ func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr) (s 
 
 	// Validate src and dst here
 
-	ctx = context.WithValue(ctx, simple.SimpleProtocolValue, NewProtocol)
-	ctx = context.WithValue(ctx, simple.SimpleMsgBusValue, mb)
-	ctx = context.WithValue(ctx, simple.SimpleSrcAddrValue, src)
-	ctx = context.WithValue(ctx, simple.SimpleDstAddrValue, dst)
+	//ctx = context.WithValue(ctx, simple.SimpleProtocolValue, NewProtocol)
+	//ctx = context.WithValue(ctx, simple.SimpleMsgBusValue, mb)
+	//ctx = context.WithValue(ctx, simple.SimpleSrcAddrValue, src)
+	//ctx = context.WithValue(ctx, simple.SimpleDstAddrValue, dst)
 
-	// var newprotointerface interface{} = NewProtocol
+	var newprotofunc interface{} = NewProtocol
+
+	scs := simple.SimpleContextStruct{
+		MsgBus:   mb,
+		Src:      src,
+		Dst:      dst,
+		Protocol: newprotofunc,
+	}
+
+	ctx = context.WithValue(ctx, simple.SimpleContext, sc)
 
 	protocollisten, err := protocol.New(ctx)
 	if err != nil {

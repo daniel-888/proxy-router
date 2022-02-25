@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 	_ "time"
+
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	//the below packages need to have their gitlab branches sorted out prior to being
 	//imported via go mod tidy
 	//_ "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
@@ -34,13 +36,22 @@ type Data string
 type EventHandler string
 type SearchString string
 
-type ContextValue string
 type EventType string
+type SimpleContextValue string
 
-const SimpleEventHandler ContextValue = "PROTOCOL"
-const SimpleMsgBusValue ContextValue = "MSGBUS"
-const SimpleSrcAddrValue ContextValue = "SRCADDR"
-const SimpleDstAddrValue ContextValue = "DSTADDR"
+const SimpleContext SimpleContextValue = "SimpleContextKey"
+
+type SimpleProtocolInterface interface {
+	EventHandler(*SimpleEvent)
+}
+
+type SimpleContextStruct struct {
+	// Protocol func(*SimpleStruct) *SimpleProtocolInterface
+	MsgBus   *msgbus.PubSub
+	Src      net.Addr
+	Dst      net.Addr
+	Protocol func(*SimpleStruct) interface{}
+}
 
 const NoEvent EventType = "noevent"
 const MsgUpdateEvent EventType = "msgupdate"
@@ -80,7 +91,6 @@ func (s *SimpleStruct) msgToConnection(b []byte) {
 	//pass the struct to the protocol chan
 }
 
-
 // this is a temporary function used to initialize a SimpleListenStruct
 func dummyFunc() {}
 
@@ -116,7 +126,7 @@ func NewSimpleStruct(ctx context.Context) (SimpleStruct, error) {
 		cancel:       dummyFunc,
 		eventHandler: dummyStruct{},
 		eventChan:    make(chan SimpleEvent),
-		commChan: make(chan []byte),
+		commChan:     make(chan []byte),
 	}
 	// determine if a more robust error message is needed
 	return myStruct, errors.New("unable to create a SimpleListenStruct")
@@ -166,18 +176,18 @@ All of the SimpleStruct functions that follow can be called
 before and after Run() is called
 It is assumed that Run() can only be called once
 */
-func (s *SimpleStruct) Run(c context.Context) (error) {
+func (s *SimpleStruct) Run(c context.Context) error {
 	// loop to continuously listen for messages coming in
 	// on the channels assigned to the connection layer
 	// and the msgbus
 
 	for {
-	select {
-	case  x := <- s.commChan:
-		fmt.Printf("%+v", x)
-	default:
-		return errors.New("error in receiving commchan value")
-	}
+		select {
+		case x := <-s.commChan:
+			fmt.Printf("%+v", x)
+		default:
+			return errors.New("error in receiving commchan value")
+		}
 	}
 }
 
@@ -284,13 +294,21 @@ of a connection manager and MsgBus. The structure ties these
 to a protocol struct where events are directed to be handled.
 */
 type SimpleStruct struct {
-	ctx          context.Context
-	cancel       func()           //it might make sense to use the WithCancel function instead
-	//the event handler portion can be removed since the 
-	//EventHandler method in implemented on the SimpleStruct 
+	ctx    context.Context
+	cancel func() //it might make sense to use the WithCancel function instead
+	//the event handler portion can be removed since the
+	//EventHandler method in implemented on the SimpleStruct
 	eventHandler interface{}      //this is a SimpleEvent struct
 	eventChan    chan SimpleEvent //channel to listen for simple events
-	commChan    chan []byte //channel to listen for simple events
+	commChan     chan []byte      //channel to listen for simple events
+}
+
+func (ss *SimpleStruct) Ctx() context.Context {
+	return ss.ctx
+}
+
+func (ss *SimpleStruct) Cancel() {
+	ss.cancel()
 }
 
 /*
@@ -308,10 +326,6 @@ var eventOne EventType = "eventOne"
 type SimpleEvent struct {
 	EventType EventType
 	Data      interface{}
-}
-
-type SimpleProtocolInterface interface {
-	EventHandler(*SimpleEvent)
 }
 
 //event handler function for the SimpleStruct which is viewable from the protocol layer
