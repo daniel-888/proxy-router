@@ -28,30 +28,8 @@ type StratumV1Struct struct {
 	// simpleproto simple.SimpleProtocolInterface
 	// Other Protocol Structure here
 	simple      *simple.SimpleStruct
+	event       chan *simple.SimpleEvent
 	connections map[int]connectionStruct
-}
-
-//
-// NewProtocol() called in the SIMPL layer when a new connection is recieved
-// Stand up a default connection to the default destination
-//
-func NewProtocol(ss *simple.SimpleStruct) (s *StratumV1Struct) {
-
-	s = &StratumV1Struct{
-		simple:      ss,
-		connections: make(map[int]connectionStruct, 0),
-	}
-
-	scs := ss.Ctx().Value(simple.SimpleContext)
-	dst := scs.(simple.SimpleContextStruct).Dst
-
-	_, err := ss.Dial(dst)
-	//ConnID, err := ss.Dial(dst)
-	if err != nil {
-		panic("")
-	}
-
-	return s
 }
 
 //
@@ -61,21 +39,14 @@ func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr) (s 
 
 	// Validate src and dst here
 
-	//ctx = context.WithValue(ctx, simple.SimpleProtocolValue, NewProtocol)
-	//ctx = context.WithValue(ctx, simple.SimpleMsgBusValue, mb)
-	//ctx = context.WithValue(ctx, simple.SimpleSrcAddrValue, src)
-	//ctx = context.WithValue(ctx, simple.SimpleDstAddrValue, dst)
-
-	var newprotofunc interface{} = NewProtocol
-
 	scs := simple.SimpleContextStruct{
 		MsgBus:   mb,
 		Src:      src,
 		Dst:      dst,
-		Protocol: newprotofunc,
+		Protocol: newProtoFunc,
 	}
 
-	ctx = context.WithValue(ctx, simple.SimpleContext, sc)
+	ctx = context.WithValue(ctx, simple.SimpleContext, scs)
 
 	protocollisten, err := protocol.New(ctx)
 	if err != nil {
@@ -87,6 +58,52 @@ func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr) (s 
 	}
 
 	return s, e
+}
+
+//
+// newProtoFunc() is called by the simple layer for Accept() connections.
+// The system here will loop on the event channel, and handle the events one at a time
+//
+// SIMPL defined this function as passing in a SimpeStruct abd retuning a chan for SimpleEvents
+//
+func newProtoFunc(ss *simple.SimpleStruct) (ret chan *simple.SimpleEvent) {
+
+	ret = make(chan *simple.SimpleEvent)
+
+	// inialize the StratumV1Struct here, launch a go routine to monitor it.
+
+	svs := &StratumV1Struct{
+		event:       ret,
+		simple:      ss,
+		connections: make(map[int]connectionStruct, 0),
+	}
+
+	scs := svs.simple.Ctx().Value(simple.SimpleContext)
+	dst := scs.(simple.SimpleContextStruct).Dst
+
+	_, err := svs.simple.Dial(dst)
+	//ConnID, err := ss.Dial(dst)
+	if err != nil {
+		panic("")
+	}
+
+	go svs.goEvent()
+
+	return ret
+}
+
+//
+//
+//
+func (s *StratumV1Struct) goEvent() {
+
+	for {
+		select {
+		case event := <-s.event:
+			s.eventHandler(event)
+		}
+	}
+
 }
 
 //
@@ -107,10 +124,7 @@ func (s *StratumV1ListenStruct) Cancel() {
 //
 //
 // Event Handler
-func (svs *StratumV1Struct) EventHandler(event *simple.SimpleEvent) {
-
-	// Here is the access to the simple layer instance
-	// simplestruct := svs.simple
+func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) {
 
 	switch event.EventType {
 	case simple.NoEvent:

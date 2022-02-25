@@ -41,16 +41,11 @@ type SimpleContextValue string
 
 const SimpleContext SimpleContextValue = "SimpleContextKey"
 
-type SimpleProtocolInterface interface {
-	EventHandler(*SimpleEvent)
-}
-
 type SimpleContextStruct struct {
-	// Protocol func(*SimpleStruct) *SimpleProtocolInterface
+	Protocol func(*SimpleStruct) chan *SimpleEvent
 	MsgBus   *msgbus.PubSub
 	Src      net.Addr
 	Dst      net.Addr
-	Protocol func(*SimpleStruct) interface{}
 }
 
 const NoEvent EventType = "noevent"

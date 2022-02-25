@@ -17,10 +17,10 @@ func TestNewProto(t *testing.T) {
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, "127.0.0.1:12345")
 
 	sc := simple.SimpleContextStruct{
-		// Protocol:
-		MsgBus: ps,
-		Src:    src,
-		Dst:    dst,
+		Protocol: newProtcolFunc,
+		MsgBus:   ps,
+		Src:      src,
+		Dst:      dst,
 	}
 
 	ctx := context.Background()
@@ -35,4 +35,24 @@ func TestNewProto(t *testing.T) {
 
 	pls.Cancel()
 
+}
+
+//
+//
+//
+func newProtcolFunc(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
+
+	sec := make(chan *simple.SimpleEvent)
+
+	go func(sec chan *simple.SimpleEvent) {
+		for {
+			select {
+			case e := <-sec:
+				fmt.Printf("Event Recieved:%v", e)
+			}
+		}
+
+	}(sec)
+
+	return sec
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
@@ -17,15 +16,6 @@ func TestNewProto(t *testing.T) {
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, "127.0.0.1:12345")
 
 	ctx := context.Background()
-
-	sc := simple.SimpleContextStruct{
-		Protocol: NewProtocol,
-		MsgBus:   ps,
-		Src:      src,
-		Dst:      dst,
-	}
-
-	ctx = context.WithValue(ctx, simple.SimpleContext, sc)
 
 	sls, err := New(ctx, ps, src, dst)
 	if err != nil {
