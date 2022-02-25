@@ -48,6 +48,21 @@ func generateTestAddr() net.Addr {
 	return testAddr{x:"1"}
 }
 
+type ConnectionLayer struct {
+	SimpleConnection *SimpleStruct
+}
+
+func  NewConnLayer(s *SimpleStruct) ConnectionLayer {
+	return ConnectionLayer {
+		SimpleConnection: s,
+	}
+}
+
+func (c *ConnectionLayer) ConnToSimple() {
+	go func() {
+		c.SimpleConnection.commChan <- []byte("test message one")
+	}()
+}
 
 //function to simulate the protocol layer which will be able to listen for and
 //send events to the SIMPL layer
@@ -117,18 +132,39 @@ func TestSendMessageFromProtocolToConnectionLayer(t *testing.T) {
 	listenStruct := pc.ListenStruct
 	listenStruct.NewSimpleStruct(generateTestContext())
 	simpleStruct := <- listenStruct.accept
-	go simpleStruct.EventHandler()
 	event := SimpleEvent { //create a simpleEvent to pass into event chan
 		EventType: eventOne,
 		Data: []byte{},
 	}
-	simpleStruct.eventChan <- event //sending data to event handler
+	simpleStruct.EventHandler(event)
 	simpleStruct.Close()
 	listenStruct.Close()
 	
+
+	
 }
 
+//test to initialize a simple layer and protocol layer
+//connection layer will send byte information to the 
+//SimpleStruct and the SimpleStruct will pass that information upwards
+//to the protocol layer
+//message will be byte array of string "test sentence one"
 func TestSendMessageFromConnectionLayer(t *testing.T) {
+	pc := generateProtocolLayer()
+	listenStruct := pc.ListenStruct
+	listenStruct.NewSimpleStruct(generateTestContext())
+	simpleStruct := <- listenStruct.accept
+	go simpleStruct.Run(listenStruct.ctx)
+
+
+	connLayer := NewConnLayer(simpleStruct)
+	connLayer.ConnToSimple()
+
+	connMsg := <- simpleStruct.protocolChan
+	//getting an issue where Data is being considered an Interface instead of a byetstring
+	if "test sentence one" != string(connMsg.Data) {
+		t.Error("msg came out wrong",err)
+	}
 }
 
 func TestReceiveMessageFromMSGBus(t *testing.T) {
