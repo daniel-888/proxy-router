@@ -7,7 +7,7 @@ import (
 	"net"
 	_ "time"
 
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	//"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	//the below packages need to have their gitlab branches sorted out prior to being
 	//imported via go mod tidy
 	//_ "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
@@ -41,12 +41,13 @@ type SimpleContextValue string
 
 const SimpleContext SimpleContextValue = "SimpleContextKey"
 
-type SimpleContextStruct struct {
-	Protocol func(*SimpleStruct) chan *SimpleEvent
-	MsgBus   *msgbus.PubSub
-	Src      net.Addr
-	Dst      net.Addr
-}
+//commented out to avoid msgbus import errors
+//type SimpleContextStruct struct {
+//	Protocol func(*SimpleStruct) chan *SimpleEvent
+//	MsgBus   *msgbus.PubSub
+//	Src      net.Addr
+//	Dst      net.Addr
+//}
 
 const NoEvent EventType = "noevent"
 const MsgUpdateEvent EventType = "msgupdate"
@@ -65,26 +66,6 @@ const ConnEOFEvent EventType = "conneof"
 const ConnErrorEvent EventType = "connerror"
 const ErrorEvent EventType = "error"
 
-// takes the byte array destined for the protocol layer and unmarshals it into a ProtocolMessage struct
-// then it pushes the ProtocolMessage onto the ProtocolChan
-func (s *SimpleStruct) msgToProtocol(b []byte) {
-	//create an in-memory temporary struct to pass to the ProtocolChan
-	//pass the struct to the protocol chan
-}
-
-// takes the byte array destined for the protocol layer and unmarshals it into a MSGBusMessage struct
-// then it pushes the MSGBusMessage onto the MSGChan
-func (s *SimpleStruct) msgToMSGBus(b []byte) {
-	//create an in-memory temporary struct to pass to the MSGChan
-	//pass the struct to the protocol chan
-}
-
-// takes the byte array destined for the protocol layer and unmarshals it into a ConnectionMessage struct
-// then it pushes the ConnectionMessage onto the ConnectionChan
-func (s *SimpleStruct) msgToConnection(b []byte) {
-	//create an in-memory temporary struct to pass to the ConnectionChan
-	//pass the struct to the protocol chan
-}
 
 // this is a temporary function used to initialize a SimpleListenStruct
 func dummyFunc() {}
