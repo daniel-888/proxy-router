@@ -16,4 +16,5 @@ cmd
 
 # Lumerin config
 ropstenconfig.json
+lumerinconfig.json
 ganacheconfig.json

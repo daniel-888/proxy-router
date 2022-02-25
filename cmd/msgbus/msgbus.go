@@ -1,8 +1,8 @@
 package msgbus
 
 import (
+	"crypto/rand"
 	"fmt"
-	"os"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
@@ -41,15 +41,15 @@ const (
 )
 
 const (
-	NoMsg         			 MsgType = "NoMsg"
-	ConfigMsg     			 MsgType = "ConfigMsg"
+	NoMsg                    MsgType = "NoMsg"
+	ConfigMsg                MsgType = "ConfigMsg"
 	ContractManagerConfigMsg MsgType = "ContractManagerConfigMsg"
-	DestMsg       			 MsgType = "DestMsg"
-	NodeOperatorMsg     	 MsgType = "NodeOperatorMsg"
-	ContractMsg   			 MsgType = "ContractMsg"
-	MinerMsg     			 MsgType = "MinerMsg"
-	ConnectionMsg 			 MsgType = "ConnectionMsg"
-	LogMsg        			 MsgType = "LogMsg"
+	DestMsg                  MsgType = "DestMsg"
+	NodeOperatorMsg          MsgType = "NodeOperatorMsg"
+	ContractMsg              MsgType = "ContractMsg"
+	MinerMsg                 MsgType = "MinerMsg"
+	ConnectionMsg            MsgType = "ConnectionMsg"
+	LogMsg                   MsgType = "LogMsg"
 )
 
 type Event struct {
@@ -1274,20 +1274,14 @@ func (reg *registry) removeAndClose(c *cmd) {
 
 }
 
-//-----------------------------------------
-//
-//-----------------------------------------
+// GetRandomIDString returns a random string.
+// Format: xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx
 func GetRandomIDString() (i IDString) {
-
-	f, err := os.Open("/dev/urandom")
-	if err != nil {
-		fmt.Printf("Error reading /dev/urandom: %s\n", err)
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		fmt.Printf("Error reading random file: %s\n", err)
 		panic(err)
 	}
-	b := make([]byte, 16)
-	f.Read(b)
-	f.Close()
-	//fmt.Printf("%08x-%08x-%08x-%08x\n", b[0:4], b[4:8], b[8:12], b[12:16])
 	str := fmt.Sprintf("%08x-%08x-%08x-%08x", b[0:4], b[4:8], b[8:12], b[12:16])
 	i = IDString(str)
 	return i
