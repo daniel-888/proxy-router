@@ -3,3 +3,4 @@
 ropstenconfig.json
 lumerinconfig.json
 ganacheconfig.json
+*.log

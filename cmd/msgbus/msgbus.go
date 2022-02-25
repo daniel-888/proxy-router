@@ -101,7 +101,9 @@ const (
 )
 
 type cmd struct {
-	op       operation
+	op operation
+	// sync indicates how the response should be sent back to the caller,
+	// synchronously (direct return) or asynchronously via a supplied channel.
 	sync     bool
 	msg      MsgType
 	ID       IDString
