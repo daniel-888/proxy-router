@@ -3,5 +3,6 @@ package contractmanager
 import "testing"
 
 func TestDeployment(t *testing.T) {
-	BeforeEach()
+	configPath := "../../ropstenconfig.json"
+	BeforeEach(configPath)
 }

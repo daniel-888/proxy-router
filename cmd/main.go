@@ -142,7 +142,7 @@ func main() {
 	}
 
 	//
-	//Fire up contract manager
+	// Fire up contract manager
 	//
 	if disablecontract == "false" {
 		var contractManagerConfig msgbus.ContractManagerConfig

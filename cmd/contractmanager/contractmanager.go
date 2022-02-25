@@ -230,13 +230,48 @@ func (seller *SellerContractManager) setupExistingContracts() (err error) {
 			}
 			contractValues = append(contractValues, contract)
 			contractMsgs = append(contractMsgs, createContractMsg(sellerContracts[i], contractValues[i], true))
-			seller.ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contractMsgs[i].ID), contractMsgs[i])
-	
+			
 			seller.nodeOperator.Contracts[msgbus.ContractID(sellerContracts[i].Hex())] = msgbus.ContAvailableState
-	
+
 			if contractValues[i].State == RunningState {
 				seller.nodeOperator.Contracts[msgbus.ContractID(sellerContracts[i].Hex())] = msgbus.ContRunningState
+
+				// get existing dests in msgbus to see if contract's dest already exists
+				event, err := seller.ps.GetWait(msgbus.DestMsg, "")
+				if err != nil {
+					panic(fmt.Sprintf("Getting existing dests Failed: %s", err))
+				}
+				existingDests := event.Data.(msgbus.IDIndex)
+
+				destUrl, err := readDestUrl(seller.ethClient, sellerContracts[i], seller.privateKey)
+				if err != nil {
+					panic(fmt.Sprintf("Reading dest url failed, Fileline::%s, Error::%v", lumerinlib.FileLine(), err))
+				}
+
+				// if msgbus has dest with same target address, use that as contract msg dest 
+				for _,v := range existingDests {
+					existingDest, err := seller.ps.DestGetWait(msgbus.DestID(v))
+					if err != nil {
+						panic(fmt.Sprintf("Getting existing dest Failed: %s", err))
+					}
+					if existingDest.NetUrl == msgbus.DestNetUrl(destUrl) {
+						contractMsgs[i].Dest = msgbus.DestID(v)
+					}
+				}
+
+				// msgbus does not have dest with that target address
+				if contractMsgs[i].Dest == "" {
+					destMsg := msgbus.Dest{
+						ID:     msgbus.DestID(msgbus.GetRandomIDString()),
+						NetUrl: msgbus.DestNetUrl(destUrl),
+					}
+					seller.ps.PubWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
+	
+					contractMsgs[i].Dest = destMsg.ID
+				}	
 			}
+
+			seller.ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contractMsgs[i].ID), contractMsgs[i])
 		}
 	}
 

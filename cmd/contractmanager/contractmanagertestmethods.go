@@ -372,9 +372,9 @@ func createNewGanacheBlock(ts TestSetup, account common.Address, privateKey stri
 	time.Sleep(time.Millisecond * time.Duration(sleepTime))
 }
 
-func BeforeEach() (ts TestSetup) {
+func BeforeEach(configPath string) (ts TestSetup) {
 	var constructorParams [5]common.Address
-	configData, err := LoadTestConfiguration("contractManager", "../../ganacheconfig.json")
+	configData, err := LoadTestConfiguration("contractManager", configPath)
 	if err != nil {
 		log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
 	}
