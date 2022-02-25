@@ -65,6 +65,7 @@ const ConnReadEvent EventType = "connread"
 const ConnEOFEvent EventType = "conneof"
 const ConnErrorEvent EventType = "connerror"
 const ErrorEvent EventType = "error"
+const MsgToProtocol EventType = "msgUp"
 
 
 // this is a temporary function used to initialize a SimpleListenStruct
@@ -92,7 +93,6 @@ func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
 		accept: make(chan *SimpleStruct),
 	}
 	// determine if a more robust error message is needed
-	// return myStruct, errors.New("unable to create a SimpleListenStruct")
 	return myStruct, nil
 }
 
@@ -108,6 +108,8 @@ func NewSimpleStruct(ctx context.Context) (SimpleStruct, error) {
 	return myStruct, errors.New("unable to create a SimpleListenStruct")
 }
 
+//consider calling this as a gorouting from protocol layer, assuming
+//protocll layer will have a layer to communicate with a chan over
 func (s *SimpleListenStruct) Run() error {
 	go func() {
 		// continuously listen for messages coming in on the accept channel
@@ -117,13 +119,14 @@ func (s *SimpleListenStruct) Run() error {
 			fmt.Printf("%+v", x)
 		}
 	}()
-	return errors.New("meow")
+	return nil
 }
 
 func (s *SimpleListenStruct) Accept() <-chan *SimpleStruct {
 	return s.accept
 }
 
+// replacing the channel with a return statement containing the new simple struct
 func (s *SimpleListenStruct) NewSimpleStruct(ctx context.Context) {
 	go func() {
 		myStruct := &SimpleStruct{ //generate a new SimpleStruct
@@ -160,7 +163,12 @@ func (s *SimpleStruct) Run(c context.Context) error {
 	for {
 		select {
 		case x := <-s.commChan:
-			fmt.Printf("%+v", x)
+			//create SimpleEvent and pass to event handler
+			newMessage := SimpleEvent{
+				EventType: MsgToProtocol,
+				Data: x,
+			}
+			s.EventHandler(newMessage)
 		default:
 			return errors.New("error in receiving commchan value")
 		}
@@ -276,6 +284,7 @@ type SimpleStruct struct {
 	//EventHandler method in implemented on the SimpleStruct
 	eventHandler interface{}      //this is a SimpleEvent struct
 	eventChan    chan SimpleEvent //channel to listen for simple events
+	protocolChan chan SimpleEvent //channel for protocol to receive simple events
 	commChan     chan []byte      //channel to listen for simple events
 }
 
@@ -305,11 +314,42 @@ type SimpleEvent struct {
 }
 
 //event handler function for the SimpleStruct which is viewable from the protocol layer
-func (s *SimpleStruct) EventHandler() {
+func (s *SimpleStruct) EventHandler(e SimpleEvent) {
 	for {
-		x := <-s.eventChan
-		switch x.EventType {
-		case eventOne:
+		switch e.EventType {
+		case NoEvent:
+			fallthrough
+		case MsgUpdateEvent:
+			fallthrough
+		case MsgDeleteEvent:
+			fallthrough
+		case MsgGetEvent:
+			fallthrough
+		case MsgGetIndexEvent:
+			fallthrough
+		case MsgSearchEvent:
+			fallthrough
+		case MsgSearchIndexEvent:
+			fallthrough
+		case MsgPublishEvent:
+			fallthrough
+		case MsgUnpublishEvent:
+			fallthrough
+		case MsgSubscribedEvent:
+			fallthrough
+		case MsgUnsubscribedEvent:
+			fallthrough
+		case MsgRemovedEvent:
+			fallthrough
+		case ConnReadEvent:
+			fallthrough
+		case ConnEOFEvent:
+			fallthrough
+		case ConnErrorEvent:
+			fallthrough
+		case ErrorEvent:
+			fallthrough
+		case MsgToProtocol:
 			fallthrough
 		default:
 			return
