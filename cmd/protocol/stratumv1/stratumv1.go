@@ -15,10 +15,6 @@ import (
 // Need a series of access functions
 //
 //
-type connectionStruct struct {
-	dst net.Addr
-	id  simple.ConnUniqueID
-}
 
 type StratumV1ListenStruct struct {
 	protocollisten *protocol.ProtocolListenStruct
@@ -27,9 +23,10 @@ type StratumV1ListenStruct struct {
 type StratumV1Struct struct {
 	// simpleproto simple.SimpleProtocolInterface
 	// Other Protocol Structure here
-	simple      *simple.SimpleStruct
-	event       chan *simple.SimpleEvent
-	connections map[int]connectionStruct
+	simple    *simple.SimpleStruct
+	eventchan chan *simple.SimpleEvent
+	srcconn   protocol.ProtocolConnectionStruct
+	dstconn   map[int]protocol.ProtocolConnectionStruct
 }
 
 //
@@ -72,17 +69,21 @@ func newProtoFunc(ss *simple.SimpleStruct) (ret chan *simple.SimpleEvent) {
 
 	// inialize the StratumV1Struct here, launch a go routine to monitor it.
 
-	svs := &StratumV1Struct{
-		event:       ret,
-		simple:      ss,
-		connections: make(map[int]connectionStruct, 0),
-	}
-
-	scs := svs.simple.Ctx().Value(simple.SimpleContext)
+	scs := ss.Ctx().Value(simple.SimpleContext)
+	src := scs.(simple.SimpleContextStruct).Src
 	dst := scs.(simple.SimpleContextStruct).Dst
 
-	_, err := svs.simple.Dial(dst)
-	//ConnID, err := ss.Dial(dst)
+	svs := &StratumV1Struct{
+		eventchan: ret,
+		simple:    ss,
+		srcconn: protocol.ProtocolConnectionStruct{
+			Addr: src,
+			Id:   0,
+		},
+		dstconn: make(map[int]protocol.ProtocolConnectionStruct, 0),
+	}
+
+	err := svs.openDstConnection(dst)
 	if err != nil {
 		panic("")
 	}
@@ -96,14 +97,9 @@ func newProtoFunc(ss *simple.SimpleStruct) (ret chan *simple.SimpleEvent) {
 //
 //
 func (s *StratumV1Struct) goEvent() {
-
-	for {
-		select {
-		case event := <-s.event:
-			s.eventHandler(event)
-		}
+	for event := range s.eventchan {
+		s.eventHandler(event)
 	}
-
 }
 
 //
@@ -231,4 +227,12 @@ func (svs *StratumV1Struct) decodeMsgBusEvent(event msgbus.Event) {
 	default:
 		lumerinlib.PanicHere(fmt.Sprintf(lumerinlib.FileLine()+" Default Reached: Event Type:%s", string(event.EventType)))
 	}
+}
+
+//
+//
+//
+func (svs *StratumV1Struct) openDstConnection(dst net.Addr) (e error) {
+
+	return e
 }

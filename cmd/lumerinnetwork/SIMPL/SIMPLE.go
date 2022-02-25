@@ -7,6 +7,7 @@ import (
 	"net"
 	_ "time"
 
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	//"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	//the below packages need to have their gitlab branches sorted out prior to being
 	//imported via go mod tidy
@@ -41,13 +42,12 @@ type SimpleContextValue string
 
 const SimpleContext SimpleContextValue = "SimpleContextKey"
 
-//commented out to avoid msgbus import errors
-//type SimpleContextStruct struct {
-//	Protocol func(*SimpleStruct) chan *SimpleEvent
-//	MsgBus   *msgbus.PubSub
-//	Src      net.Addr
-//	Dst      net.Addr
-//}
+type SimpleContextStruct struct {
+	Protocol func(*SimpleStruct) chan *SimpleEvent
+	MsgBus   *msgbus.PubSub
+	Src      net.Addr
+	Dst      net.Addr
+}
 
 const NoEvent EventType = "noevent"
 const MsgUpdateEvent EventType = "msgupdate"
@@ -66,7 +66,6 @@ const ConnEOFEvent EventType = "conneof"
 const ConnErrorEvent EventType = "connerror"
 const ErrorEvent EventType = "error"
 const MsgToProtocol EventType = "msgUp"
-
 
 // this is a temporary function used to initialize a SimpleListenStruct
 func dummyFunc() {}
@@ -166,7 +165,7 @@ func (s *SimpleStruct) Run(c context.Context) error {
 			//create SimpleEvent and pass to event handler
 			newMessage := SimpleEvent{
 				EventType: MsgToProtocol,
-				Data: x,
+				Data:      x,
 			}
 			s.EventHandler(newMessage)
 		default:
