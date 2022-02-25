@@ -1,6 +1,6 @@
 #!/bin/sh
 
-./lumerin \
+lumerin \
 	--buyer="false" \
 	--network="custom" \
 	--mnemonic="" \
@@ -9,7 +9,7 @@
 	--accountindex="0" \
 	--listenip="127.0.0.1" \
 	--listenport=3334 \
-	--configfile="./lumerinconfig.json" \
+	--configfile="./ganacheconfig.json" \
 	--configdownload="" \
 	--logfile="/tmp/lumerin1.log" \
 	--loglevel=4 \
