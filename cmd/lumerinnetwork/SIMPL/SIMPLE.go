@@ -37,6 +37,7 @@ type SearchString string
 type ContextValue string
 type EventType string
 
+const SimpleEventHandler ContextValue = "PROTOCOL"
 const SimpleMsgBusValue ContextValue = "MSGBUS"
 const SimpleSrcAddrValue ContextValue = "SRCADDR"
 const SimpleDstAddrValue ContextValue = "DSTADDR"
@@ -212,7 +213,7 @@ func (s *SimpleStruct) SetEncryptionDefault() {}
 func (s *SimpleStruct) SetCompressionDefault() {}
 
 // Dial the a destination address (DST)
-func (s *SimpleStruct) Dial(u URL) ConnUniqueID { return 1 } //return of 1 to appease compiler
+func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) { return 0, nil } //return of 1 to appease compiler
 
 // Reconnect dropped connection
 func (s *SimpleStruct) Redial(u ConnUniqueID) {} //return of 1 to appease compiler

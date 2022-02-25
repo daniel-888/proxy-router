@@ -10,11 +10,11 @@ import (
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
-type ContextValue string
-
-const SimpleMsgBusValue ContextValue = "MSGBUS"
-const SimpleSrcAddrValue ContextValue = "SRCADDR"
-const SimpleDstAddrValue ContextValue = "DSTADDR"
+//type ContextValue string
+//
+//const SimpleMsgBusValue ContextValue = "MSGBUS"
+//const SimpleSrcAddrValue ContextValue = "SRCADDR"
+//const SimpleDstAddrValue ContextValue = "DSTADDR"
 
 //
 // Top layer protocol template functions that a new protocol will use to access the SIMPLe layer
@@ -26,9 +26,9 @@ type ProtocolListenStruct struct {
 	simplelisten *simple.SimpleListenStruct
 }
 
-type ProtocolInterface interface {
-	EventHandler(*simple.SimpleStruct)
-}
+//type ProtocolInterface interface {
+//	EventHandler(*simple.SimpleStruct)
+//}
 
 //
 // New() Create a new ProtocolListenStruct
@@ -37,24 +37,24 @@ func New(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 
 	var ok bool
 
-	// eh := ctx.Value(simple.SimpleEventHandler)
-	// if eh == nil {
-	// 	lumerinlib.PanicHere("")
-	// }
+	eh := ctx.Value(simple.SimpleEventHandler)
+	if eh == nil {
+		lumerinlib.PanicHere("")
+	}
 
-	mb := ctx.Value(SimpleMsgBusValue)
+	mb := ctx.Value(simple.SimpleMsgBusValue)
 	_, ok = mb.(*msgbus.PubSub)
 	if !ok {
 		lumerinlib.PanicHere("Missing SimpleMsgBusValue")
 	}
 
-	dst := ctx.Value(SimpleDstAddrValue)
+	dst := ctx.Value(simple.SimpleDstAddrValue)
 	_, ok = dst.(net.Addr)
 	if !ok {
 		lumerinlib.PanicHere("Missing SimpleDstAddrValue")
 	}
 
-	listen := ctx.Value(SimpleSrcAddrValue)
+	listen := ctx.Value(simple.SimpleSrcAddrValue)
 	_, ok = listen.(net.Addr)
 	if !ok {
 		lumerinlib.PanicHere("Missing SimpleSrcAddrValue")
@@ -87,7 +87,6 @@ func (pls *ProtocolListenStruct) Cancel() {
 // Run() calls the simple layer Run function on the SimpleListenStruct
 //
 func (pls *ProtocolListenStruct) Run() {
-	pls.simplelisten.Run()
 	go pls.goAccept()
 }
 
