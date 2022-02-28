@@ -5,54 +5,54 @@ type MinerState string
 
 const (
 	ContAvailableState ContractState = "AvailableState"
-	ContActiveState    ContractState = "ActiveState"
 	ContRunningState   ContractState = "RunningState"
-	ContCompleteState  ContractState = "CompleteState"
 )
 
 // Need to figure out the IDString for this, for now it is just a string
 type IDString string
 type ConfigID IDString
-type SellerID IDString
-type BuyerID IDString
+type ContractManagerConfigID IDString
+type NodeOperatorID IDString
 type ContractID IDString
 
 // Do we still need this with the config package in place?
 type ConfigInfo struct {
-	ID          ConfigID
-	DefaultDest DestID
-	Seller      SellerID
+	ID          	ConfigID
+	DefaultDest 	DestID
+	NodeOperator	NodeOperatorID
 }
 
-type Seller struct {
-	ID                     SellerID
+type ContractManagerConfig struct {
+	ID			 		ContractManagerConfigID
+	Mnemonic	 		string
+	AccountIndex 		int
+	EthNodeAddr 		string
+	ClaimFunds	 		bool
+	CloneFactoryAddress string
+	LumerinTokenAddress string
+	ValidatorAddress	string
+	ProxyAddress		string
+}
+
+type NodeOperator struct {
+	ID                     NodeOperatorID
+	IsBuyer                bool
 	DefaultDest            DestID
+	EthereumAccount		   string
 	TotalAvailableHashRate int
 	UnusedHashRate         int
-	AvailableContracts     map[ContractID]bool
-	ActiveContracts        map[ContractID]bool
-	RunningContracts       map[ContractID]bool
-	CompleteContracts      map[ContractID]bool
-}
-
-type Buyer struct {
-	ID                BuyerID
-	DefaultDest       DestID
-	ActiveContracts   map[ContractID]bool
-	RunningContracts  map[ContractID]bool
-	CompleteContracts map[ContractID]bool
+	Contracts       	   map[ContractID]ContractState
 }
 
 type Contract struct {
 	IsSeller               bool
 	ID                     ContractID
 	State                  ContractState
-	Buyer                  BuyerID
+	Buyer                  string
 	Price                  int
 	Limit                  int
 	Speed                  int
 	Length                 int
-	ValidationFee          int
 	StartingBlockTimestamp int
 	Dest                   DestID
 }

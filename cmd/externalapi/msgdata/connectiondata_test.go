@@ -3,6 +3,9 @@ package msgdata
 import (
 	"fmt"
 	"testing"
+	"time"
+
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 func TestAddConnection(t *testing.T) {
@@ -12,10 +15,11 @@ func TestAddConnection(t *testing.T) {
 		Dest:      				"Test",
 		State:     				"Test",
 		TotalHash: 				100, //"Test",
-		StartDate: 				"Test",
+		StartDate: 				time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC),
 	}
 	
-	connectionRepo := NewConnection()
+	ps := msgbus.New(10)
+	connectionRepo := NewConnection(ps)
 	connectionRepo.AddConnection(connection)
 
 	if len(connectionRepo.ConnectionJSONs) != 1 {
@@ -31,10 +35,11 @@ func TestGetAllConnections(t *testing.T) {
 		connection[i].Dest = "Test"
 		connection[i].State = "Test"
 		connection[i].TotalHash = 100 //"Test"
-		connection[i].StartDate = "Test"
+		connection[i].StartDate = time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC)
 	}
 	
-	connectionRepo := NewConnection()
+	ps := msgbus.New(10)
+	connectionRepo := NewConnection(ps)
 	for i := 0; i < 10; i++ {
 		connectionRepo.AddConnection(connection[i])
 	}
@@ -53,10 +58,11 @@ func TestGetConnection(t *testing.T) {
 		connection[i].Dest = "Test"
 		connection[i].State = "Test"
 		connection[i].TotalHash = 100 //"Test"
-		connection[i].StartDate = "Test"
+		connection[i].StartDate = time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC)
 	}
 	
-	connectionRepo := NewConnection()
+	ps := msgbus.New(10)
+	connectionRepo := NewConnection(ps)
 	for i := 0; i < 10; i++ {
 		connectionRepo.AddConnection(connection[i])
 	}
@@ -79,10 +85,11 @@ func TestUpdateConnection(t *testing.T) {
 		connection[i].Dest = "Test"
 		connection[i].State = "Test"
 		connection[i].TotalHash = 100 //"Test"
-		connection[i].StartDate = "Test"
+		connection[i].StartDate = time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC)
 	}
 	
-	connectionRepo := NewConnection()
+	ps := msgbus.New(10)
+	connectionRepo := NewConnection(ps)
 	for i := 0; i < 10; i++ {
 		connectionRepo.AddConnection(connection[i])
 	}
@@ -93,7 +100,7 @@ func TestUpdateConnection(t *testing.T) {
 		Dest:      				"",
 		State:     				"",
 		TotalHash: 				0, //"",
-		StartDate: 				"",
+		StartDate: 				time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC),
 	}
 	
 	var results [10]ConnectionJSON
@@ -121,10 +128,11 @@ func TestDeleteConnection(t *testing.T) {
 		connection[i].Dest = "Test"
 		connection[i].State = "Test"
 		connection[i].TotalHash = 0 //"Test"
-		connection[i].StartDate = "Test"
+		connection[i].StartDate = time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC)
 	}
 	
-	connectionRepo := NewConnection()
+	ps := msgbus.New(10)
+	connectionRepo := NewConnection(ps)
 	for i := 0; i < 10; i++ {
 		connectionRepo.AddConnection(connection[i])
 	}

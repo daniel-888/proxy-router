@@ -3,16 +3,19 @@ package msgdata
 import (
 	"fmt"
 	"testing"
+
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 func TestAddConfigInfo(t *testing.T) {
 	config := ConfigInfoJSON{
-		ID:          "Test",
-		DefaultDest: "Test",
-		Seller:      "Test",
+		ID:          	"Test",
+		DefaultDest: 	"Test",
+		NodeOperator:	"Test",
 	}
 	
-	configRepo := NewConfigInfo()
+	ps := msgbus.New(10)
+	configRepo := NewConfigInfo(ps)
 	configRepo.AddConfigInfo(config)
 
 	if len(configRepo.ConfigInfoJSONs) != 1 {
@@ -25,10 +28,11 @@ func TestGetAllConfigInfos(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		config[i].ID = "Test" + fmt.Sprint(i)
 		config[i].DefaultDest = "Test"
-		config[i].Seller = "Test"
+		config[i].NodeOperator = "Test"
 	}
 	
-	configRepo := NewConfigInfo()
+	ps := msgbus.New(10)
+	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
 	}
@@ -44,10 +48,11 @@ func TestGetConfigInfo(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		config[i].ID = "Test" + fmt.Sprint(i)
 		config[i].DefaultDest = "Test"
-		config[i].Seller = "Test"
+		config[i].NodeOperator = "Test"
 	}
 	
-	configRepo := NewConfigInfo()
+	ps := msgbus.New(10)
+	configRepo := NewConfigInfo(ps)	
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
 	}
@@ -67,10 +72,11 @@ func TestUpdateConfigInfo(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		config[i].ID = "Test" + fmt.Sprint(i)
 		config[i].DefaultDest = "Test"
-		config[i].Seller = "Test"
+		config[i].NodeOperator = "Test"
 	}
 	
-	configRepo := NewConfigInfo()
+	ps := msgbus.New(10)
+	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
 	}
@@ -78,7 +84,7 @@ func TestUpdateConfigInfo(t *testing.T) {
 	configUpdates := ConfigInfoJSON{
 		ID:		"",
 		DefaultDest: "",
-		Seller:	"Updated",
+		NodeOperator:	"Updated",
 	}
 	
 	var results [10]ConfigInfoJSON
@@ -89,7 +95,7 @@ func TestUpdateConfigInfo(t *testing.T) {
 		if errors[i] != nil {
 			t.Errorf("UpdateConfigInfo function returned error for this ID: " + results[i].ID)
 		}
-		if results[i].Seller != "Updated" {
+		if results[i].NodeOperator != "Updated" {
 			t.Errorf("UpdateConfigInfo function did not update Config Info")
 		}
 		if results[i].ID != config[i].ID {
@@ -103,10 +109,11 @@ func TestDeleteConfigInfo(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		config[i].ID = "Test" + fmt.Sprint(i)
 		config[i].DefaultDest = "Test"
-		config[i].Seller = "Test"
+		config[i].NodeOperator = "Test"
 	}
 	
-	configRepo := NewConfigInfo()
+	ps := msgbus.New(10)
+	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
 	}

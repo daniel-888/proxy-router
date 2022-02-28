@@ -9,11 +9,11 @@ type ConfigConst string
 const (
 	BuyerNode                        ConfigConst = "BuyerNode"
 	ConfigHelp                       ConfigConst = "ConfigHelp"
-	ConfigContractEthURL             ConfigConst = "ConfigContractEthURL"
-	ConfigContractManagerAcct        ConfigConst = "ConfigContractManagerAcct"
-	ConfigContractMinShareAmtPerMin  ConfigConst = "ConfigContractMinShareAmtPerMin"
-	ConfigContractMinShareAvePerHour ConfigConst = "ConfigContractMinShareAvePerHour"
-	ConfigContractShareDropTolerance ConfigConst = "ConfigContractShareDropTolerance"
+	ConfigContractNetwork				ConfigConst = "ConfigContractNetwork"
+	ConfigContractMnemonic			 	ConfigConst = "ConfigContractMnemonic"
+	ConfigContractEthereumNodeAddress   ConfigConst = "ConfigContractEthereumNodeAddress"
+	ConfigContractClaimFunds            ConfigConst = "ConfigContractClaimFunds"
+	ConfigContractAccountIndex 			ConfigConst = "ConfigContractAccountIndex"
 	ConfigConnectionListenIP         ConfigConst = "ConfigConnectionListenIP"
 	ConfigConnectionListenPort       ConfigConst = "ConfigConnectionListenPort"
 	ConfigConfigFilePath             ConfigConst = "ConfigConfigFilePath"
@@ -25,6 +25,7 @@ const (
 	DisableContract                  ConfigConst = "DisableContract"
 	DisableSchedule                  ConfigConst = "DisableSchedule"
 	DisableStratumv1                 ConfigConst = "DisableStratumV1"
+	DisableAPI						 	ConfigConst = "DisableAPI"
 )
 
 // Config Structure
@@ -83,61 +84,61 @@ var ConfigMap = map[ConfigConst]configitem{
 		envval:     nil,
 		flagval:    nil,
 	},
-	ConfigContractEthURL: {
-		flagname:   "ethurl",
-		flagusage:  "GETH Node URL",
-		envname:    "ETHURL",
-		configname: "contract.ethurl",
-		defval:     "wss://127.0.0.1:7545",
+	ConfigContractNetwork: {
+		flagname:   "network",
+		flagusage:  "Options: mainnet, ropsten, or custom",
+		envname:    "NEWTORK",
+		configname: "contract.network",
+		defval:     "ropsten",
 		configval:  nil,
 		envval:     nil,
 		flagval:    nil,
 	},
-	ConfigContractManagerAcct: {
-		flagname:   "contractmanager",
-		flagusage:  "Contract Manager Account ID",
-		envname:    "CONTRACTMANAGERID",
-		configname: "contract.manager",
+	ConfigContractMnemonic: {
+		flagname:   "mnemonic",
+		flagusage:  "HD Wallet Mnemonic",
+		envname:    "MNEMONIC",
+		configname: "contract.mnemonic",
 		defval:     "",
 		configval:  nil,
 		envval:     nil,
 		flagval:    nil,
 	},
-	ConfigContractMinShareAmtPerMin: {
-		flagname:   "",
-		flagusage:  "",
-		envname:    "",
-		configname: "contractManager.MinShareAmtPerMin",
-		defval:     "10",
+	ConfigContractEthereumNodeAddress: {
+		flagname:   "ethnodeaddress",
+		flagusage:  "URL of Ethereum Node",
+		envname:    "ETHNODEADDRESS",
+		configname: "contract.ethnode",
+		defval:     "wss://127.0.0.1:7545",
 		configval:  nil,
 		envval:     nil,
 		flagval:    nil,
 	},
-	ConfigContractMinShareAvePerHour: {
-		flagname:   "",
-		flagusage:  "",
-		envname:    "",
-		configname: "contractManager.MinShareAvePerHour",
-		defval:     "10",
+	ConfigContractClaimFunds: {
+		flagname:   "claimfunds",
+		flagusage:  "Seller Claims Funds at Closeout",
+		envname:    "CLAIMFUNDS",
+		configname: "contract.claimfunds",
+		defval:     "false",
 		configval:  nil,
 		envval:     nil,
 		flagval:    nil,
 	},
-	ConfigContractShareDropTolerance: {
-		flagname:   "",
-		flagusage:  "",
-		envname:    "",
-		configname: "contractManager.ShareDropTolerance",
-		defval:     "10",
+	ConfigContractAccountIndex: {
+		flagname:   "accountindex",
+		flagusage:  "Account number in HD Wallet",
+		envname:    "ACCOUNTINDEX",
+		configname: "contract.accountindex",
+		defval:     "0",
 		configval:  nil,
 		envval:     nil,
 		flagval:    nil,
 	},
 	ConfigConfigFilePath: {
 		flagname:  "configfile",
-		flagusage: "Configuration File Path",
+		flagusage: "Relative Path to Configuration File",
 		envname:   "CONFIGFILEPATH",
-		defval:    "lumerinconfig.json",
+		defval:    "",
 		configval: nil,
 		envval:    nil,
 		flagval:   nil,
@@ -209,6 +210,15 @@ var ConfigMap = map[ConfigConst]configitem{
 		flagname:  "disablestratumv1",
 		flagusage: "Disable the Stratum V1 Protocol",
 		envname:   "DISABLESTRATUMV1",
+		defval:    "false",
+		configval: nil,
+		envval:    nil,
+		flagval:   nil,
+	},
+	DisableAPI: {
+		flagname:  "disableapi",
+		flagusage: "Disable the external api",
+		envname:   "DISABLEAPI",
 		defval:    "false",
 		configval: nil,
 		envval:    nil,

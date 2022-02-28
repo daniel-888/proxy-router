@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 
@@ -36,6 +38,11 @@ func DestPOST(dest *msgdata.DestRepo) gin.HandlerFunc {
 		}
 		for i := range(requestBody) {
 			dest.AddDest(requestBody[i])
+			destMsg := msgdata.ConvertDestJSONtoDestMSG(requestBody[i])
+			_,err := dest.Ps.PubWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
+			if err != nil {
+				log.Printf("Dest POST request failed to update msgbus: %s", err)
+			}
 		}
 	
 		c.Status(http.StatusOK)
@@ -55,6 +62,13 @@ func DestPUT(dest *msgdata.DestRepo) gin.HandlerFunc {
 			c.Status(http.StatusNotFound)
 			return
 		}
+
+		destMsg := msgdata.ConvertDestJSONtoDestMSG(requestBody)
+		_,err := dest.Ps.SetWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
+		if err != nil {
+			log.Printf("Dest PUT request failed to update msgbus: %s", err)
+		}
+
 		c.Status(http.StatusOK)
 	}
 }
@@ -67,6 +81,12 @@ func DestDELETE(dest *msgdata.DestRepo) gin.HandlerFunc {
 			c.Status(http.StatusNotFound)
 			return
 		}
+
+		_,err := dest.Ps.UnpubWait(msgbus.DestMsg, msgbus.IDString(id))
+		if err != nil {
+			log.Printf("Dest DELETE request failed to update msgbus: %s", err)
+		}
+
 		c.Status(http.StatusOK)
 	}
 }

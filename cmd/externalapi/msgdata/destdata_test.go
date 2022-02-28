@@ -3,6 +3,8 @@ package msgdata
 import (
 	"fmt"
 	"testing"
+
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 func TestAddDest(t *testing.T) {
@@ -11,7 +13,8 @@ func TestAddDest(t *testing.T) {
 		NetUrl: 	"Test",
 	}
 	
-	destRepo := NewDest()
+	ps := msgbus.New(10)
+	destRepo := NewDest(ps)
 	destRepo.AddDest(dest)
 
 	if len(destRepo.DestJSONs) != 1 {
@@ -26,7 +29,8 @@ func TestGetAllDests(t *testing.T) {
 		dest[i].NetUrl = "Test"
 	}
 	
-	destRepo := NewDest()
+	ps := msgbus.New(10)
+	destRepo := NewDest(ps)
 	for i := 0; i < 10; i++ {
 		destRepo.AddDest(dest[i])
 	}
@@ -44,7 +48,8 @@ func TestGetDest(t *testing.T) {
 		dest[i].NetUrl = "Test"
 	}
 	
-	destRepo := NewDest()
+	ps := msgbus.New(10)
+	destRepo := NewDest(ps)
 	for i := 0; i < 10; i++ {
 		destRepo.AddDest(dest[i])
 	}
@@ -66,7 +71,8 @@ func TestUpdateDest(t *testing.T) {
 		dest[i].NetUrl = "Test"
 	}
 	
-	destRepo := NewDest()
+	ps := msgbus.New(10)
+	destRepo := NewDest(ps)
 	for i := 0; i < 10; i++ {
 		destRepo.AddDest(dest[i])
 	}
@@ -100,7 +106,8 @@ func TestDeleteDest(t *testing.T) {
 		dest[i].NetUrl = "Test"
 	}
 	
-	destRepo := NewDest()
+	ps := msgbus.New(10)
+	destRepo := NewDest(ps)
 	for i := 0; i < 10; i++ {
 		destRepo.AddDest(dest[i])
 	}

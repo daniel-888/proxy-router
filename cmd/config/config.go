@@ -4,6 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"io"
+	"io/ioutil"
+	"encoding/json"
+	"path/filepath"
+	"log"
+	"net/http"
+	"net/url"
+	"strings"
 )
 
 //
@@ -98,18 +106,72 @@ func ConfigGetVal(cc ConfigConst) (v string, e error) {
 }
 
 // Local File takes precidence over remote download config
-func LoadConfiguration() (e error) {
-	e = nil
-	filename, err := ConfigGetVal(ConfigConfigFilePath)
+func LoadConfiguration(pkg string) (map[string]interface{}, error) {
+	var data map[string]interface{}
+	var err error = nil 
+	currDir,_ := os.Getwd()
+	defer os.Chdir(currDir)
+
+	filePath, err := ConfigGetVal(ConfigConfigFilePath)
 	if err != nil {
 		panic(fmt.Errorf("error retrieving config file variable: %s", err))
 	}
+	file := filepath.Base(filePath)
+	filePath = filepath.Dir(filePath)
+	os.Chdir(filePath)
+	
+	configFile, err := os.Open(file)
+	if err != nil {
+		return data, err
+	}
+	defer configFile.Close()
+	byteValue,_ := ioutil.ReadAll(configFile)
+	
 
-	_ = filename
+	err = json.Unmarshal(byteValue, &data)
+	return data[pkg].(map[string]interface{}), err
+}
 
-	// Skip for now
-	// Get the code out the door
-	//
-
-	return e
+func DownloadConfig(fullURLFile string) {
+    fileURL, err := url.Parse(fullURLFile)
+    if err != nil {
+        log.Fatal(err)
+    }
+    path := fileURL.Path
+    segments := strings.Split(path, "/")
+    fileName := segments[len(segments)-1]
+    
+    var file *os.File
+    if flag.Lookup("test.v") == nil { // called from main.go
+        file, err = os.Create("./configurationmanager/" + fileName)
+        if err != nil {
+            log.Fatal(err)
+        }
+    } else { // called from test srcipt
+        file, err = os.Create(fileName)
+        if err != nil {
+            log.Fatal(err)
+        }
+    }
+    
+    client := http.Client{
+        CheckRedirect: func(r *http.Request, via []*http.Request) error {
+            r.URL.Opaque = r.URL.Path
+            return nil
+        },
+    }
+  
+    resp, err := client.Get(fullURLFile)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer resp.Body.Close()
+ 
+    size, err := io.Copy(file, resp.Body)
+	if err != nil {
+        log.Fatal(err)
+    }
+    defer file.Close()
+ 
+    fmt.Printf("Downloaded a file %s with size %d\n", fileName, size)
 }

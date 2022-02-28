@@ -1,8 +1,8 @@
 package msgbus
 
 import (
+	"crypto/rand"
 	"fmt"
-	"os"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
@@ -41,15 +41,15 @@ const (
 )
 
 const (
-	NoMsg         MsgType = "NoMsg"
-	ConfigMsg     MsgType = "ConfigMsg"
-	DestMsg       MsgType = "DestMsg"
-	SellerMsg     MsgType = "SellerMsg"
-	BuyerMsg      MsgType = "BuyerMsg"
-	ContractMsg   MsgType = "ContractMsg"
-	MinerMsg      MsgType = "MinerMsg"
-	ConnectionMsg MsgType = "ConnectionMsg"
-	LogMsg        MsgType = "LogMsg"
+	NoMsg                    MsgType = "NoMsg"
+	ConfigMsg                MsgType = "ConfigMsg"
+	ContractManagerConfigMsg MsgType = "ContractManagerConfigMsg"
+	DestMsg                  MsgType = "DestMsg"
+	NodeOperatorMsg          MsgType = "NodeOperatorMsg"
+	ContractMsg              MsgType = "ContractMsg"
+	MinerMsg                 MsgType = "MinerMsg"
+	ConnectionMsg            MsgType = "ConnectionMsg"
+	LogMsg                   MsgType = "LogMsg"
 )
 
 type Event struct {
@@ -101,7 +101,9 @@ const (
 )
 
 type cmd struct {
-	op       operation
+	op operation
+	// sync indicates how the response should be sent back to the caller,
+	// synchronously (direct return) or asynchronously via a supplied channel.
 	sync     bool
 	msg      MsgType
 	ID       IDString
@@ -802,15 +804,17 @@ func (ps *PubSub) start() {
 	}
 
 	reg.data[ConfigMsg] = make(map[IDString]registryData)
+	reg.data[ContractManagerConfigMsg] = make(map[IDString]registryData)
 	reg.data[DestMsg] = make(map[IDString]registryData)
-	reg.data[SellerMsg] = make(map[IDString]registryData)
+	reg.data[NodeOperatorMsg] = make(map[IDString]registryData)
 	reg.data[ContractMsg] = make(map[IDString]registryData)
 	reg.data[MinerMsg] = make(map[IDString]registryData)
 	reg.data[ConnectionMsg] = make(map[IDString]registryData)
 
 	reg.notify[ConfigMsg] = make(map[chan Event]interface{})
+	reg.notify[ContractManagerConfigMsg] = make(map[chan Event]interface{})
 	reg.notify[DestMsg] = make(map[chan Event]interface{})
-	reg.notify[SellerMsg] = make(map[chan Event]interface{})
+	reg.notify[NodeOperatorMsg] = make(map[chan Event]interface{})
 	reg.notify[ContractMsg] = make(map[chan Event]interface{})
 	reg.notify[MinerMsg] = make(map[chan Event]interface{})
 	reg.notify[ConnectionMsg] = make(map[chan Event]interface{})
@@ -1024,7 +1028,11 @@ func (reg *registry) set(c *cmd) {
 		event.send(c.eventch)
 	}
 
-	// Notify anyone listening
+	// Notify anyone listening for the message class
+	for nch, _ := range reg.notify[c.msg] {
+		event.send(nch)
+	}
+	// Notify anyone listening for the specific ID
 	for ech, _ := range reg.data[c.msg][c.ID].sub.eventchan {
 		if _, ok := reg.data[c.msg][c.ID].sub.eventchan[ech]; ok {
 			event.send(ech)
@@ -1268,20 +1276,14 @@ func (reg *registry) removeAndClose(c *cmd) {
 
 }
 
-//-----------------------------------------
-//
-//-----------------------------------------
+// GetRandomIDString returns a random string.
+// Format: xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx
 func GetRandomIDString() (i IDString) {
-
-	f, err := os.Open("/dev/urandom")
-	if err != nil {
-		fmt.Printf("Error reading /dev/urandom: %s\n", err)
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		fmt.Printf("Error reading random file: %s\n", err)
 		panic(err)
 	}
-	b := make([]byte, 16)
-	f.Read(b)
-	f.Close()
-	//fmt.Printf("%08x-%08x-%08x-%08x\n", b[0:4], b[4:8], b[8:12], b[12:16])
 	str := fmt.Sprintf("%08x-%08x-%08x-%08x", b[0:4], b[4:8], b[8:12], b[12:16])
 	i = IDString(str)
 	return i

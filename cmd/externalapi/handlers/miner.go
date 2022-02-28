@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 
@@ -36,6 +38,11 @@ func MinerPOST(miner *msgdata.MinerRepo) gin.HandlerFunc {
 		}
 		for i := range(requestBody) {
 			miner.AddMiner(requestBody[i])
+			minerMsg := msgdata.ConvertMinerJSONtoMinerMSG(requestBody[i])
+			_,err := miner.Ps.PubWait(msgbus.MinerMsg, msgbus.IDString(minerMsg.ID), minerMsg)
+			if err != nil {
+				log.Printf("Miner POST request failed to update msgbus: %s", err)
+			}
 		}
 		
 		c.Status(http.StatusOK)
@@ -55,6 +62,13 @@ func MinerPUT(miner *msgdata.MinerRepo) gin.HandlerFunc {
 			c.Status(http.StatusNotFound)
 			return
 		}
+		
+		minerMsg := msgdata.ConvertMinerJSONtoMinerMSG(requestBody)
+		_,err := miner.Ps.SetWait(msgbus.MinerMsg, msgbus.IDString(minerMsg.ID), minerMsg)
+		if err != nil {
+			log.Printf("Miner PUT request failed to update msgbus: %s", err)
+		}
+
 		c.Status(http.StatusOK)
 	}
 }
@@ -67,6 +81,12 @@ func MinerDELETE(miner *msgdata.MinerRepo) gin.HandlerFunc {
 			c.Status(http.StatusNotFound)
 			return
 		}
+
+		_,err := miner.Ps.UnpubWait(msgbus.MinerMsg, msgbus.IDString(id))
+		if err != nil {
+			log.Printf("Miner DELETE request failed to update msgbus: %s", err)
+		}
+
 		c.Status(http.StatusOK)
 	}
 }
