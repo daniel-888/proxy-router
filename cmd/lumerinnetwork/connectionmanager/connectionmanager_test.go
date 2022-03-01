@@ -24,7 +24,7 @@ func TestSetupListenCancel(t *testing.T) {
 
 	testaddr := &testAddr{
 		network: "tcp",
-		ipaddr:  "127.0.0.1:12345",
+		ipaddr:  "127.0.0.1:12349",
 	}
 
 	l, e := testListen(ctx, testaddr)
@@ -59,7 +59,7 @@ func TestSrcDial(t *testing.T) {
 
 	testaddr := &testAddr{
 		network: "tcp",
-		ipaddr:  "127.0.0.1:12345",
+		ipaddr:  "127.0.0.1:12346",
 	}
 
 	l, e := testListen(ctx, testaddr)
@@ -119,7 +119,7 @@ func TestSrcDefDstDial(t *testing.T) {
 	//}
 	testaddr := &testAddr{
 		network: "tcp",
-		ipaddr:  "127.0.0.1:12345",
+		ipaddr:  "127.0.0.1:12347",
 	}
 
 	l, e := testListen(ctx, testaddr)
@@ -173,7 +173,7 @@ func TestSrcIdxDstDial(t *testing.T) {
 	//}
 	testaddr := &testAddr{
 		network: "tcp",
-		ipaddr:  "127.0.0.1:12345",
+		ipaddr:  "127.0.0.1:12348",
 	}
 
 	l, e := testListen(ctx, testaddr)

@@ -82,7 +82,7 @@ func TestTCPSetupListener(t *testing.T) {
 
 	l, e := Listen(ctx, "tcp", addr)
 	if e != nil {
-		t.Fatalf("Listen() Test Failed")
+		t.Fatalf("Listen() Test Failed: %s", e)
 	}
 
 	go goTestAcceptChannelEcho(l)
