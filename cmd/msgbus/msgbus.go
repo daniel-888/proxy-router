@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
@@ -80,8 +81,10 @@ type registry struct {
 
 // PubSub is a collection of topics.
 type PubSub struct {
-	cmdChan  chan *cmd
-	capacity int
+	cmdChan       chan *cmd
+	capacity      int
+	requestIDChan chan int
+	logger        *log.Logger
 }
 
 const (
@@ -122,16 +125,18 @@ func getCommandError(e MsgBusError) error {
 	return fmt.Errorf("command Error: %s", e)
 }
 
-//--------------------------------------------------------------------------------
 // New creates a new PubSub and starts a goroutine for handling operations.
 // The capacity of the channels created by Sub and SubOnce will be as specified.
-//
-// Convert this to a message bus
-//
-//--------------------------------------------------------------------------------
-func New(capacity int) *PubSub {
-	ps := &PubSub{make(chan *cmd), capacity}
+func New(capacity int, l *log.Logger) *PubSub {
+	ps := &PubSub{
+		cmdChan:       make(chan *cmd),
+		capacity:      capacity,
+		requestIDChan: make(chan int),
+		logger:        l,
+	}
+
 	go ps.start()
+
 	return ps
 }
 
@@ -162,22 +167,20 @@ func (ps *PubSub) NewEvent() Event {
 	return e
 }
 
-//--------------------------------------------------------------------------------
-// Create new topic structure
-//
-//--------------------------------------------------------------------------------
-func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}) (err error) {
+// Pub publishes a message/command to its subscribers, asynchronously.
+func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if id == "" {
-		return getCommandError(MsgBusErrNoID)
+		return requestID, getCommandError(MsgBusErrNoID)
 	}
 
 	if data == nil {
-		return getCommandError(MsgBusErrNoData)
+		return requestID, getCommandError(MsgBusErrNoData)
 	}
 
 	c := cmd{
@@ -191,13 +194,10 @@ func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}) (err error) {
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
-//--------------------------------------------------------------------------------
-// Create new topic structure
-//
-//--------------------------------------------------------------------------------
+// PubWait publishes a message/command to its subscribers, synchronously.
 func (ps *PubSub) PubWait(msg MsgType, id IDString, data interface{}) (e Event, err error) {
 
 	if msg == NoMsg {
@@ -226,17 +226,16 @@ func (ps *PubSub) PubWait(msg MsgType, id IDString, data interface{}) (e Event, 
 	return e, err
 }
 
-//--------------------------------------------------------------------------------
-// Request update events for the topic
-//--------------------------------------------------------------------------------
-func (ps *PubSub) Sub(msg MsgType, id IDString, ech EventChan) (err error) {
+// Sub subscribes to a message/command, asynchronously.
+func (ps *PubSub) Sub(msg MsgType, id IDString, ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	c := cmd{
@@ -250,12 +249,10 @@ func (ps *PubSub) Sub(msg MsgType, id IDString, ech EventChan) (err error) {
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
-//--------------------------------------------------------------------------------
-// Request update events for the topic
-//--------------------------------------------------------------------------------
+// SubWait subscribes to a message/command, synchronously.
 func (ps *PubSub) SubWait(msg MsgType, id IDString, ech EventChan) (e Event, err error) {
 
 	if msg == NoMsg {
@@ -282,14 +279,15 @@ func (ps *PubSub) SubWait(msg MsgType, id IDString, ech EventChan) (e Event, err
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) Get(msg MsgType, id IDString, ech EventChan) (err error) {
+func (ps *PubSub) Get(msg MsgType, id IDString, ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	c := cmd{
@@ -303,7 +301,7 @@ func (ps *PubSub) Get(msg MsgType, id IDString, ech EventChan) (err error) {
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 
 }
 
@@ -798,6 +796,15 @@ func (ps *PubSub) dispatch(c *cmd) (event Event, e error) {
 //
 //--------------------------------------------------------------------------------
 func (ps *PubSub) start() {
+	defer close(ps.requestIDChan)
+	go func() {
+		counter := 1
+		for {
+			ps.requestIDChan <- counter
+			counter++
+		}
+	}()
+
 	reg := registry{
 		data:   make(map[MsgType]map[IDString]registryData),
 		notify: make(map[MsgType]map[chan Event]interface{}),
