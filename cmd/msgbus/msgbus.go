@@ -276,9 +276,8 @@ func (ps *PubSub) SubWait(msg MsgType, id IDString, ech EventChan) (e Event, err
 
 }
 
-//--------------------------------------------------------------------------------
-//
-//--------------------------------------------------------------------------------
+// Get retrieves a record by ID or, if no ID, then all
+// record IDs associated with the given message type, asynchronously.
 func (ps *PubSub) Get(msg MsgType, id IDString, ech EventChan) (requestID int, err error) {
 	requestID = <-ps.requestIDChan
 
@@ -305,9 +304,8 @@ func (ps *PubSub) Get(msg MsgType, id IDString, ech EventChan) (requestID int, e
 
 }
 
-//--------------------------------------------------------------------------------
-//
-//--------------------------------------------------------------------------------
+// GetWait retrieves a record by ID or, if no ID, then all
+// record IDs associated with the given message type, synchronously.
 func (ps *PubSub) GetWait(msg MsgType, id IDString) (e Event, err error) {
 
 	if msg == NoMsg {
@@ -330,18 +328,19 @@ func (ps *PubSub) GetWait(msg MsgType, id IDString) (e Event, err error) {
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) SearchIP(msg MsgType, ip string, ech EventChan) (err error) {
+func (ps *PubSub) SearchIP(msg MsgType, ip string, ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	if ip == "" {
-		return getCommandError(MsgBusErrNoSearchTerm)
+		return requestID, getCommandError(MsgBusErrNoSearchTerm)
 	}
 
 	c := cmd{
@@ -355,7 +354,7 @@ func (ps *PubSub) SearchIP(msg MsgType, ip string, ech EventChan) (err error) {
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 
 }
 
@@ -388,18 +387,19 @@ func (ps *PubSub) SearchIPWait(msg MsgType, ip string) (e Event, err error) {
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) SearchMAC(msg MsgType, mac string, ech EventChan) (err error) {
+func (ps *PubSub) SearchMAC(msg MsgType, mac string, ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	if mac == "" {
-		return getCommandError(MsgBusErrNoSearchTerm)
+		return requestID, getCommandError(MsgBusErrNoSearchTerm)
 	}
 
 	c := cmd{
@@ -413,7 +413,7 @@ func (ps *PubSub) SearchMAC(msg MsgType, mac string, ech EventChan) (err error) 
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 
 }
 
@@ -446,18 +446,19 @@ func (ps *PubSub) SearchMACWait(msg MsgType, mac string) (e Event, err error) {
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) SearchName(msg MsgType, name string, ech EventChan) (err error) {
+func (ps *PubSub) SearchName(msg MsgType, name string, ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	if name == "" {
-		return getCommandError(MsgBusErrNoSearchTerm)
+		return requestID, getCommandError(MsgBusErrNoSearchTerm)
 	}
 
 	c := cmd{
@@ -471,7 +472,7 @@ func (ps *PubSub) SearchName(msg MsgType, name string, ech EventChan) (err error
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 
 }
 
@@ -504,18 +505,19 @@ func (ps *PubSub) SearchNameWait(msg MsgType, name string) (e Event, err error) 
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) Set(msg MsgType, id IDString, data interface{}) (err error) {
+func (ps *PubSub) Set(msg MsgType, id IDString, data interface{}) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if id == "" {
-		return getCommandError(MsgBusErrNoID)
+		return requestID, getCommandError(MsgBusErrNoID)
 	}
 
 	if data == nil {
-		return getCommandError(MsgBusErrNoData)
+		return requestID, getCommandError(MsgBusErrNoData)
 	}
 
 	c := cmd{
@@ -529,7 +531,7 @@ func (ps *PubSub) Set(msg MsgType, id IDString, data interface{}) (err error) {
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
 //--------------------------------------------------------------------------------
@@ -565,18 +567,19 @@ func (ps *PubSub) SetWait(msg MsgType, id IDString, data interface{}) (e Event, 
 //--------------------------------------------------------------------------------
 // Request removal of events for the topic
 //--------------------------------------------------------------------------------
-func (ps *PubSub) Unsub(msg MsgType, id IDString, ech EventChan) (err error) {
+func (ps *PubSub) Unsub(msg MsgType, id IDString, ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if id == "" {
-		return getCommandError(MsgBusErrNoID)
+		return requestID, getCommandError(MsgBusErrNoID)
 	}
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	c := cmd{
@@ -590,7 +593,7 @@ func (ps *PubSub) Unsub(msg MsgType, id IDString, ech EventChan) (err error) {
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
 //--------------------------------------------------------------------------------
@@ -626,14 +629,15 @@ func (ps *PubSub) UnsubWait(msg MsgType, id IDString, ech EventChan) (e Event, e
 //--------------------------------------------------------------------------------
 // Request removal of the topic
 //--------------------------------------------------------------------------------
-func (ps *PubSub) Unpub(msg MsgType, id IDString) (err error) {
+func (ps *PubSub) Unpub(msg MsgType, id IDString) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if id == "" {
-		return getCommandError(MsgBusErrNoID)
+		return requestID, getCommandError(MsgBusErrNoID)
 	}
 
 	c := cmd{
@@ -647,7 +651,7 @@ func (ps *PubSub) Unpub(msg MsgType, id IDString) (err error) {
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
 //--------------------------------------------------------------------------------
@@ -679,10 +683,11 @@ func (ps *PubSub) UnpubWait(msg MsgType, id IDString) (e Event, err error) {
 //--------------------------------------------------------------------------------
 // Request update events for the topic
 //--------------------------------------------------------------------------------
-func (ps *PubSub) RemoveAndCloseEventChan(ech EventChan) (err error) {
+func (ps *PubSub) RemoveAndCloseEventChan(ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	c := cmd{
@@ -696,7 +701,7 @@ func (ps *PubSub) RemoveAndCloseEventChan(ech EventChan) (err error) {
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
 //--------------------------------------------------------------------------------
@@ -726,7 +731,8 @@ func (ps *PubSub) RemoveAndCloseEventChanWait(ech EventChan) (e Event, err error
 // Shutdown closes all subscribed channels and terminates the goroutine.
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) Shutdown() (err error) {
+func (ps *PubSub) Shutdown() (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	c := cmd{
 		op:      opShutdown,
@@ -739,7 +745,7 @@ func (ps *PubSub) Shutdown() (err error) {
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
 //--------------------------------------------------------------------------------
@@ -1053,7 +1059,7 @@ func (reg *registry) set(c *cmd) {
 //
 // Msg
 // ID
-// eventch - where to send the get request too
+// eventch - where to send the get request to
 //
 //-----------------------------------------
 func (reg *registry) get(c *cmd) {
@@ -1070,7 +1076,7 @@ func (reg *registry) get(c *cmd) {
 		event.Err = getCommandError(MsgBusErrBadMsg)
 	} else if c.ID == "" {
 		var index IDIndex
-		for i, _ := range reg.data[c.msg] {
+		for i := range reg.data[c.msg] {
 			index = append(index, i)
 		}
 		event.EventType = GetIndexEvent
