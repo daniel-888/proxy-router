@@ -21,12 +21,7 @@ type StratumV1ListenStruct struct {
 }
 
 type StratumV1Struct struct {
-	// simpleproto simple.SimpleProtocolInterface
-	// Other Protocol Structure here
-	simple    *simple.SimpleStruct
-	eventchan chan *simple.SimpleEvent
-	srcconn   protocol.ProtocolConnectionStruct
-	dstconn   map[int]protocol.ProtocolConnectionStruct
+	protocol *protocol.ProtocolStruct
 }
 
 //
@@ -45,7 +40,7 @@ func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr) (s 
 
 	ctx = context.WithValue(ctx, simple.SimpleContext, scs)
 
-	protocollisten, err := protocol.New(ctx)
+	protocollisten, err := protocol.NewListen(ctx)
 	if err != nil {
 		lumerinlib.PanicHere("")
 	}
@@ -63,41 +58,42 @@ func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr) (s 
 //
 // SIMPL defined this function as passing in a SimpeStruct abd retuning a chan for SimpleEvents
 //
-func newProtoFunc(ss *simple.SimpleStruct) (ret chan *simple.SimpleEvent) {
+func newProtoFunc(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
 
-	ret = make(chan *simple.SimpleEvent)
-
-	// inialize the StratumV1Struct here, launch a go routine to monitor it.
-
-	scs := ss.Ctx().Value(simple.SimpleContext)
-	src := scs.(simple.SimpleContextStruct).Src
-	dst := scs.(simple.SimpleContextStruct).Dst
-
-	svs := &StratumV1Struct{
-		eventchan: ret,
-		simple:    ss,
-		srcconn: protocol.ProtocolConnectionStruct{
-			Addr: src,
-			Id:   0,
-		},
-		dstconn: make(map[int]protocol.ProtocolConnectionStruct, 0),
+	sc := ss.Ctx().Value(simple.SimpleContext)
+	if sc == nil {
+		lumerinlib.PanicHere("")
 	}
 
-	err := svs.openDstConnection(dst)
+	dst := sc.(simple.SimpleContextStruct).Dst
+	if dst == nil {
+		lumerinlib.PanicHere("")
+	}
+
+	pls, err := protocol.NewProtocol(ss)
+	if err != nil {
+		lumerinlib.PanicHere("")
+	}
+
+	svs := &StratumV1Struct{
+		protocol: pls,
+	}
+
+	_, err = pls.OpenConn(dst)
 	if err != nil {
 		panic("")
 	}
 
 	go svs.goEvent()
 
-	return ret
+	return svs.protocol.Event()
 }
 
 //
 //
 //
 func (s *StratumV1Struct) goEvent() {
-	for event := range s.eventchan {
+	for event := range s.protocol.Event() {
 		s.eventHandler(event)
 	}
 }
@@ -188,7 +184,7 @@ func (svs *StratumV1Struct) decodeMsgBusEvent(event msgbus.Event) {
 
 	switch event.EventType {
 	case msgbus.NoEvent:
-		fmt.Sprintf(lumerinlib.Funcname() + " NoEvent received, returning\n")
+		fmt.Printf(lumerinlib.Funcname() + " NoEvent received, returning\n")
 		return
 	case msgbus.UpdateEvent:
 		svs.handleMsgUpdateEvent(event)
@@ -227,12 +223,4 @@ func (svs *StratumV1Struct) decodeMsgBusEvent(event msgbus.Event) {
 	default:
 		lumerinlib.PanicHere(fmt.Sprintf(lumerinlib.FileLine()+" Default Reached: Event Type:%s", string(event.EventType)))
 	}
-}
-
-//
-//
-//
-func (svs *StratumV1Struct) openDstConnection(dst net.Addr) (e error) {
-
-	return e
 }
