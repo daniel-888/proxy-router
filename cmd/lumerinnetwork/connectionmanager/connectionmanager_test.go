@@ -305,17 +305,32 @@ func (s *ConnectionStruct) goSrcChannelEcho() {
 			return
 		}
 		if e != nil {
-			panic(fmt.Sprintf(lumerinlib.FileLine()+" Read Failed: %s\n", e))
+			select {
+			case <-s.ctx.Done():
+				return
+			default:
+				panic(fmt.Sprintf(lumerinlib.FileLine()+" Read Failed: %s\n", e))
+			}
 		}
 
 		if readcount != 0 {
 			buf = buf[:readcount]
 			writecount, e := s.SrcWrite(buf)
 			if e != nil {
-				panic(fmt.Sprintf(lumerinlib.FileLine()+" write Failed: %s\n", e))
+				select {
+				case <-s.ctx.Done():
+					return
+				default:
+					panic(fmt.Sprintf(lumerinlib.FileLine()+" write Failed: %s\n", e))
+				}
 			}
 			if writecount == 0 {
-				panic(fmt.Sprintf(lumerinlib.FileLine() + " write Failed: Zero bytes written\n"))
+				select {
+				case <-s.ctx.Done():
+					return
+				default:
+					panic(fmt.Sprintf(lumerinlib.FileLine() + " write Failed: Zero bytes written\n"))
+				}
 			}
 		}
 	}
