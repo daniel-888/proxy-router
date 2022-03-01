@@ -121,6 +121,75 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 }
 
+func TestRequestID(t *testing.T) {
+	mb := New(1, nil)
+
+	compareID := func(method string, id, requestID int) {
+		if id != requestID {
+			t.Errorf("expected ID %d but got %d in %s method\n", id, requestID, method)
+		}
+	}
+
+	for id := 1; id < 100; id++ {
+		requestID, _ := mb.Pub(NoMsg, IDString("0"), "datadatadata")
+		compareID("Pub", id, requestID)
+	}
+
+	eventChan := make(EventChan)
+	for id := 100; id < 200; id++ {
+		requestID, _ := mb.Sub(NoMsg, IDString("0"), eventChan)
+		compareID("Sub", id, requestID)
+	}
+
+	eventChan = make(EventChan)
+	for id := 200; id < 300; id++ {
+		requestID, _ := mb.Get(NoMsg, IDString("0"), eventChan)
+		compareID("Get", id, requestID)
+	}
+
+	eventChan = make(EventChan)
+	for id := 300; id < 400; id++ {
+		requestID, _ := mb.SearchIP(NoMsg, "ip address", eventChan)
+		compareID("SearchIP", id, requestID)
+	}
+
+	eventChan = make(EventChan)
+	for id := 400; id < 500; id++ {
+		requestID, _ := mb.SearchMAC(NoMsg, "mac address", eventChan)
+		compareID("SearchMAC", id, requestID)
+	}
+
+	eventChan = make(EventChan)
+	for id := 500; id < 600; id++ {
+		requestID, _ := mb.SearchName(NoMsg, "name", eventChan)
+		compareID("SearchName", id, requestID)
+	}
+
+	for id := 600; id < 700; id++ {
+		requestID, _ := mb.Set(NoMsg, IDString("0"), "datadatadata")
+		compareID("Set", id, requestID)
+	}
+
+	for id := 700; id < 800; id++ {
+		requestID, _ := mb.Unpub(NoMsg, IDString("0"))
+		compareID("Unpub", id, requestID)
+	}
+
+	eventChan = make(EventChan)
+	for id := 800; id < 900; id++ {
+		requestID, _ := mb.Unsub(NoMsg, IDString("0"), eventChan)
+		compareID("Unsub", id, requestID)
+	}
+
+	eventChan = make(EventChan)
+	requestID, _ := mb.RemoveAndCloseEventChan(eventChan)
+	compareID("RemoveAndCloseEventChan", 900, requestID)
+
+	mb = New(1, nil)
+	requestID, _ = mb.Shutdown()
+	compareID("Shutdown", 1, requestID)
+}
+
 func TestGetRandomIDString(t *testing.T) {
 	requiredRegex := `^[0-9a-fA-F]{8}\-[0-9a-fA-F]{8}\-[0-9a-fA-F]{8}\-[0-9a-fA-F]{8}$`
 	regex, err := regexp.Compile(requiredRegex)

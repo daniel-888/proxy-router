@@ -167,6 +167,19 @@ func (ps *PubSub) NewEvent() Event {
 	return e
 }
 
+// GetRandomIDString returns a random string.
+// Format: xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx
+func GetRandomIDString() (i IDString) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		fmt.Printf("Error reading random file: %s\n", err)
+		panic(err)
+	}
+	str := fmt.Sprintf("%08x-%08x-%08x-%08x", b[0:4], b[4:8], b[8:12], b[12:16])
+	i = IDString(str)
+	return i
+}
+
 // Pub publishes a message/command to its subscribers, asynchronously.
 func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}) (requestID int, err error) {
 	requestID = <-ps.requestIDChan
@@ -1267,14 +1280,12 @@ func (reg *registry) removeAndClose(c *cmd) {
 		event.Err = getCommandError(MsgBusErrNoEventChan)
 	}
 
-	for msg, _ := range reg.notify {
-		if _, ok := reg.notify[msg][c.eventch]; ok {
-			delete(reg.notify[msg], c.eventch)
-		}
+	for msg := range reg.notify {
+		delete(reg.notify[msg], c.eventch)
 	}
 
-	for msg, _ := range reg.data {
-		for id, _ := range reg.data[msg] {
+	for msg := range reg.data {
+		for id := range reg.data[msg] {
 			if _, ok := reg.data[msg][id].sub.eventchan[c.eventch]; ok {
 				delete(reg.data[c.msg][c.ID].sub.eventchan, c.eventch)
 			}
@@ -1287,17 +1298,4 @@ func (reg *registry) removeAndClose(c *cmd) {
 		event.send(c.returnch)
 	}
 
-}
-
-// GetRandomIDString returns a random string.
-// Format: xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx
-func GetRandomIDString() (i IDString) {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		fmt.Printf("Error reading random file: %s\n", err)
-		panic(err)
-	}
-	str := fmt.Sprintf("%08x-%08x-%08x-%08x", b[0:4], b[4:8], b[8:12], b[12:16])
-	i = IDString(str)
-	return i
 }
