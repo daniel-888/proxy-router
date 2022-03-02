@@ -1,18 +1,19 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
-	"strconv"
-	"time"
-	"context"
 	"os"
 	"os/signal"
+	"strconv"
+	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
@@ -30,8 +31,17 @@ import (
 //
 // -------------------------------------------
 func main() {
+	logFile, err := os.OpenFile(config.MustGet(config.ConfigLogFilePath), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	if err != nil {
+		fmt.Printf("error opening log file: %v", err)
+		os.Exit(1)
+	}
+
+	l := log.New().SetFormatJSON().SetOutput(logFile)
+	defer l.Close()
+
 	mainContext, mainCancel := context.WithCancel(context.Background())
-	sigInt := make(chan os.Signal, 1) 
+	sigInt := make(chan os.Signal, 1)
 	signal.Notify(sigInt, os.Interrupt)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -85,15 +95,9 @@ func main() {
 	}
 
 	//
-	// Fire up logger
-	//
-	// logging.Init(false)
-	// defer logging.Cleanup()
-
-	//
 	// Fire up the Message Bus
 	//
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, l)
 
 	//
 	// Setup Default Dest
@@ -119,8 +123,8 @@ func main() {
 	// Setup Node Operator Msg
 	//
 	nodeOperator := msgbus.NodeOperator{
-		ID: msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
-		IsBuyer: buyer,
+		ID:          msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
+		IsBuyer:     buyer,
 		DefaultDest: dest.ID,
 	}
 	event, err = ps.PubWait(msgbus.NodeOperatorMsg, msgbus.IDString(nodeOperator.ID), nodeOperator)
@@ -238,16 +242,16 @@ func main() {
 			if err != nil {
 				panic(fmt.Sprintf("Getting mnemonic val failed: %s\n", err))
 			}
-		
+
 			accountIndexStr, err := config.ConfigGetVal(config.ConfigContractAccountIndex)
 			if err != nil {
 				panic(fmt.Sprintf("Getting account index val failed: %s\n", err))
 			}
-			contractManagerConfig.AccountIndex,err = strconv.Atoi(accountIndexStr)
+			contractManagerConfig.AccountIndex, err = strconv.Atoi(accountIndexStr)
 			if err != nil {
 				panic(fmt.Sprintf("Converting account index string to int failed: %s\n", err))
 			}
-	
+
 			contractManagerConfig.EthNodeAddr, err = config.ConfigGetVal(config.ConfigContractEthereumNodeAddress)
 			if err != nil {
 				panic(fmt.Sprintf("Getting ethereum node address val failed: %s\n", err))
@@ -261,7 +265,7 @@ func main() {
 				contractManagerConfig.ClaimFunds = true
 			}
 		}
-		
+
 		// Publish Contract Manager Config to MsgBus
 		ps.PubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractManagerConfig)
 
@@ -283,7 +287,7 @@ func main() {
 	if disableapi == "false" {
 		var api externalapi.APIRepos
 		api.InitializeJSONRepos(ps)
-		time.Sleep(time.Millisecond*2000)
+		time.Sleep(time.Millisecond * 2000)
 		go api.RunAPI()
 	}
 
@@ -292,7 +296,7 @@ func main() {
 		fmt.Println("Signal Interupt: Cancelling all contexts and shuting down program")
 		mainCancel()
 	case <-mainContext.Done():
-		time.Sleep(time.Second*5)
+		time.Sleep(time.Second * 5)
 		signal.Stop(sigInt)
 		return
 	}

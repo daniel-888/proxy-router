@@ -9,17 +9,17 @@ import (
 
 func TestAddDest(t *testing.T) {
 	dest := DestJSON{
-		ID:			"Test",
-		NetUrl: 	"Test",
+		ID:     "Test",
+		NetUrl: "Test",
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	destRepo := NewDest(ps)
 	destRepo.AddDest(dest)
 
 	if len(destRepo.DestJSONs) != 1 {
 		t.Errorf("Dest struct not added")
-	} 
+	}
 }
 
 func TestGetAllDests(t *testing.T) {
@@ -28,8 +28,8 @@ func TestGetAllDests(t *testing.T) {
 		dest[i].ID = "Test" + fmt.Sprint(i)
 		dest[i].NetUrl = "Test"
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	destRepo := NewDest(ps)
 	for i := 0; i < 10; i++ {
 		destRepo.AddDest(dest[i])
@@ -38,8 +38,8 @@ func TestGetAllDests(t *testing.T) {
 
 	if len(results) != 10 {
 		t.Errorf("Could not get all dest structs")
-	} 
-} 
+	}
+}
 
 func TestGetDest(t *testing.T) {
 	var dest [10]DestJSON
@@ -47,8 +47,8 @@ func TestGetDest(t *testing.T) {
 		dest[i].ID = "Test" + fmt.Sprint(i)
 		dest[i].NetUrl = "Test"
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	destRepo := NewDest(ps)
 	for i := 0; i < 10; i++ {
 		destRepo.AddDest(dest[i])
@@ -70,23 +70,23 @@ func TestUpdateDest(t *testing.T) {
 		dest[i].ID = "Test" + fmt.Sprint(i)
 		dest[i].NetUrl = "Test"
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	destRepo := NewDest(ps)
 	for i := 0; i < 10; i++ {
 		destRepo.AddDest(dest[i])
 	}
 
 	destUpdates := DestJSON{
-		ID:			"",
-		NetUrl:		"Updated",
+		ID:     "",
+		NetUrl: "Updated",
 	}
-	
+
 	var results [10]DestJSON
 	var errors [10]error
 	for i := 0; i < 10; i++ {
-		errors[i] = destRepo.UpdateDest("Test" + fmt.Sprint(i), destUpdates)
-		results[i],_ = destRepo.GetDest("Test" + fmt.Sprint(i))
+		errors[i] = destRepo.UpdateDest("Test"+fmt.Sprint(i), destUpdates)
+		results[i], _ = destRepo.GetDest("Test" + fmt.Sprint(i))
 		if errors[i] != nil {
 			t.Errorf("UpdateDest function returned error for this ID: " + results[i].ID)
 		}
@@ -105,13 +105,13 @@ func TestDeleteDest(t *testing.T) {
 		dest[i].ID = "Test" + fmt.Sprint(i)
 		dest[i].NetUrl = "Test"
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	destRepo := NewDest(ps)
 	for i := 0; i < 10; i++ {
 		destRepo.AddDest(dest[i])
 	}
-	
+
 	error := destRepo.DeleteDest("Test7")
 	if error != nil {
 		t.Errorf("DeleteDest function returned error")

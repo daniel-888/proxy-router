@@ -9,23 +9,23 @@ import (
 
 func TestAddContract(t *testing.T) {
 	contract := ContractJSON{
-		ID:				"Test",
-		State: 			"Test",
-		Buyer: 			"Test",
-		Price: 			100,
-		Limit: 			100,
-		Speed: 			100,
-		Length: 		100,
+		ID:                     "Test",
+		State:                  "Test",
+		Buyer:                  "Test",
+		Price:                  100,
+		Limit:                  100,
+		Speed:                  100,
+		Length:                 100,
 		StartingBlockTimestamp: 100,
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	contractRepo := NewContract(ps)
 	contractRepo.AddContract(contract)
 
 	if len(contractRepo.ContractJSONs) != 1 {
 		t.Errorf("Contract struct not added")
-	} 
+	}
 }
 
 func TestGetAllContracts(t *testing.T) {
@@ -40,8 +40,8 @@ func TestGetAllContracts(t *testing.T) {
 		contract[i].Length = 100
 		contract[i].StartingBlockTimestamp = 100
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	contractRepo := NewContract(ps)
 	for i := 0; i < 10; i++ {
 		contractRepo.AddContract(contract[i])
@@ -50,8 +50,8 @@ func TestGetAllContracts(t *testing.T) {
 
 	if len(results) != 10 {
 		t.Errorf("Could not get all contract structs")
-	} 
-} 
+	}
+}
 
 func TestGetContract(t *testing.T) {
 	var contract [10]ContractJSON
@@ -65,8 +65,8 @@ func TestGetContract(t *testing.T) {
 		contract[i].Length = 100
 		contract[i].StartingBlockTimestamp = 100
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	contractRepo := NewContract(ps)
 	for i := 0; i < 10; i++ {
 		contractRepo.AddContract(contract[i])
@@ -94,29 +94,29 @@ func TestUpdateContract(t *testing.T) {
 		contract[i].Length = 100
 		contract[i].StartingBlockTimestamp = 100
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	contractRepo := NewContract(ps)
 	for i := 0; i < 10; i++ {
 		contractRepo.AddContract(contract[i])
 	}
 
 	contractUpdates := ContractJSON{
-		ID:				"",
-		State: 			"Updated",
-		Buyer: 			"",
-		Price: 			0,
-		Limit: 			0,
-		Speed: 			0,
-		Length: 		0,
+		ID:                     "",
+		State:                  "Updated",
+		Buyer:                  "",
+		Price:                  0,
+		Limit:                  0,
+		Speed:                  0,
+		Length:                 0,
 		StartingBlockTimestamp: 100,
 	}
-	
+
 	var results [10]ContractJSON
 	var errors [10]error
 	for i := 0; i < 10; i++ {
-		errors[i] = contractRepo.UpdateContract("Test" + fmt.Sprint(i), contractUpdates)
-		results[i],_ = contractRepo.GetContract("Test" + fmt.Sprint(i))
+		errors[i] = contractRepo.UpdateContract("Test"+fmt.Sprint(i), contractUpdates)
+		results[i], _ = contractRepo.GetContract("Test" + fmt.Sprint(i))
 		if errors[i] != nil {
 			t.Errorf("UpdateContract function returned error for this ID: " + results[i].ID)
 		}
@@ -141,13 +141,13 @@ func TestDeleteContract(t *testing.T) {
 		contract[i].Length = 100
 		contract[i].StartingBlockTimestamp = 100
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	contractRepo := NewContract(ps)
 	for i := 0; i < 10; i++ {
 		contractRepo.AddContract(contract[i])
 	}
-	
+
 	error := contractRepo.DeleteContract("Test7")
 	if error != nil {
 		t.Errorf("DeleteContract function returned error")
