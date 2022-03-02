@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/handlers"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 	"gitlab.com/TitanInd/lumerin/cmd/log"
@@ -47,7 +46,7 @@ func (api *APIRepos) InitializeJSONRepos(ps *msgbus.PubSub) {
 	go api.NodeOperator.SubscribeToNodeOperatorMsgBus()
 }
 
-func (api *APIRepos) RunAPI(l *log.Logger) {
+func (api *APIRepos) RunAPI(port string, l *log.Logger) {
 	r := gin.Default()
 
 	configRoutes := r.Group("/config")
@@ -118,11 +117,6 @@ func (api *APIRepos) RunAPI(l *log.Logger) {
 		nodeOperatorRoutes.DELETE("/:id", handlers.NodeOperatorDELETE(api.NodeOperator))
 	}
 
-	if err := r.Run(); err != nil {
-		panic(fmt.Sprintf("external api failed to run:%s", err))
-	}
-
-	port := config.MustGet(config.ConfigRESTPort)
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%s", port),
 		Handler:           r,

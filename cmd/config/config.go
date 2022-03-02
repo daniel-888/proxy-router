@@ -113,9 +113,7 @@ func ConfigGetVal(cc ConfigConst) (v string, e error) {
 }
 
 // Local File takes precidence over remote download config
-func LoadConfiguration(pkg string) (map[string]interface{}, error) {
-	var data map[string]interface{}
-	var err error = nil
+func LoadConfiguration(pkg string) (data map[string]interface{}, err error) {
 	currDir, _ := os.Getwd()
 	defer os.Chdir(currDir)
 

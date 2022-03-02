@@ -21,12 +21,12 @@ const (
 	ConfigLogFilePath                 ConfigConst = "ConfigLogFilePath"
 	ConfigLogLevel                    ConfigConst = "ConfigLogLevel"
 	DefaultPoolAddr                   ConfigConst = "DefaultPoolAddr"
+	ConfigRESTPort                    ConfigConst = "ConfigRESTPort"
 	DisableConnection                 ConfigConst = "DisableConnection"
 	DisableContract                   ConfigConst = "DisableContract"
 	DisableSchedule                   ConfigConst = "DisableSchedule"
 	DisableStratumv1                  ConfigConst = "DisableStratumV1"
 	DisableAPI                        ConfigConst = "DisableAPI"
-	ConfigRESTPort                    ConfigConst = "RESTPort"
 )
 
 // Config Structure
