@@ -82,10 +82,13 @@ type registry struct {
 
 // PubSub is a collection of topics.
 type PubSub struct {
-	cmdChan       chan *cmd
-	capacity      int
+	cmdChan  chan *cmd
+	capacity int
+	// requestIDChan carries the incrementing request IDs
 	requestIDChan chan int
-	logger        *log.Logger
+	// done signals to close the requestIDChan
+	done   chan struct{}
+	logger *log.Logger
 }
 
 const (
@@ -830,13 +833,18 @@ func (ps *PubSub) dispatch(c *cmd) (event Event, e error) {
 //--------------------------------------------------------------------------------
 func (ps *PubSub) start() {
 	defer close(ps.requestIDChan)
-	go func() {
+	go func(requestIDChan chan<- int) {
 		counter := 1
 		for {
-			ps.requestIDChan <- counter
-			counter++
+			select {
+			case <-ps.done:
+				break
+			default:
+				requestIDChan <- counter
+				counter++
+			}
 		}
-	}()
+	}(ps.requestIDChan)
 
 	reg := registry{
 		data:   make(map[MsgType]map[IDString]registryData),
@@ -865,7 +873,6 @@ loop:
 		fmt.Printf("MSGBUS: %+v\n", *cmdptr)
 
 		if cmdptr.op == opNop {
-			// cmdptr.err = nil
 			continue loop
 		}
 
@@ -901,8 +908,9 @@ loop:
 		default:
 			panic("default reached for cmd.op")
 		}
-
 	}
+
+	ps.done <- struct{}{}
 
 	fmt.Printf("Closing PubSub Command chan\n")
 

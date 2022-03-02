@@ -9,6 +9,15 @@ import (
 
 func TestBoilerPlateFunc(t *testing.T) {
 	eventChan := make(EventChan)
+	go func(eventChan EventChan) {
+		for event := range eventChan {
+			fmt.Printf("Read Chan: %+v\n", event)
+		}
+
+		fmt.Printf("Closed Read Chan\n")
+
+	}(eventChan)
+	defer close(eventChan)
 
 	config := ConfigInfo{
 		ID:           "ConfigID01",
@@ -30,24 +39,7 @@ func TestBoilerPlateFunc(t *testing.T) {
 	miner := Miner{}
 	connection := Connection{}
 
-	ps := New(1)
-	if err := ps.Shutdown(); err != nil {
-		time.Sleep(time.Second * 5)
-		t.Error(err)
-	}
-	time.Sleep(time.Second * 5)
-	fmt.Println("NO ERROR!!! YAY!")
-	return
-	go func(eventChan EventChan) {
-		for event := range eventChan {
-			fmt.Printf("Read Chan: %+v\n", event)
-		}
-
-		fmt.Printf("Closed Read Chan\n")
-
-	}(eventChan)
-	defer close(eventChan)
-
+	ps := New(1, nil)
 	pubSetParams := []struct {
 		msg  MsgType
 		id   IDString
@@ -62,7 +54,7 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 
 	for _, params := range pubSetParams {
-		if err := ps.Pub(params.msg, params.id, params.data); err != nil {
+		if _, err := ps.Pub(params.msg, params.id, params.data); err != nil {
 			t.Errorf("trying to pub: %v", err)
 		}
 	}
@@ -81,13 +73,13 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 
 	for _, params := range subParams {
-		if err := ps.Sub(params.msg, params.id, params.ch); err != nil {
+		if _, err := ps.Sub(params.msg, params.id, params.ch); err != nil {
 			t.Errorf("trying to sub: %v", err)
 		}
 	}
 
 	for _, params := range pubSetParams {
-		if err := ps.Set(params.msg, params.id, params.data); err != nil {
+		if _, err := ps.Set(params.msg, params.id, params.data); err != nil {
 			t.Errorf("trying to set: %v", err)
 		}
 	}
@@ -112,10 +104,17 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 
 	for _, params := range getParams {
-		if err := ps.Get(params.msg, params.id, params.ch); err != nil {
+		if _, err := ps.Get(params.msg, params.id, params.ch); err != nil {
 			t.Errorf("trying to get: %v", err)
 		}
 	}
+
+	if _, err := ps.Shutdown(); err != nil {
+		t.Errorf("shutting down: %v", err)
+	}
+
+	// symbolizes that the app runs after the message bus shuts down
+	time.Sleep(time.Second * 5)
 }
 
 func TestRequestID(t *testing.T) {
