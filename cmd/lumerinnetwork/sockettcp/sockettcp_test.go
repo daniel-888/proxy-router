@@ -16,7 +16,7 @@ func TestTCPSetupTestCancel(t *testing.T) {
 
 	ctx := context.Background()
 
-	addr := ":12345"
+	addr := ":12347"
 
 	l, e := Listen(ctx, "tcp", addr)
 	if e != nil {
@@ -76,10 +76,9 @@ func TestTCPListenAddr(t *testing.T) {
 
 func TestTCPSetupListener(t *testing.T) {
 
-	ctx, cancel := context.WithCancel(context.Background())
-	_ = cancel
+	ctx := context.Background()
 
-	addr := "127.0.0.1:12345"
+	addr := "127.0.0.1:12346"
 
 	l, e := Listen(ctx, "tcp", addr)
 	if e != nil {
@@ -117,8 +116,9 @@ func TestTCPSetupListener(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+"Count Test Failed read: %d, write: %d\n", readcount, writecount))
 	}
 
-	fmt.Printf("Done\n")
 }
+
+// -------------------------------------------------------------------------------
 
 //
 //

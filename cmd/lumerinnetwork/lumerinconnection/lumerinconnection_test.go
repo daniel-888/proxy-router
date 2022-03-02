@@ -54,7 +54,7 @@ func TestDial(t *testing.T) {
 
 	testaddr := &testAddr{
 		network: "tcp",
-		ipaddr:  "127.0.0.1:12345",
+		ipaddr:  "127.0.0.1:12346",
 	}
 
 	l, e := testListen(ctx, testaddr)
