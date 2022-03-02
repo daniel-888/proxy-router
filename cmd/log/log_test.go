@@ -3,9 +3,9 @@ package log
 import (
 	"bufio"
 	"os"
+	"strconv"
 	"testing"
-
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"time"
 )
 
 func TestNew(t *testing.T) {
@@ -18,8 +18,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestWriteToFile(t *testing.T) {
-	// generate a sure-to-be-new file
-	testFilePath := string(msgbus.GetRandomIDString())
+	testFilePath := strconv.Itoa(time.Now().Nanosecond())
 
 	writeTo, err := os.OpenFile(testFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0755)
 	if err != nil {

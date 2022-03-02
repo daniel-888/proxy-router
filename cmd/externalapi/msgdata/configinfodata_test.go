@@ -9,18 +9,18 @@ import (
 
 func TestAddConfigInfo(t *testing.T) {
 	config := ConfigInfoJSON{
-		ID:          	"Test",
-		DefaultDest: 	"Test",
-		NodeOperator:	"Test",
+		ID:           "Test",
+		DefaultDest:  "Test",
+		NodeOperator: "Test",
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	configRepo := NewConfigInfo(ps)
 	configRepo.AddConfigInfo(config)
 
 	if len(configRepo.ConfigInfoJSONs) != 1 {
 		t.Errorf("Config Info not added")
-	} 
+	}
 }
 
 func TestGetAllConfigInfos(t *testing.T) {
@@ -30,8 +30,8 @@ func TestGetAllConfigInfos(t *testing.T) {
 		config[i].DefaultDest = "Test"
 		config[i].NodeOperator = "Test"
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
@@ -40,8 +40,8 @@ func TestGetAllConfigInfos(t *testing.T) {
 
 	if len(results) != 10 {
 		t.Errorf("Could not get all config infos")
-	} 
-} 
+	}
+}
 
 func TestGetConfigInfo(t *testing.T) {
 	var config [10]ConfigInfoJSON
@@ -50,9 +50,9 @@ func TestGetConfigInfo(t *testing.T) {
 		config[i].DefaultDest = "Test"
 		config[i].NodeOperator = "Test"
 	}
-	
-	ps := msgbus.New(10)
-	configRepo := NewConfigInfo(ps)	
+
+	ps := msgbus.New(10, nil)
+	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
 	}
@@ -74,24 +74,24 @@ func TestUpdateConfigInfo(t *testing.T) {
 		config[i].DefaultDest = "Test"
 		config[i].NodeOperator = "Test"
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
 	}
 
 	configUpdates := ConfigInfoJSON{
-		ID:		"",
-		DefaultDest: "",
-		NodeOperator:	"Updated",
+		ID:           "",
+		DefaultDest:  "",
+		NodeOperator: "Updated",
 	}
-	
+
 	var results [10]ConfigInfoJSON
 	var errors [10]error
 	for i := 0; i < 10; i++ {
-		errors[i] = configRepo.UpdateConfigInfo("Test" + fmt.Sprint(i), configUpdates)
-		results[i],_ = configRepo.GetConfigInfo("Test" + fmt.Sprint(i))
+		errors[i] = configRepo.UpdateConfigInfo("Test"+fmt.Sprint(i), configUpdates)
+		results[i], _ = configRepo.GetConfigInfo("Test" + fmt.Sprint(i))
 		if errors[i] != nil {
 			t.Errorf("UpdateConfigInfo function returned error for this ID: " + results[i].ID)
 		}
@@ -111,13 +111,13 @@ func TestDeleteConfigInfo(t *testing.T) {
 		config[i].DefaultDest = "Test"
 		config[i].NodeOperator = "Test"
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
 	}
-	
+
 	error := configRepo.DeleteConfigInfo("Test7")
 	if error != nil {
 		t.Errorf("DeleteConfigInfo function returned error")

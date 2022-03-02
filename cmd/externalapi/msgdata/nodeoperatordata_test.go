@@ -16,17 +16,17 @@ func TestAddNodeOperator(t *testing.T) {
 	}
 	nodeOperator.Contracts = map[msgbus.ContractID]msgbus.ContractState{
 		"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": msgbus.ContRunningState,
-        "0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": msgbus.ContAvailableState,
-        "0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
-	}   
+		"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": msgbus.ContAvailableState,
+		"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
+	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	nodeOperatorRepo := NewNodeOperator(ps)
 	nodeOperatorRepo.AddNodeOperator(nodeOperator)
 
 	if len(nodeOperatorRepo.NodeOperatorJSONs) != 1 {
 		t.Errorf("NodeOperator struct not added")
-	} 
+	}
 }
 
 func TestGetAllNodeOperators(t *testing.T) {
@@ -40,10 +40,10 @@ func TestGetAllNodeOperators(t *testing.T) {
 			"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": msgbus.ContRunningState,
 			"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": msgbus.ContAvailableState,
 			"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
-		}  
+		}
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	nodeOperatorRepo := NewNodeOperator(ps)
 	for i := 0; i < 10; i++ {
 		nodeOperatorRepo.AddNodeOperator(nodeOperator[i])
@@ -52,8 +52,8 @@ func TestGetAllNodeOperators(t *testing.T) {
 
 	if len(results) != 10 {
 		t.Errorf("Could not get all nodeOperator structs")
-	} 
-} 
+	}
+}
 
 func TestGetNodeOperator(t *testing.T) {
 	var nodeOperator [10]NodeOperatorJSON
@@ -66,10 +66,10 @@ func TestGetNodeOperator(t *testing.T) {
 			"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": msgbus.ContRunningState,
 			"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": msgbus.ContAvailableState,
 			"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
-		}  
+		}
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	nodeOperatorRepo := NewNodeOperator(ps)
 	for i := 0; i < 10; i++ {
 		nodeOperatorRepo.AddNodeOperator(nodeOperator[i])
@@ -96,10 +96,10 @@ func TestUpdateNodeOperator(t *testing.T) {
 			"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": msgbus.ContRunningState,
 			"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": msgbus.ContAvailableState,
 			"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
-		}  
+		}
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	nodeOperatorRepo := NewNodeOperator(ps)
 	for i := 0; i < 10; i++ {
 		nodeOperatorRepo.AddNodeOperator(nodeOperator[i])
@@ -112,12 +112,12 @@ func TestUpdateNodeOperator(t *testing.T) {
 		UnusedHashRate:         0,
 	}
 	nodeOperatorUpdates.Contracts = map[msgbus.ContractID]msgbus.ContractState{}
-	
+
 	var results [10]NodeOperatorJSON
 	var errors [10]error
 	for i := 0; i < 10; i++ {
-		errors[i] = nodeOperatorRepo.UpdateNodeOperator("Test" + fmt.Sprint(i), nodeOperatorUpdates)
-		results[i],_ = nodeOperatorRepo.GetNodeOperator("Test" + fmt.Sprint(i))
+		errors[i] = nodeOperatorRepo.UpdateNodeOperator("Test"+fmt.Sprint(i), nodeOperatorUpdates)
+		results[i], _ = nodeOperatorRepo.GetNodeOperator("Test" + fmt.Sprint(i))
 		if errors[i] != nil {
 			t.Errorf("UpdateNodeOperator function returned error for this ID: " + results[i].ID)
 		}
@@ -141,15 +141,15 @@ func TestDeleteNodeOperator(t *testing.T) {
 			"0x50937C047DB93CB5C87F65B6EFFEA47D03DF0F7D": msgbus.ContRunningState,
 			"0xFB610E4C269DA110C97B92F5F34EAA50E5F3D500": msgbus.ContAvailableState,
 			"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
-		}  
+		}
 	}
-	
-	ps := msgbus.New(10)
+
+	ps := msgbus.New(10, nil)
 	nodeOperatorRepo := NewNodeOperator(ps)
 	for i := 0; i < 10; i++ {
 		nodeOperatorRepo.AddNodeOperator(nodeOperator[i])
 	}
-	
+
 	error := nodeOperatorRepo.DeleteNodeOperator("Test7")
 	if error != nil {
 		t.Errorf("DeleteNodeOperator function returned error")
