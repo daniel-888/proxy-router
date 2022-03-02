@@ -13,25 +13,26 @@ import (
 // Top layer protocol template functions that a new protocol will use to access the SIMPLe layer
 //
 
-type ProtocolConnectionStruct struct {
-	Addr net.Addr
-	Id   simple.ConnUniqueID
-}
-
 type ProtocolListenStruct struct {
 	ctx          context.Context
 	cancel       func()
 	simplelisten *simple.SimpleListenStruct
 }
 
-//type ProtocolInterface interface {
-//	EventHandler(*simple.SimpleStruct)
-//}
+type ProtocolStruct struct {
+	ctx       context.Context
+	cancel    func()
+	simple    *simple.SimpleStruct
+	eventchan chan *simple.SimpleEvent
+	srcconn   ProtocolConnectionStruct
+	dstconn   ProtocolDstStruct
+	msgbus    ProtocolMsgBusStruct
+}
 
 //
 // New() Create a new ProtocolListenStruct
 //
-func New(ctx context.Context) (pls *ProtocolListenStruct, e error) {
+func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 
 	var ok bool
 
@@ -106,4 +107,65 @@ func (pls *ProtocolListenStruct) goAccept() {
 		}
 	}()
 	pls.simplelisten.Run()
+}
+
+// --------------------------------------------
+
+//
+//
+//
+func NewProtocol(s *simple.SimpleStruct) (pls *ProtocolStruct, e error) {
+
+	ctx, cancel := context.WithCancel(s.Ctx())
+	eventchan := make(chan *simple.SimpleEvent)
+	scs := s.Ctx().Value(simple.SimpleContext)
+	src := scs.(simple.SimpleContextStruct).Src
+	dst := scs.(simple.SimpleContextStruct).Dst
+
+	ps := &ProtocolStruct{
+		ctx:       ctx,
+		cancel:    cancel,
+		simple:    s,
+		eventchan: eventchan,
+		srcconn: ProtocolConnectionStruct{
+			Addr: src,
+			Id:   0,
+		},
+		dstconn: ProtocolDstStruct{
+			conn: make(map[int]ProtocolConnectionStruct, 0),
+		},
+		msgbus: ProtocolMsgBusStruct{},
+	}
+
+	_, e = ps.dstconn.openConn(dst)
+
+	return pls, e
+}
+
+//
+// Cancel() calls the simple layer Cancel function on the SimpleListenStruct
+//
+func (ps *ProtocolStruct) Cancel() {
+	ps.cancel()
+}
+
+//
+// Run() calls the simple layer Run function on the SimpleListenStruct
+//
+func (ps *ProtocolStruct) Run() {
+	// go ps.goAccept()
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) Event() chan *simple.SimpleEvent {
+	return ps.eventchan
+}
+
+//
+//
+//p
+func (ps *ProtocolStruct) OpenConn(dst net.Addr) (index int, e error) {
+	return ps.dstconn.openConn(dst)
 }

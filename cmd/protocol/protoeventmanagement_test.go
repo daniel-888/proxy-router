@@ -26,7 +26,7 @@ func TestNewProto(t *testing.T) {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, simple.SimpleContext, sc)
 
-	pls, e := New(ctx)
+	pls, e := NewListen(ctx)
 	if e != nil {
 		lumerinlib.PanicHere(fmt.Sprintf("New() problem:%s", e))
 	}
