@@ -61,7 +61,7 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 	var api APIRepos
 	api.InitializeJSONRepos(ps)
 	time.Sleep(time.Millisecond * 1000)
-	go api.RunAPI()
+	go api.RunAPI(nil)
 
 	fmt.Print("\n/// Publish Msgbus Msgs //\n\n")
 	ps.PubWait(msgbus.DestMsg, msgbus.IDString(dest.ID), msgbus.Dest{})

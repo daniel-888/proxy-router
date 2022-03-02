@@ -2,22 +2,26 @@ package externalapi
 
 import (
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/handlers"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 type APIRepos struct {
-	Config					*msgdata.ConfigInfoRepo 
-	ContractManagerConfig	*msgdata.ContractManagerConfigRepo
-	Connection 				*msgdata.ConnectionRepo 
-	Contract				*msgdata.ContractRepo 
-	Dest					*msgdata.DestRepo 
-	Miner					*msgdata.MinerRepo 
-	NodeOperator			*msgdata.NodeOperatorRepo
+	Config                *msgdata.ConfigInfoRepo
+	ContractManagerConfig *msgdata.ContractManagerConfigRepo
+	Connection            *msgdata.ConnectionRepo
+	Contract              *msgdata.ContractRepo
+	Dest                  *msgdata.DestRepo
+	Miner                 *msgdata.MinerRepo
+	NodeOperator          *msgdata.NodeOperatorRepo
 }
 
 func (api *APIRepos) InitializeJSONRepos(ps *msgbus.PubSub) {
@@ -43,7 +47,7 @@ func (api *APIRepos) InitializeJSONRepos(ps *msgbus.PubSub) {
 	go api.NodeOperator.SubscribeToNodeOperatorMsgBus()
 }
 
-func (api *APIRepos) RunAPI() {
+func (api *APIRepos) RunAPI(l *log.Logger) {
 	r := gin.Default()
 
 	configRoutes := r.Group("/config")
@@ -116,5 +120,21 @@ func (api *APIRepos) RunAPI() {
 
 	if err := r.Run(); err != nil {
 		panic(fmt.Sprintf("external api failed to run:%s", err))
+	}
+
+	port := config.MustGet(config.ConfigRESTPort)
+	server := &http.Server{
+		Addr:              fmt.Sprintf(":%s", port),
+		Handler:           r,
+		IdleTimeout:       20 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		ReadHeaderTimeout: 20 * time.Second,
+		MaxHeaderBytes:    http.DefaultMaxHeaderBytes,
+	}
+
+	fmt.Printf("REST listening on port :%v\n", port)
+
+	if err := server.ListenAndServe(); err != nil {
+		l.Fatalf("serving REST API: %v", err)
 	}
 }

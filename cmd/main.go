@@ -288,7 +288,7 @@ func main() {
 		var api externalapi.APIRepos
 		api.InitializeJSONRepos(ps)
 		time.Sleep(time.Millisecond * 2000)
-		go api.RunAPI()
+		go api.RunAPI(l)
 	}
 
 	select {

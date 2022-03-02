@@ -7,25 +7,26 @@ package config
 type ConfigConst string
 
 const (
-	BuyerNode                        ConfigConst = "BuyerNode"
-	ConfigHelp                       ConfigConst = "ConfigHelp"
-	ConfigContractNetwork				ConfigConst = "ConfigContractNetwork"
-	ConfigContractMnemonic			 	ConfigConst = "ConfigContractMnemonic"
-	ConfigContractEthereumNodeAddress   ConfigConst = "ConfigContractEthereumNodeAddress"
-	ConfigContractClaimFunds            ConfigConst = "ConfigContractClaimFunds"
-	ConfigContractAccountIndex 			ConfigConst = "ConfigContractAccountIndex"
-	ConfigConnectionListenIP         ConfigConst = "ConfigConnectionListenIP"
-	ConfigConnectionListenPort       ConfigConst = "ConfigConnectionListenPort"
-	ConfigConfigFilePath             ConfigConst = "ConfigConfigFilePath"
-	ConfigConfigDownloadPath         ConfigConst = "ConfigConfigDownloadPath"
-	ConfigLogFilePath                ConfigConst = "ConfigLogFilePath"
-	ConfigLogLevel                   ConfigConst = "ConfigLogLevel"
-	DefaultPoolAddr                  ConfigConst = "DefaultPoolAddr"
-	DisableConnection                ConfigConst = "DisableConnection"
-	DisableContract                  ConfigConst = "DisableContract"
-	DisableSchedule                  ConfigConst = "DisableSchedule"
-	DisableStratumv1                 ConfigConst = "DisableStratumV1"
-	DisableAPI						 	ConfigConst = "DisableAPI"
+	BuyerNode                         ConfigConst = "BuyerNode"
+	ConfigHelp                        ConfigConst = "ConfigHelp"
+	ConfigContractNetwork             ConfigConst = "ConfigContractNetwork"
+	ConfigContractMnemonic            ConfigConst = "ConfigContractMnemonic"
+	ConfigContractEthereumNodeAddress ConfigConst = "ConfigContractEthereumNodeAddress"
+	ConfigContractClaimFunds          ConfigConst = "ConfigContractClaimFunds"
+	ConfigContractAccountIndex        ConfigConst = "ConfigContractAccountIndex"
+	ConfigConnectionListenIP          ConfigConst = "ConfigConnectionListenIP"
+	ConfigConnectionListenPort        ConfigConst = "ConfigConnectionListenPort"
+	ConfigConfigFilePath              ConfigConst = "ConfigConfigFilePath"
+	ConfigConfigDownloadPath          ConfigConst = "ConfigConfigDownloadPath"
+	ConfigLogFilePath                 ConfigConst = "ConfigLogFilePath"
+	ConfigLogLevel                    ConfigConst = "ConfigLogLevel"
+	DefaultPoolAddr                   ConfigConst = "DefaultPoolAddr"
+	DisableConnection                 ConfigConst = "DisableConnection"
+	DisableContract                   ConfigConst = "DisableContract"
+	DisableSchedule                   ConfigConst = "DisableSchedule"
+	DisableStratumv1                  ConfigConst = "DisableStratumV1"
+	DisableAPI                        ConfigConst = "DisableAPI"
+	ConfigRESTPort                    ConfigConst = "RESTPort"
 )
 
 // Config Structure
@@ -178,6 +179,16 @@ var ConfigMap = map[ConfigConst]configitem{
 		configval: nil,
 		envval:    nil,
 		flagval:   nil,
+	},
+	ConfigRESTPort: {
+		flagname:   "rest_port",
+		flagusage:  "REST API Port",
+		envname:    "RESTPORT",
+		configname: "externalAPI.port",
+		defval:     "8080",
+		configval:  nil,
+		envval:     nil,
+		flagval:    nil,
 	},
 	DisableConnection: {
 		flagname:  "disableconnection",
