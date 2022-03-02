@@ -5,8 +5,6 @@ import (
 	"regexp"
 	"testing"
 	"time"
-
-	"gitlab.com/TitanInd/lumerin/cmd/log"
 )
 
 func TestBoilerPlateFunc(t *testing.T) {
@@ -31,10 +29,9 @@ func TestBoilerPlateFunc(t *testing.T) {
 	contract := Contract{}
 	miner := Miner{}
 	connection := Connection{}
-	l := log.New()
 
-	ps := New(1, l)
-	if _, err := ps.Shutdown(); err != nil {
+	ps := New(1)
+	if err := ps.Shutdown(); err != nil {
 		time.Sleep(time.Second * 5)
 		t.Error(err)
 	}
@@ -65,7 +62,7 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 
 	for _, params := range pubSetParams {
-		if _, err := ps.Pub(params.msg, params.id, params.data); err != nil {
+		if err := ps.Pub(params.msg, params.id, params.data); err != nil {
 			t.Errorf("trying to pub: %v", err)
 		}
 	}
@@ -84,13 +81,13 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 
 	for _, params := range subParams {
-		if _, err := ps.Sub(params.msg, params.id, params.ch); err != nil {
+		if err := ps.Sub(params.msg, params.id, params.ch); err != nil {
 			t.Errorf("trying to sub: %v", err)
 		}
 	}
 
 	for _, params := range pubSetParams {
-		if _, err := ps.Set(params.msg, params.id, params.data); err != nil {
+		if err := ps.Set(params.msg, params.id, params.data); err != nil {
 			t.Errorf("trying to set: %v", err)
 		}
 	}
@@ -115,7 +112,7 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 
 	for _, params := range getParams {
-		if _, err := ps.Get(params.msg, params.id, params.ch); err != nil {
+		if err := ps.Get(params.msg, params.id, params.ch); err != nil {
 			t.Errorf("trying to get: %v", err)
 		}
 	}
