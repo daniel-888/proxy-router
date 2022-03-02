@@ -14,9 +14,8 @@ var TestString = "This is the the test string\n"
 
 func TestTCPSetupTestCancel(t *testing.T) {
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 
-	// addr := "127.0.0.1:12345"
 	addr := ":12345"
 
 	l, e := Listen(ctx, "tcp", addr)
@@ -24,7 +23,7 @@ func TestTCPSetupTestCancel(t *testing.T) {
 		t.Fatalf(fmt.Sprintf(lumerinlib.FileLine()+"Listen() Test Failed: %s", e))
 	}
 
-	cancel()
+	l.Cancel()
 
 	_, e = l.Accept()
 	fmt.Printf(lumerinlib.FileLine()+" Accept() Returned:%s\n", e)
@@ -34,18 +33,20 @@ func TestTCPSetupTestCancel(t *testing.T) {
 		case <-ctx.Done():
 			fmt.Printf(lumerinlib.FileLine()+" CTX Done(): %s\n", ctx.Err())
 		default:
-			t.Fatalf(fmt.Sprintf(lumerinlib.FileLine()+"Accept() Test Failed: %s", e))
+			fmt.Printf(lumerinlib.FileLine()+"Accept() Test Passed: %s\n", e)
 		}
 	} else {
 		t.Fatalf(fmt.Sprintf(lumerinlib.FileLine()+"Accept() Test Failed: %s", e))
-
 	}
 
 }
 
+//
+//
+//
 func TestTCPListenAddr(t *testing.T) {
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 
 	addr := ":55667"
 
@@ -69,7 +70,7 @@ func TestTCPListenAddr(t *testing.T) {
 		t.Fatalf(fmt.Sprintf(lumerinlib.FileLine()+"Addr() Test Failed: address:%s", netaddr.String()))
 	}
 
-	cancel()
+	l.Cancel()
 
 }
 

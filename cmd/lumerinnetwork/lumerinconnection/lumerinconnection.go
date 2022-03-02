@@ -138,6 +138,20 @@ func (ll *LumerinListenStruct) Accept() (lci *LumerinSocketStruct, e error) {
 //
 //
 //
+func (ll *LumerinListenStruct) Cancel() {
+
+	switch ll.listener.(type) {
+	case *sockettcp.ListenTCPStruct:
+		tcp := ll.listener.(*sockettcp.ListenTCPStruct)
+		tcp.Cancel()
+	default:
+		panic(fmt.Sprintf(lumerinlib.FileLine()+":"+lumerinlib.Funcname()+" Type:'%T' not supported\n", ll.listener))
+	}
+}
+
+//
+//
+//
 func (ll *LumerinListenStruct) Close() (e error) {
 
 	switch ll.listener.(type) {

@@ -16,24 +16,19 @@ import (
 //
 func TestSetupListenCancel(t *testing.T) {
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 
 	testaddr := &testAddr{
 		network: "tcp",
 		ipaddr:  "127.0.0.1:12345",
 	}
 
-	//ip := net.IPAddr{
-	//	IP: net.IP(net.IPv4(127, 0, 0, 1)),
-	//}
-
-	// l, e := testListen(ctx, TCP, 12345, ip)
 	l, e := testListen(ctx, testaddr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
 
-	cancel()
+	l.Cancel()
 
 	_, e = l.Accept()
 	if e != nil {
@@ -41,8 +36,10 @@ func TestSetupListenCancel(t *testing.T) {
 		case <-ctx.Done():
 			fmt.Printf(lumerinlib.FileLine()+" CTX Done(): %s\n", ctx.Err())
 		default:
-			t.Fatalf(fmt.Sprintf(lumerinlib.FileLine()+"Accept() Test Failed: %s", e))
+			fmt.Printf(lumerinlib.FileLine()+"Accept() Test Passed: %s\n", e)
 		}
+	} else {
+		t.Fatalf(fmt.Sprintf(lumerinlib.FileLine()+"Accept() Failed: %s\n", e))
 	}
 
 }
@@ -52,19 +49,14 @@ func TestSetupListenCancel(t *testing.T) {
 //
 func TestDial(t *testing.T) {
 
-	ctx, cancel := context.WithCancel(context.Background())
-	_ = cancel
+	ctx := context.Background()
 	var TestString = "This is a test string\n"
 
 	testaddr := &testAddr{
 		network: "tcp",
 		ipaddr:  "127.0.0.1:12345",
 	}
-	//ip := net.IPAddr{
-	//	IP: net.IP(net.IPv4(127, 0, 0, 1)),
-	//}
 
-	// l, e := testListen(ctx, TCP, 12345, ip)
 	l, e := testListen(ctx, testaddr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
@@ -72,7 +64,6 @@ func TestDial(t *testing.T) {
 
 	go goTestAcceptChannelEcho(l)
 
-	// s := testDial(ctx, "tcp", 12345, ip)
 	s := testDial(ctx, testaddr)
 
 	fmt.Printf(lumerinlib.FileLine() + " Dial completed\n")
@@ -99,6 +90,8 @@ func TestDial(t *testing.T) {
 	}
 
 }
+
+// ---------------------------------------------------------------------------------
 
 //
 //

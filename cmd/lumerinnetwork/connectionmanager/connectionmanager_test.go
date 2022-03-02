@@ -28,7 +28,6 @@ func TestSetupListenCancel(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
 
-	// defer l.Close()
 	l.Cancel()
 
 	_, e = l.Accept()
