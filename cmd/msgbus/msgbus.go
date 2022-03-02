@@ -57,6 +57,7 @@ type Event struct {
 	EventType EventType
 	Msg       MsgType
 	ID        IDString
+	RequestID int
 	Data      interface{}
 	Err       error
 }
@@ -110,8 +111,8 @@ type cmd struct {
 	sync bool
 	msg  MsgType
 	ID   IDString
-	// RequestID is an incrementing value to keep track of each async call.
-	RequestID int
+	// requestID is an incrementing value to keep track of each async call.
+	requestID int
 	Name      string
 	IP        string
 	MAC       string
@@ -199,12 +200,13 @@ func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}) (requestID int
 	}
 
 	c := cmd{
-		op:      opPub,
-		sync:    false,
-		msg:     msg,
-		ID:      id,
-		data:    data,
-		eventch: nil,
+		op:        opPub,
+		sync:      false,
+		msg:       msg,
+		ID:        id,
+		requestID: requestID,
+		data:      data,
+		eventch:   nil,
 	}
 
 	_, err = ps.dispatch(&c)
@@ -254,12 +256,13 @@ func (ps *PubSub) Sub(msg MsgType, id IDString, ech EventChan) (requestID int, e
 	}
 
 	c := cmd{
-		op:      opSub,
-		sync:    false,
-		msg:     msg,
-		ID:      id,
-		data:    nil,
-		eventch: ech,
+		op:        opSub,
+		sync:      false,
+		msg:       msg,
+		ID:        id,
+		requestID: requestID,
+		data:      nil,
+		eventch:   ech,
 	}
 
 	_, err = ps.dispatch(&c)
@@ -305,12 +308,13 @@ func (ps *PubSub) Get(msg MsgType, id IDString, ech EventChan) (requestID int, e
 	}
 
 	c := cmd{
-		op:      opGet,
-		sync:    false,
-		msg:     msg,
-		ID:      id,
-		data:    nil,
-		eventch: ech,
+		op:        opGet,
+		sync:      false,
+		msg:       msg,
+		ID:        id,
+		requestID: requestID,
+		data:      nil,
+		eventch:   ech,
 	}
 
 	_, err = ps.dispatch(&c)
@@ -359,12 +363,13 @@ func (ps *PubSub) SearchIP(msg MsgType, ip string, ech EventChan) (requestID int
 	}
 
 	c := cmd{
-		op:      opSearch,
-		sync:    false,
-		msg:     msg,
-		IP:      ip,
-		data:    nil,
-		eventch: ech,
+		op:        opSearch,
+		sync:      false,
+		msg:       msg,
+		IP:        ip,
+		requestID: requestID,
+		data:      nil,
+		eventch:   ech,
 	}
 
 	_, err = ps.dispatch(&c)
@@ -418,12 +423,13 @@ func (ps *PubSub) SearchMAC(msg MsgType, mac string, ech EventChan) (requestID i
 	}
 
 	c := cmd{
-		op:      opSearch,
-		sync:    false,
-		msg:     msg,
-		MAC:     mac,
-		data:    nil,
-		eventch: ech,
+		op:        opSearch,
+		sync:      false,
+		msg:       msg,
+		MAC:       mac,
+		data:      nil,
+		eventch:   ech,
+		requestID: requestID,
 	}
 
 	_, err = ps.dispatch(&c)
@@ -477,12 +483,13 @@ func (ps *PubSub) SearchName(msg MsgType, name string, ech EventChan) (requestID
 	}
 
 	c := cmd{
-		op:      opSearch,
-		sync:    false,
-		msg:     msg,
-		Name:    name,
-		data:    nil,
-		eventch: ech,
+		op:        opSearch,
+		sync:      false,
+		msg:       msg,
+		Name:      name,
+		data:      nil,
+		eventch:   ech,
+		requestID: requestID,
 	}
 
 	_, err = ps.dispatch(&c)
@@ -536,12 +543,13 @@ func (ps *PubSub) Set(msg MsgType, id IDString, data interface{}) (requestID int
 	}
 
 	c := cmd{
-		op:      opSet,
-		sync:    false,
-		msg:     msg,
-		ID:      id,
-		data:    data,
-		eventch: nil,
+		op:        opSet,
+		sync:      false,
+		msg:       msg,
+		ID:        id,
+		requestID: requestID,
+		data:      data,
+		eventch:   nil,
 	}
 
 	_, err = ps.dispatch(&c)
@@ -598,12 +606,13 @@ func (ps *PubSub) Unsub(msg MsgType, id IDString, ech EventChan) (requestID int,
 	}
 
 	c := cmd{
-		op:      opUnsub,
-		sync:    false,
-		msg:     msg,
-		ID:      id,
-		data:    nil,
-		eventch: ech,
+		op:        opUnsub,
+		sync:      false,
+		msg:       msg,
+		ID:        id,
+		requestID: requestID,
+		data:      nil,
+		eventch:   ech,
 	}
 
 	_, err = ps.dispatch(&c)
@@ -656,12 +665,13 @@ func (ps *PubSub) Unpub(msg MsgType, id IDString) (requestID int, err error) {
 	}
 
 	c := cmd{
-		op:      opUnpub,
-		sync:    false,
-		msg:     msg,
-		ID:      id,
-		data:    nil,
-		eventch: nil,
+		op:        opUnpub,
+		sync:      false,
+		msg:       msg,
+		ID:        id,
+		requestID: requestID,
+		data:      nil,
+		eventch:   nil,
 	}
 
 	_, err = ps.dispatch(&c)
@@ -706,12 +716,13 @@ func (ps *PubSub) RemoveAndCloseEventChan(ech EventChan) (requestID int, err err
 	}
 
 	c := cmd{
-		op:      opRemove,
-		sync:    false,
-		msg:     NoMsg,
-		ID:      "",
-		data:    nil,
-		eventch: ech,
+		op:        opRemove,
+		sync:      false,
+		msg:       NoMsg,
+		ID:        "",
+		requestID: requestID,
+		data:      nil,
+		eventch:   ech,
 	}
 
 	_, err = ps.dispatch(&c)
@@ -750,12 +761,13 @@ func (ps *PubSub) Shutdown() (requestID int, err error) {
 	requestID = <-ps.requestIDChan
 
 	c := cmd{
-		op:      opShutdown,
-		sync:    false,
-		msg:     NoMsg,
-		ID:      "",
-		data:    nil,
-		eventch: nil,
+		op:        opShutdown,
+		sync:      false,
+		msg:       NoMsg,
+		ID:        "",
+		requestID: requestID,
+		data:      nil,
+		eventch:   nil,
 	}
 
 	_, err = ps.dispatch(&c)
@@ -923,6 +935,7 @@ func (reg *registry) pub(c *cmd) {
 		EventType: PublishEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      c.data,
 		Err:       nil,
 	}
@@ -973,6 +986,7 @@ func (reg *registry) sub(c *cmd) {
 		EventType: SubscribedEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      c.data,
 		Err:       nil,
 	}
@@ -1017,6 +1031,7 @@ func (reg *registry) set(c *cmd) {
 		EventType: UpdateEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      c.data,
 		Err:       nil,
 	}
@@ -1083,6 +1098,7 @@ func (reg *registry) get(c *cmd) {
 		EventType: GetEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      nil,
 		Err:       nil,
 	}
@@ -1122,6 +1138,7 @@ func (reg *registry) search(c *cmd) {
 		Msg:       c.msg,
 		Data:      nil,
 		Err:       nil,
+		RequestID: c.requestID,
 	}
 
 	// Only works for Miner messages at the moment.
@@ -1186,6 +1203,7 @@ func (reg *registry) unsub(c *cmd) {
 		EventType: UnsubscribedEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      nil,
 		Err:       nil,
 	}
@@ -1228,6 +1246,7 @@ func (reg *registry) unpub(c *cmd) {
 		EventType: UnpublishEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      nil,
 		Err:       nil,
 	}
@@ -1274,6 +1293,7 @@ func (reg *registry) removeAndClose(c *cmd) {
 		EventType: RemovedEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      nil,
 		Err:       nil,
 	}
