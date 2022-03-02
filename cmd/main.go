@@ -31,7 +31,7 @@ import (
 //
 // -------------------------------------------
 func main() {
-	logFile, err := os.OpenFile("../lumerin.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	logFile, err := os.OpenFile(config.MustGet(config.ConfigLogFilePath), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
 		fmt.Printf("error opening log file: %v", err)
 		os.Exit(1)

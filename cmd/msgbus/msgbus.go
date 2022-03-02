@@ -107,15 +107,17 @@ type cmd struct {
 	op operation
 	// sync indicates how the response should be sent back to the caller,
 	// synchronously (direct return) or asynchronously via a supplied channel.
-	sync     bool
-	msg      MsgType
-	ID       IDString
-	Name     string
-	IP       string
-	MAC      string
-	data     interface{}
-	eventch  EventChan
-	returnch EventChan
+	sync bool
+	msg  MsgType
+	ID   IDString
+	// RequestID is an incrementing value to keep track of each async call.
+	RequestID int
+	Name      string
+	IP        string
+	MAC       string
+	data      interface{}
+	eventch   EventChan
+	returnch  EventChan
 }
 
 //--------------------------------------------------------------------------------
