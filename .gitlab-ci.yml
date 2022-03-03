@@ -22,4 +22,5 @@ test:
     - go test ./cmd/msgbus
     - go test ./cmd/protocol
     - go test ./cmd/walletmanager
+    - go test ./lumerinlib
 
