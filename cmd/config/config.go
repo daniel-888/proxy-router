@@ -87,6 +87,13 @@ func ConfigGetConfigName(cc ConfigConst) (v string, e error) {
 	return
 }
 
+// MustGet looks for the config key and returns a string value no matter what.
+func MustGet(cc ConfigConst) string {
+	val, _ := ConfigGetVal(cc)
+
+	return val
+}
+
 func ConfigGetVal(cc ConfigConst) (v string, e error) {
 	if val, ok := ConfigMap[cc]; ok {
 		if val.flagval != nil && *val.flagval != "" {

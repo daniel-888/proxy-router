@@ -22,6 +22,7 @@ var ErrConnMgrIDXOutOfRange = errors.New("CM: index out of range")
 type ConnectionListenStruct struct {
 	listen *lumerinconnection.LumerinListenStruct
 	ctx    context.Context
+	cancel func()
 	port   int
 	addr   net.Addr
 	// ip     net.IPAddr
@@ -41,8 +42,9 @@ type ConnectionStruct struct {
 //
 //
 //
-// func Listen(ctx context.Context, port int, ip net.IPAddr) (cls *ConnectionListenStruct, e error) {
 func Listen(ctx context.Context, addr net.Addr) (cls *ConnectionListenStruct, e error) {
+
+	ctx, cancel := context.WithCancel(ctx)
 
 	l, e := lumerinconnection.Listen(ctx, addr)
 	if e != nil {
@@ -52,9 +54,8 @@ func Listen(ctx context.Context, addr net.Addr) (cls *ConnectionListenStruct, e 
 	cls = &ConnectionListenStruct{
 		listen: l,
 		ctx:    ctx,
+		cancel: cancel,
 		addr:   addr,
-		//		port:   port,
-		//		ip:     ip,
 	}
 
 	return cls, e
@@ -95,6 +96,13 @@ func (cls *ConnectionListenStruct) Accept() (cs *ConnectionStruct, e error) {
 //
 func (cls *ConnectionListenStruct) Close() (e error) {
 	return cls.listen.Close()
+}
+
+//
+//
+//
+func (cls *ConnectionListenStruct) Cancel() {
+	cls.cancel()
 }
 
 //

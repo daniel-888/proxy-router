@@ -19,7 +19,7 @@ func TestAddContract(t *testing.T) {
 		StartingBlockTimestamp: 100,
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	contractRepo := NewContract(ps)
 	contractRepo.AddContract(contract)
 
@@ -41,7 +41,7 @@ func TestGetAllContracts(t *testing.T) {
 		contract[i].StartingBlockTimestamp = 100
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	contractRepo := NewContract(ps)
 	for i := 0; i < 10; i++ {
 		contractRepo.AddContract(contract[i])
@@ -66,7 +66,7 @@ func TestGetContract(t *testing.T) {
 		contract[i].StartingBlockTimestamp = 100
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	contractRepo := NewContract(ps)
 	for i := 0; i < 10; i++ {
 		contractRepo.AddContract(contract[i])
@@ -95,7 +95,7 @@ func TestUpdateContract(t *testing.T) {
 		contract[i].StartingBlockTimestamp = 100
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	contractRepo := NewContract(ps)
 	for i := 0; i < 10; i++ {
 		contractRepo.AddContract(contract[i])
@@ -142,7 +142,7 @@ func TestDeleteContract(t *testing.T) {
 		contract[i].StartingBlockTimestamp = 100
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	contractRepo := NewContract(ps)
 	for i := 0; i < 10; i++ {
 		contractRepo.AddContract(contract[i])

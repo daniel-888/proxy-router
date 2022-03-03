@@ -22,7 +22,7 @@ import (
 
 func TestBuyerRoutine(t *testing.T) {
 	configPath := "../../ganacheconfig.json"
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	ts := BeforeEach(configPath)
 	var hashrateContractAddress [3]common.Address
 	var purchasedHashrateContractAddress [3]common.Address

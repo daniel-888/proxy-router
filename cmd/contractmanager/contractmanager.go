@@ -20,7 +20,7 @@ import (
 
 	//"github.com/ethereum/go-ethereum/crypto/ecies"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/miguelmota/go-ethereum-hdwallet"
+	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
@@ -184,7 +184,7 @@ func (seller *SellerContractManager) start() (err error) {
 
 		// monitor new contracts getting created and start hashrate conrtract monitor routine when they are created
 		contractEventChan := seller.ps.NewEventChan()
-		err = seller.ps.Sub(msgbus.ContractMsg, "", contractEventChan)
+		_, err = seller.ps.Sub(msgbus.ContractMsg, "", contractEventChan)
 		if err != nil {
 			panic(fmt.Sprintf("Failed to subscribe to contract events on msgbus, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err))
 		}
@@ -503,7 +503,7 @@ func (seller *SellerContractManager) watchHashrateContract(addr msgbus.ContractI
 		}
 	}()
 
-	err = seller.ps.Sub(msgbus.ContractMsg, msgbus.IDString(addr), contractEventChan)
+	_, err = seller.ps.Sub(msgbus.ContractMsg, msgbus.IDString(addr), contractEventChan)
 	if err != nil {
 		panic(fmt.Sprintf("Subscribing to Contract Failed: %s", err))
 	}
@@ -635,7 +635,7 @@ func (buyer *BuyerContractManager) start() (err error) {
 
 	// miner event channel for miner monitor that checks miner publishes, updates, and deletes
 	minerEventChan := buyer.ps.NewEventChan()
-	err = buyer.ps.Sub(msgbus.MinerMsg, msgbus.IDString(""), minerEventChan)
+	_, err = buyer.ps.Sub(msgbus.MinerMsg, msgbus.IDString(""), minerEventChan)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to subscribe to miner events on msgbus, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err))
 	}
@@ -651,7 +651,7 @@ func (buyer *BuyerContractManager) start() (err error) {
 			go buyer.watchHashrateContract(addr, hrLogs, hrSub)
 
 			contractEventChan := buyer.ps.NewEventChan()
-			err = buyer.ps.Sub(msgbus.ContractMsg, msgbus.IDString(addr), contractEventChan)
+			_, err = buyer.ps.Sub(msgbus.ContractMsg, msgbus.IDString(addr), contractEventChan)
 			if err != nil {
 				panic(fmt.Sprintf("Failed to subscribe to contract %s events, Fileline::%s, Error::%s\n", addr, lumerinlib.FileLine(), err))
 			}
@@ -660,7 +660,7 @@ func (buyer *BuyerContractManager) start() (err error) {
 
 		// monitor new contracts getting purchased and start watch hashrate conrtract routine when they are purchased
 		contractEventChan := buyer.ps.NewEventChan()
-		err := buyer.ps.Sub(msgbus.ContractMsg, "", contractEventChan)
+		_, err := buyer.ps.Sub(msgbus.ContractMsg, "", contractEventChan)
 		if err != nil {
 			panic(fmt.Sprintf("Failed to subscribe to contract events on msgbus, Fileline::%s, Error::%s\n", lumerinlib.FileLine(), err))
 		}
@@ -680,7 +680,7 @@ func (buyer *BuyerContractManager) start() (err error) {
 					go buyer.watchHashrateContract(msgbus.ContractID(addr.Hex()), hrLogs, hrSub)
 
 					newContractEventChan := buyer.ps.NewEventChan()
-					err = buyer.ps.Sub(msgbus.ContractMsg, msgbus.IDString(newContract.ID), newContractEventChan)
+					_, err = buyer.ps.Sub(msgbus.ContractMsg, msgbus.IDString(newContract.ID), newContractEventChan)
 					if err != nil {
 						panic(fmt.Sprintf("Failed to subscribe to contract %s events, Fileline::%s, Error::%s\n", newContract.ID, lumerinlib.FileLine(), err))
 					}

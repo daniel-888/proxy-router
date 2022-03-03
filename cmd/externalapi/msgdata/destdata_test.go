@@ -13,7 +13,7 @@ func TestAddDest(t *testing.T) {
 		NetUrl: "Test",
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	destRepo := NewDest(ps)
 	destRepo.AddDest(dest)
 
@@ -29,7 +29,7 @@ func TestGetAllDests(t *testing.T) {
 		dest[i].NetUrl = "Test"
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	destRepo := NewDest(ps)
 	for i := 0; i < 10; i++ {
 		destRepo.AddDest(dest[i])
@@ -48,7 +48,7 @@ func TestGetDest(t *testing.T) {
 		dest[i].NetUrl = "Test"
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	destRepo := NewDest(ps)
 	for i := 0; i < 10; i++ {
 		destRepo.AddDest(dest[i])
@@ -71,7 +71,7 @@ func TestUpdateDest(t *testing.T) {
 		dest[i].NetUrl = "Test"
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	destRepo := NewDest(ps)
 	for i := 0; i < 10; i++ {
 		destRepo.AddDest(dest[i])
@@ -106,7 +106,7 @@ func TestDeleteDest(t *testing.T) {
 		dest[i].NetUrl = "Test"
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	destRepo := NewDest(ps)
 	for i := 0; i < 10; i++ {
 		destRepo.AddDest(dest[i])

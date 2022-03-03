@@ -22,8 +22,8 @@ import (
 )
 
 func TestSellerRoutine(t *testing.T) {
-	configPath := "../../ganacheconfig.json"
-	ps := msgbus.New(10)
+	configPath := "../../ropstenconfig.json"
+	ps := msgbus.New(10, nil)
 	ts := BeforeEach(configPath)
 	var hashrateContractAddress [4]common.Address
 	var purchasedHashrateContractAddress [4]common.Address

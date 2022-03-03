@@ -9,6 +9,15 @@ import (
 
 func TestBoilerPlateFunc(t *testing.T) {
 	eventChan := make(EventChan)
+	go func(eventChan EventChan) {
+		for event := range eventChan {
+			fmt.Printf("Read Chan: %+v\n", event)
+		}
+
+		fmt.Printf("Closed Read Chan\n")
+
+	}(eventChan)
+	defer close(eventChan)
 
 	config := ConfigInfo{
 		ID:           "ConfigID01",
@@ -30,24 +39,7 @@ func TestBoilerPlateFunc(t *testing.T) {
 	miner := Miner{}
 	connection := Connection{}
 
-	ps := New(1)
-	if err := ps.Shutdown(); err != nil {
-		time.Sleep(time.Second * 5)
-		t.Error(err)
-	}
-	time.Sleep(time.Second * 5)
-	fmt.Println("NO ERROR!!! YAY!")
-	//return
-	go func(eventChan EventChan) {
-		for event := range eventChan {
-			fmt.Printf("Read Chan: %+v\n", event)
-		}
-
-		fmt.Printf("Closed Read Chan\n")
-
-	}(eventChan)
-	defer close(eventChan)
-
+	ps := New(1, nil)
 	pubSetParams := []struct {
 		msg  MsgType
 		id   IDString
@@ -62,8 +54,7 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 
 	for _, params := range pubSetParams {
-		fmt.Println(params)
-		if err := ps.Pub(params.msg, params.id, params.data); err != nil {
+		if _, err := ps.Pub(params.msg, params.id, params.data); err != nil {
 			t.Errorf("trying to pub: %v", err)
 		}
 	}
@@ -82,13 +73,13 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 
 	for _, params := range subParams {
-		if err := ps.Sub(params.msg, params.id, params.ch); err != nil {
+		if _, err := ps.Sub(params.msg, params.id, params.ch); err != nil {
 			t.Errorf("trying to sub: %v", err)
 		}
 	}
 
 	for _, params := range pubSetParams {
-		if err := ps.Set(params.msg, params.id, params.data); err != nil {
+		if _, err := ps.Set(params.msg, params.id, params.data); err != nil {
 			t.Errorf("trying to set: %v", err)
 		}
 	}
@@ -113,10 +104,86 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 
 	for _, params := range getParams {
-		if err := ps.Get(params.msg, params.id, params.ch); err != nil {
+		if _, err := ps.Get(params.msg, params.id, params.ch); err != nil {
 			t.Errorf("trying to get: %v", err)
 		}
 	}
+
+	if _, err := ps.Shutdown(); err != nil {
+		t.Errorf("shutting down: %v", err)
+	}
+
+	// symbolizes that the app runs after the message bus shuts down
+	time.Sleep(time.Second * 5)
+}
+
+func TestRequestID(t *testing.T) {
+	mb := New(1, nil)
+
+	compareID := func(method string, id, requestID int) {
+		if id != requestID {
+			t.Errorf("expected ID %d but got %d in %s method\n", id, requestID, method)
+		}
+	}
+
+	for id := 1; id < 100; id++ {
+		requestID, _ := mb.Pub(NoMsg, IDString("0"), "datadatadata")
+		compareID("Pub", id, requestID)
+	}
+
+	eventChan := make(EventChan)
+	for id := 100; id < 200; id++ {
+		requestID, _ := mb.Sub(NoMsg, IDString("0"), eventChan)
+		compareID("Sub", id, requestID)
+	}
+
+	eventChan = make(EventChan)
+	for id := 200; id < 300; id++ {
+		requestID, _ := mb.Get(NoMsg, IDString("0"), eventChan)
+		compareID("Get", id, requestID)
+	}
+
+	eventChan = make(EventChan)
+	for id := 300; id < 400; id++ {
+		requestID, _ := mb.SearchIP(NoMsg, "ip address", eventChan)
+		compareID("SearchIP", id, requestID)
+	}
+
+	eventChan = make(EventChan)
+	for id := 400; id < 500; id++ {
+		requestID, _ := mb.SearchMAC(NoMsg, "mac address", eventChan)
+		compareID("SearchMAC", id, requestID)
+	}
+
+	eventChan = make(EventChan)
+	for id := 500; id < 600; id++ {
+		requestID, _ := mb.SearchName(NoMsg, "name", eventChan)
+		compareID("SearchName", id, requestID)
+	}
+
+	for id := 600; id < 700; id++ {
+		requestID, _ := mb.Set(NoMsg, IDString("0"), "datadatadata")
+		compareID("Set", id, requestID)
+	}
+
+	for id := 700; id < 800; id++ {
+		requestID, _ := mb.Unpub(NoMsg, IDString("0"))
+		compareID("Unpub", id, requestID)
+	}
+
+	eventChan = make(EventChan)
+	for id := 800; id < 900; id++ {
+		requestID, _ := mb.Unsub(NoMsg, IDString("0"), eventChan)
+		compareID("Unsub", id, requestID)
+	}
+
+	eventChan = make(EventChan)
+	requestID, _ := mb.RemoveAndCloseEventChan(eventChan)
+	compareID("RemoveAndCloseEventChan", 900, requestID)
+
+	mb = New(1, nil)
+	requestID, _ = mb.Shutdown()
+	compareID("Shutdown", 1, requestID)
 }
 
 func TestGetRandomIDString(t *testing.T) {

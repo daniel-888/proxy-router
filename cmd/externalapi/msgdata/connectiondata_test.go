@@ -18,7 +18,7 @@ func TestAddConnection(t *testing.T) {
 		StartDate: time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC),
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	connectionRepo := NewConnection(ps)
 	connectionRepo.AddConnection(connection)
 
@@ -38,7 +38,7 @@ func TestGetAllConnections(t *testing.T) {
 		connection[i].StartDate = time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC)
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	connectionRepo := NewConnection(ps)
 	for i := 0; i < 10; i++ {
 		connectionRepo.AddConnection(connection[i])
@@ -61,7 +61,7 @@ func TestGetConnection(t *testing.T) {
 		connection[i].StartDate = time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC)
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	connectionRepo := NewConnection(ps)
 	for i := 0; i < 10; i++ {
 		connectionRepo.AddConnection(connection[i])
@@ -88,7 +88,7 @@ func TestUpdateConnection(t *testing.T) {
 		connection[i].StartDate = time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC)
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	connectionRepo := NewConnection(ps)
 	for i := 0; i < 10; i++ {
 		connectionRepo.AddConnection(connection[i])
@@ -131,7 +131,7 @@ func TestDeleteConnection(t *testing.T) {
 		connection[i].StartDate = time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC)
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	connectionRepo := NewConnection(ps)
 	for i := 0; i < 10; i++ {
 		connectionRepo.AddConnection(connection[i])

@@ -2,13 +2,18 @@ package msgbus
 
 import (
 	"testing"
+
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 )
 
-var ps *PubSub = New(1)
-var host = "127.0.0.1"
-var port = "3334"
-var username = "someusername"
-var testurl = "stratum+tcp://" + username + ":@" + host + ":" + port + "/"
+var (
+	l                = log.New()
+	ps       *PubSub = New(1, l)
+	host             = "127.0.0.1"
+	port             = "3334"
+	username         = "someusername"
+	testurl          = "stratum+tcp://" + username + ":@" + host + ":" + port + "/"
+)
 
 func TestDestPubWait(t *testing.T) {
 

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
@@ -56,6 +57,7 @@ type Event struct {
 	EventType EventType
 	Msg       MsgType
 	ID        IDString
+	RequestID int
 	Data      interface{}
 	Err       error
 }
@@ -82,6 +84,11 @@ type registry struct {
 type PubSub struct {
 	cmdChan  chan *cmd
 	capacity int
+	// requestIDChan carries the incrementing request IDs
+	requestIDChan chan int
+	// done signals to close the requestIDChan
+	done   chan struct{}
+	logger *log.Logger
 }
 
 const (
@@ -104,15 +111,17 @@ type cmd struct {
 	op operation
 	// sync indicates how the response should be sent back to the caller,
 	// synchronously (direct return) or asynchronously via a supplied channel.
-	sync     bool
-	msg      MsgType
-	ID       IDString
-	Name     string
-	IP       string
-	MAC      string
-	data     interface{}
-	eventch  EventChan
-	returnch EventChan
+	sync bool
+	msg  MsgType
+	ID   IDString
+	// requestID is an incrementing value to keep track of each async call.
+	requestID int
+	Name      string
+	IP        string
+	MAC       string
+	data      interface{}
+	eventch   EventChan
+	returnch  EventChan
 }
 
 //--------------------------------------------------------------------------------
@@ -122,16 +131,18 @@ func getCommandError(e MsgBusError) error {
 	return fmt.Errorf("command Error: %s", e)
 }
 
-//--------------------------------------------------------------------------------
 // New creates a new PubSub and starts a goroutine for handling operations.
 // The capacity of the channels created by Sub and SubOnce will be as specified.
-//
-// Convert this to a message bus
-//
-//--------------------------------------------------------------------------------
-func New(capacity int) *PubSub {
-	ps := &PubSub{make(chan *cmd), capacity}
+func New(capacity int, l *log.Logger) *PubSub {
+	ps := &PubSub{
+		cmdChan:       make(chan *cmd),
+		capacity:      capacity,
+		requestIDChan: make(chan int),
+		logger:        l,
+	}
+
 	go ps.start()
+
 	return ps
 }
 
@@ -162,42 +173,51 @@ func (ps *PubSub) NewEvent() Event {
 	return e
 }
 
-//--------------------------------------------------------------------------------
-// Create new topic structure
-//
-//--------------------------------------------------------------------------------
-func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}) (err error) {
+// GetRandomIDString returns a random string.
+// Format: xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx
+func GetRandomIDString() (i IDString) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		fmt.Printf("Error reading random file: %s\n", err)
+		panic(err)
+	}
+	str := fmt.Sprintf("%08x-%08x-%08x-%08x", b[0:4], b[4:8], b[8:12], b[12:16])
+	i = IDString(str)
+	return i
+}
+
+// Pub publishes a message/command to its subscribers, asynchronously.
+func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if id == "" {
-		return getCommandError(MsgBusErrNoID)
+		return requestID, getCommandError(MsgBusErrNoID)
 	}
 
 	if data == nil {
-		return getCommandError(MsgBusErrNoData)
+		return requestID, getCommandError(MsgBusErrNoData)
 	}
 
 	c := cmd{
-		op:      opPub,
-		sync:    false,
-		msg:     msg,
-		ID:      id,
-		data:    data,
-		eventch: nil,
+		op:        opPub,
+		sync:      false,
+		msg:       msg,
+		ID:        id,
+		requestID: requestID,
+		data:      data,
+		eventch:   nil,
 	}
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
-//--------------------------------------------------------------------------------
-// Create new topic structure
-//
-//--------------------------------------------------------------------------------
+// PubWait publishes a message/command to its subscribers, synchronously.
 func (ps *PubSub) PubWait(msg MsgType, id IDString, data interface{}) (e Event, err error) {
 
 	if msg == NoMsg {
@@ -226,36 +246,34 @@ func (ps *PubSub) PubWait(msg MsgType, id IDString, data interface{}) (e Event, 
 	return e, err
 }
 
-//--------------------------------------------------------------------------------
-// Request update events for the topic
-//--------------------------------------------------------------------------------
-func (ps *PubSub) Sub(msg MsgType, id IDString, ech EventChan) (err error) {
+// Sub subscribes to a message/command, asynchronously.
+func (ps *PubSub) Sub(msg MsgType, id IDString, ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	c := cmd{
-		op:      opSub,
-		sync:    false,
-		msg:     msg,
-		ID:      id,
-		data:    nil,
-		eventch: ech,
+		op:        opSub,
+		sync:      false,
+		msg:       msg,
+		ID:        id,
+		requestID: requestID,
+		data:      nil,
+		eventch:   ech,
 	}
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
-//--------------------------------------------------------------------------------
-// Request update events for the topic
-//--------------------------------------------------------------------------------
+// SubWait subscribes to a message/command, synchronously.
 func (ps *PubSub) SubWait(msg MsgType, id IDString, ech EventChan) (e Event, err error) {
 
 	if msg == NoMsg {
@@ -279,37 +297,37 @@ func (ps *PubSub) SubWait(msg MsgType, id IDString, ech EventChan) (e Event, err
 
 }
 
-//--------------------------------------------------------------------------------
-//
-//--------------------------------------------------------------------------------
-func (ps *PubSub) Get(msg MsgType, id IDString, ech EventChan) (err error) {
+// Get retrieves a record by ID or, if no ID, then all
+// record IDs associated with the given message type, asynchronously.
+func (ps *PubSub) Get(msg MsgType, id IDString, ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	c := cmd{
-		op:      opGet,
-		sync:    false,
-		msg:     msg,
-		ID:      id,
-		data:    nil,
-		eventch: ech,
+		op:        opGet,
+		sync:      false,
+		msg:       msg,
+		ID:        id,
+		requestID: requestID,
+		data:      nil,
+		eventch:   ech,
 	}
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 
 }
 
-//--------------------------------------------------------------------------------
-//
-//--------------------------------------------------------------------------------
+// GetWait retrieves a record by ID or, if no ID, then all
+// record IDs associated with the given message type, synchronously.
 func (ps *PubSub) GetWait(msg MsgType, id IDString) (e Event, err error) {
 
 	if msg == NoMsg {
@@ -332,32 +350,34 @@ func (ps *PubSub) GetWait(msg MsgType, id IDString) (e Event, err error) {
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) SearchIP(msg MsgType, ip string, ech EventChan) (err error) {
+func (ps *PubSub) SearchIP(msg MsgType, ip string, ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	if ip == "" {
-		return getCommandError(MsgBusErrNoSearchTerm)
+		return requestID, getCommandError(MsgBusErrNoSearchTerm)
 	}
 
 	c := cmd{
-		op:      opSearch,
-		sync:    false,
-		msg:     msg,
-		IP:      ip,
-		data:    nil,
-		eventch: ech,
+		op:        opSearch,
+		sync:      false,
+		msg:       msg,
+		IP:        ip,
+		requestID: requestID,
+		data:      nil,
+		eventch:   ech,
 	}
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 
 }
 
@@ -390,32 +410,34 @@ func (ps *PubSub) SearchIPWait(msg MsgType, ip string) (e Event, err error) {
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) SearchMAC(msg MsgType, mac string, ech EventChan) (err error) {
+func (ps *PubSub) SearchMAC(msg MsgType, mac string, ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	if mac == "" {
-		return getCommandError(MsgBusErrNoSearchTerm)
+		return requestID, getCommandError(MsgBusErrNoSearchTerm)
 	}
 
 	c := cmd{
-		op:      opSearch,
-		sync:    false,
-		msg:     msg,
-		MAC:     mac,
-		data:    nil,
-		eventch: ech,
+		op:        opSearch,
+		sync:      false,
+		msg:       msg,
+		MAC:       mac,
+		data:      nil,
+		eventch:   ech,
+		requestID: requestID,
 	}
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 
 }
 
@@ -448,32 +470,34 @@ func (ps *PubSub) SearchMACWait(msg MsgType, mac string) (e Event, err error) {
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) SearchName(msg MsgType, name string, ech EventChan) (err error) {
+func (ps *PubSub) SearchName(msg MsgType, name string, ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	if name == "" {
-		return getCommandError(MsgBusErrNoSearchTerm)
+		return requestID, getCommandError(MsgBusErrNoSearchTerm)
 	}
 
 	c := cmd{
-		op:      opSearch,
-		sync:    false,
-		msg:     msg,
-		Name:    name,
-		data:    nil,
-		eventch: ech,
+		op:        opSearch,
+		sync:      false,
+		msg:       msg,
+		Name:      name,
+		data:      nil,
+		eventch:   ech,
+		requestID: requestID,
 	}
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 
 }
 
@@ -506,32 +530,34 @@ func (ps *PubSub) SearchNameWait(msg MsgType, name string) (e Event, err error) 
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) Set(msg MsgType, id IDString, data interface{}) (err error) {
+func (ps *PubSub) Set(msg MsgType, id IDString, data interface{}) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if id == "" {
-		return getCommandError(MsgBusErrNoID)
+		return requestID, getCommandError(MsgBusErrNoID)
 	}
 
 	if data == nil {
-		return getCommandError(MsgBusErrNoData)
+		return requestID, getCommandError(MsgBusErrNoData)
 	}
 
 	c := cmd{
-		op:      opSet,
-		sync:    false,
-		msg:     msg,
-		ID:      id,
-		data:    data,
-		eventch: nil,
+		op:        opSet,
+		sync:      false,
+		msg:       msg,
+		ID:        id,
+		requestID: requestID,
+		data:      data,
+		eventch:   nil,
 	}
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
 //--------------------------------------------------------------------------------
@@ -567,32 +593,34 @@ func (ps *PubSub) SetWait(msg MsgType, id IDString, data interface{}) (e Event, 
 //--------------------------------------------------------------------------------
 // Request removal of events for the topic
 //--------------------------------------------------------------------------------
-func (ps *PubSub) Unsub(msg MsgType, id IDString, ech EventChan) (err error) {
+func (ps *PubSub) Unsub(msg MsgType, id IDString, ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if id == "" {
-		return getCommandError(MsgBusErrNoID)
+		return requestID, getCommandError(MsgBusErrNoID)
 	}
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	c := cmd{
-		op:      opUnsub,
-		sync:    false,
-		msg:     msg,
-		ID:      id,
-		data:    nil,
-		eventch: ech,
+		op:        opUnsub,
+		sync:      false,
+		msg:       msg,
+		ID:        id,
+		requestID: requestID,
+		data:      nil,
+		eventch:   ech,
 	}
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
 //--------------------------------------------------------------------------------
@@ -628,28 +656,30 @@ func (ps *PubSub) UnsubWait(msg MsgType, id IDString, ech EventChan) (e Event, e
 //--------------------------------------------------------------------------------
 // Request removal of the topic
 //--------------------------------------------------------------------------------
-func (ps *PubSub) Unpub(msg MsgType, id IDString) (err error) {
+func (ps *PubSub) Unpub(msg MsgType, id IDString) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
-		return getCommandError(MsgBusErrNoMsg)
+		return requestID, getCommandError(MsgBusErrNoMsg)
 	}
 
 	if id == "" {
-		return getCommandError(MsgBusErrNoID)
+		return requestID, getCommandError(MsgBusErrNoID)
 	}
 
 	c := cmd{
-		op:      opUnpub,
-		sync:    false,
-		msg:     msg,
-		ID:      id,
-		data:    nil,
-		eventch: nil,
+		op:        opUnpub,
+		sync:      false,
+		msg:       msg,
+		ID:        id,
+		requestID: requestID,
+		data:      nil,
+		eventch:   nil,
 	}
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
 //--------------------------------------------------------------------------------
@@ -681,24 +711,26 @@ func (ps *PubSub) UnpubWait(msg MsgType, id IDString) (e Event, err error) {
 //--------------------------------------------------------------------------------
 // Request update events for the topic
 //--------------------------------------------------------------------------------
-func (ps *PubSub) RemoveAndCloseEventChan(ech EventChan) (err error) {
+func (ps *PubSub) RemoveAndCloseEventChan(ech EventChan) (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	if ech == nil {
-		return getCommandError(MsgBusErrNoEventChan)
+		return requestID, getCommandError(MsgBusErrNoEventChan)
 	}
 
 	c := cmd{
-		op:      opRemove,
-		sync:    false,
-		msg:     NoMsg,
-		ID:      "",
-		data:    nil,
-		eventch: ech,
+		op:        opRemove,
+		sync:      false,
+		msg:       NoMsg,
+		ID:        "",
+		requestID: requestID,
+		data:      nil,
+		eventch:   ech,
 	}
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
 //--------------------------------------------------------------------------------
@@ -728,20 +760,22 @@ func (ps *PubSub) RemoveAndCloseEventChanWait(ech EventChan) (e Event, err error
 // Shutdown closes all subscribed channels and terminates the goroutine.
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) Shutdown() (err error) {
+func (ps *PubSub) Shutdown() (requestID int, err error) {
+	requestID = <-ps.requestIDChan
 
 	c := cmd{
-		op:      opShutdown,
-		sync:    false,
-		msg:     NoMsg,
-		ID:      "",
-		data:    nil,
-		eventch: nil,
+		op:        opShutdown,
+		sync:      false,
+		msg:       NoMsg,
+		ID:        "",
+		requestID: requestID,
+		data:      nil,
+		eventch:   nil,
 	}
 
 	_, err = ps.dispatch(&c)
 
-	return err
+	return requestID, err
 }
 
 //--------------------------------------------------------------------------------
@@ -798,6 +832,20 @@ func (ps *PubSub) dispatch(c *cmd) (event Event, e error) {
 //
 //--------------------------------------------------------------------------------
 func (ps *PubSub) start() {
+	defer close(ps.requestIDChan)
+	go func(requestIDChan chan<- int) {
+		counter := 1
+		for {
+			select {
+			case <-ps.done:
+				break
+			default:
+				requestIDChan <- counter
+				counter++
+			}
+		}
+	}(ps.requestIDChan)
+
 	reg := registry{
 		data:   make(map[MsgType]map[IDString]registryData),
 		notify: make(map[MsgType]map[chan Event]interface{}),
@@ -825,7 +873,6 @@ loop:
 		fmt.Printf("MSGBUS: %+v\n", *cmdptr)
 
 		if cmdptr.op == opNop {
-			// cmdptr.err = nil
 			continue loop
 		}
 
@@ -861,8 +908,9 @@ loop:
 		default:
 			panic("default reached for cmd.op")
 		}
-
 	}
+
+	ps.done <- struct{}{}
 
 	fmt.Printf("Closing PubSub Command chan\n")
 
@@ -895,6 +943,7 @@ func (reg *registry) pub(c *cmd) {
 		EventType: PublishEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      c.data,
 		Err:       nil,
 	}
@@ -945,6 +994,7 @@ func (reg *registry) sub(c *cmd) {
 		EventType: SubscribedEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      c.data,
 		Err:       nil,
 	}
@@ -989,6 +1039,7 @@ func (reg *registry) set(c *cmd) {
 		EventType: UpdateEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      c.data,
 		Err:       nil,
 	}
@@ -1046,7 +1097,7 @@ func (reg *registry) set(c *cmd) {
 //
 // Msg
 // ID
-// eventch - where to send the get request too
+// eventch - where to send the get request to
 //
 //-----------------------------------------
 func (reg *registry) get(c *cmd) {
@@ -1055,6 +1106,7 @@ func (reg *registry) get(c *cmd) {
 		EventType: GetEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      nil,
 		Err:       nil,
 	}
@@ -1094,6 +1146,7 @@ func (reg *registry) search(c *cmd) {
 		Msg:       c.msg,
 		Data:      nil,
 		Err:       nil,
+		RequestID: c.requestID,
 	}
 
 	// Only works for Miner messages at the moment.
@@ -1158,6 +1211,7 @@ func (reg *registry) unsub(c *cmd) {
 		EventType: UnsubscribedEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      nil,
 		Err:       nil,
 	}
@@ -1200,6 +1254,7 @@ func (reg *registry) unpub(c *cmd) {
 		EventType: UnpublishEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      nil,
 		Err:       nil,
 	}
@@ -1246,6 +1301,7 @@ func (reg *registry) removeAndClose(c *cmd) {
 		EventType: RemovedEvent,
 		Msg:       c.msg,
 		ID:        c.ID,
+		RequestID: c.requestID,
 		Data:      nil,
 		Err:       nil,
 	}
@@ -1255,9 +1311,7 @@ func (reg *registry) removeAndClose(c *cmd) {
 	}
 
 	for msg := range reg.notify {
-		if _, ok := reg.notify[msg][c.eventch]; ok {
-			delete(reg.notify[msg], c.eventch)
-		}
+		delete(reg.notify[msg], c.eventch)
 	}
 
 	for msg := range reg.data {
@@ -1274,17 +1328,4 @@ func (reg *registry) removeAndClose(c *cmd) {
 		event.send(c.returnch)
 	}
 
-}
-
-// GetRandomIDString returns a random string.
-// Format: xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx
-func GetRandomIDString() (i IDString) {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		fmt.Printf("Error reading random file: %s\n", err)
-		panic(err)
-	}
-	str := fmt.Sprintf("%08x-%08x-%08x-%08x", b[0:4], b[4:8], b[8:12], b[12:16])
-	i = IDString(str)
-	return i
 }

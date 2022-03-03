@@ -206,9 +206,14 @@ func (l *ListenTCPStruct) closed() bool {
 // Closes down a listening Socket
 //
 func (l *ListenTCPStruct) Close() error {
-
-	l.cancel()
 	return l.listener.Close()
+}
+
+//
+//
+//
+func (l *ListenTCPStruct) Cancel() {
+	l.cancel()
 }
 
 //

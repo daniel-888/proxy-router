@@ -17,7 +17,7 @@ func TestAddMiner(t *testing.T) {
 		CurrentHashRate:         100,
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	minerRepo := NewMiner(ps)
 	minerRepo.AddMiner(miner)
 
@@ -36,7 +36,7 @@ func TestGetAllMiners(t *testing.T) {
 		miner[i].CurrentHashRate = 100
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	minerRepo := NewMiner(ps)
 	for i := 0; i < 10; i++ {
 		minerRepo.AddMiner(miner[i])
@@ -58,7 +58,7 @@ func TestGetMiner(t *testing.T) {
 		miner[i].CurrentHashRate = 100
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	minerRepo := NewMiner(ps)
 	for i := 0; i < 10; i++ {
 		minerRepo.AddMiner(miner[i])
@@ -84,7 +84,7 @@ func TestUpdateMiner(t *testing.T) {
 		miner[i].CurrentHashRate = 100
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	minerRepo := NewMiner(ps)
 	for i := 0; i < 10; i++ {
 		minerRepo.AddMiner(miner[i])
@@ -125,7 +125,7 @@ func TestDeleteMiner(t *testing.T) {
 		miner[i].CurrentHashRate = 100
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	minerRepo := NewMiner(ps)
 	for i := 0; i < 10; i++ {
 		minerRepo.AddMiner(miner[i])
@@ -141,7 +141,7 @@ func TestDeleteMiner(t *testing.T) {
 }
 
 func TestSubsribeToMsgBus(t *testing.T) {
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	minerRepo := NewMiner(ps)
 	go minerRepo.SubscribeToMinerMsgBus()
 	time.Sleep(time.Millisecond * 2000)

@@ -10,7 +10,7 @@ import (
 )
 
 func TestMsgBusDataAddedToApiRepos(t *testing.T) {
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 
 	dest := msgbus.Dest{
 		ID:     msgbus.DestID("DestID01"),

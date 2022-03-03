@@ -13,6 +13,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
@@ -30,6 +31,15 @@ import (
 //
 // -------------------------------------------
 func main() {
+	logFile, err := os.OpenFile(config.MustGet(config.ConfigLogFilePath), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	if err != nil {
+		fmt.Printf("error opening log file: %v", err)
+		os.Exit(1)
+	}
+
+	l := log.New().SetFormatJSON().SetOutput(logFile)
+	defer l.Close()
+
 	mainContext, mainCancel := context.WithCancel(context.Background())
 	sigInt := make(chan os.Signal, 1)
 	signal.Notify(sigInt, os.Interrupt)
@@ -85,15 +95,9 @@ func main() {
 	}
 
 	//
-	// Fire up logger
-	//
-	// logging.Init(false)
-	// defer logging.Cleanup()
-
-	//
 	// Fire up the Message Bus
 	//
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, l)
 
 	//
 	// Setup Default Dest

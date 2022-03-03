@@ -10,7 +10,7 @@ import (
 )
 
 func TestSellerConnectionScheduler(t *testing.T) {
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	mainCtx := context.Background()
 
 	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"
@@ -323,7 +323,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 }
 
 func TestBuyerConnectionScheduler(t *testing.T) {
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	mainCtx := context.Background()
 
 	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"

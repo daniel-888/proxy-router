@@ -12,7 +12,7 @@ import (
 
 func TestNewProto(t *testing.T) {
 
-	ps := msgbus.New(1)
+	ps := msgbus.New(1, nil)
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, "127.0.0.1:12345")
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, "127.0.0.1:12345")
 

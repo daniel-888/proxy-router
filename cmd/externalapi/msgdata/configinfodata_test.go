@@ -14,7 +14,7 @@ func TestAddConfigInfo(t *testing.T) {
 		NodeOperator: "Test",
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	configRepo := NewConfigInfo(ps)
 	configRepo.AddConfigInfo(config)
 
@@ -31,7 +31,7 @@ func TestGetAllConfigInfos(t *testing.T) {
 		config[i].NodeOperator = "Test"
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
@@ -51,7 +51,7 @@ func TestGetConfigInfo(t *testing.T) {
 		config[i].NodeOperator = "Test"
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
@@ -75,7 +75,7 @@ func TestUpdateConfigInfo(t *testing.T) {
 		config[i].NodeOperator = "Test"
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])
@@ -112,7 +112,7 @@ func TestDeleteConfigInfo(t *testing.T) {
 		config[i].NodeOperator = "Test"
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	configRepo := NewConfigInfo(ps)
 	for i := 0; i < 10; i++ {
 		configRepo.AddConfigInfo(config[i])

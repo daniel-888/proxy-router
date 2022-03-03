@@ -20,7 +20,7 @@ func TestAddNodeOperator(t *testing.T) {
 		"0x397729E80F77BA09D930FE24E8D1FC74372E86D3": msgbus.ContAvailableState,
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	nodeOperatorRepo := NewNodeOperator(ps)
 	nodeOperatorRepo.AddNodeOperator(nodeOperator)
 
@@ -43,7 +43,7 @@ func TestGetAllNodeOperators(t *testing.T) {
 		}
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	nodeOperatorRepo := NewNodeOperator(ps)
 	for i := 0; i < 10; i++ {
 		nodeOperatorRepo.AddNodeOperator(nodeOperator[i])
@@ -69,7 +69,7 @@ func TestGetNodeOperator(t *testing.T) {
 		}
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	nodeOperatorRepo := NewNodeOperator(ps)
 	for i := 0; i < 10; i++ {
 		nodeOperatorRepo.AddNodeOperator(nodeOperator[i])
@@ -99,7 +99,7 @@ func TestUpdateNodeOperator(t *testing.T) {
 		}
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	nodeOperatorRepo := NewNodeOperator(ps)
 	for i := 0; i < 10; i++ {
 		nodeOperatorRepo.AddNodeOperator(nodeOperator[i])
@@ -144,7 +144,7 @@ func TestDeleteNodeOperator(t *testing.T) {
 		}
 	}
 
-	ps := msgbus.New(10)
+	ps := msgbus.New(10, nil)
 	nodeOperatorRepo := NewNodeOperator(ps)
 	for i := 0; i < 10; i++ {
 		nodeOperatorRepo.AddNodeOperator(nodeOperator[i])
