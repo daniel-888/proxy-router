@@ -10,27 +10,27 @@ import (
 
 //Struct of Miner parameters in JSON
 type MinerJSON struct {
-	ID                      string	`json:"id"`
-	Name					string 	`json:"name"`
-	IP						string 	`json:"ip"`
-	MAC						string 	`json:"mac"`
-	State                   string 	`json:"state"`
-	Dest                   	string 	`json:"dest"`
-	InitialMeasuredHashRate int 	`json:"initialMeasuredHashRate"`
-	CurrentHashRate         int 	`json:"currentHashRate"`
+	ID                      string `json:"id"`
+	Name                    string `json:"name"`
+	IP                      string `json:"ip"`
+	MAC                     string `json:"mac"`
+	State                   string `json:"state"`
+	Dest                    string `json:"dest"`
+	InitialMeasuredHashRate int    `json:"initialMeasuredHashRate"`
+	CurrentHashRate         int    `json:"currentHashRate"`
 }
 
 //Struct that stores slice of all JSON Miner structs in Repo
 type MinerRepo struct {
 	MinerJSONs []MinerJSON
-	Ps          *msgbus.PubSub
+	Ps         *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON Miner structs
 func NewMiner(ps *msgbus.PubSub) *MinerRepo {
 	return &MinerRepo{
 		MinerJSONs: []MinerJSON{},
-		Ps:			ps,
+		Ps:         ps,
 	}
 }
 
@@ -41,7 +41,7 @@ func (r *MinerRepo) GetAllMiners() []MinerJSON {
 
 //Return Miner Struct by ID
 func (r *MinerRepo) GetMiner(id string) (MinerJSON, error) {
-	for i,m := range r.MinerJSONs {
+	for i, m := range r.MinerJSONs {
 		if m.ID == id {
 			return r.MinerJSONs[i], nil
 		}
@@ -63,18 +63,26 @@ func (r *MinerRepo) AddMinerFromMsgBus(minerID msgbus.MinerID, miner msgbus.Mine
 	minerJSON.Dest = string(miner.Dest)
 	minerJSON.InitialMeasuredHashRate = miner.InitialMeasuredHashRate
 	minerJSON.CurrentHashRate = miner.CurrentHashRate
-	
+
 	r.MinerJSONs = append(r.MinerJSONs, minerJSON)
 }
 
 //Update Miner Struct with specific ID and leave empty parameters unchanged
 func (r *MinerRepo) UpdateMiner(id string, newMiner MinerJSON) error {
-	for i,m := range r.MinerJSONs {
+	for i, m := range r.MinerJSONs {
 		if m.ID == id {
-			if newMiner.State != "" {r.MinerJSONs[i].State = newMiner.State}
-			if newMiner.Dest != "" {r.MinerJSONs[i].Dest = newMiner.Dest}
-			if newMiner.InitialMeasuredHashRate != 0 {r.MinerJSONs[i].InitialMeasuredHashRate = newMiner.InitialMeasuredHashRate}
-			if newMiner.CurrentHashRate != 0 {r.MinerJSONs[i].CurrentHashRate = newMiner.CurrentHashRate}
+			if newMiner.State != "" {
+				r.MinerJSONs[i].State = newMiner.State
+			}
+			if newMiner.Dest != "" {
+				r.MinerJSONs[i].Dest = newMiner.Dest
+			}
+			if newMiner.InitialMeasuredHashRate != 0 {
+				r.MinerJSONs[i].InitialMeasuredHashRate = newMiner.InitialMeasuredHashRate
+			}
+			if newMiner.CurrentHashRate != 0 {
+				r.MinerJSONs[i].CurrentHashRate = newMiner.CurrentHashRate
+			}
 
 			return nil
 		}
@@ -84,7 +92,7 @@ func (r *MinerRepo) UpdateMiner(id string, newMiner MinerJSON) error {
 
 //Delete Miner Struct with specific ID
 func (r *MinerRepo) DeleteMiner(id string) error {
-	for i,m := range r.MinerJSONs {
+	for i, m := range r.MinerJSONs {
 		if m.ID == id {
 			r.MinerJSONs = append(r.MinerJSONs[:i], r.MinerJSONs[i+1:]...)
 
@@ -97,7 +105,7 @@ func (r *MinerRepo) DeleteMiner(id string) error {
 //Subscribe to events for miner msgs on msgbus to update API repo with data
 func (r *MinerRepo) SubscribeToMinerMsgBus() {
 	minerCh := r.Ps.NewEventChan()
-	
+
 	// add existing miners to api repo
 	miners, err := r.Ps.MinerGetAllWait()
 	if err != nil {
@@ -122,7 +130,7 @@ func (r *MinerRepo) SubscribeToMinerMsgBus() {
 	}
 
 	for event = range minerCh {
-		loop:
+	loop:
 		switch event.EventType {
 		//
 		// Subscribe Event
@@ -145,7 +153,7 @@ func (r *MinerRepo) SubscribeToMinerMsgBus() {
 			}
 			miner := event.Data.(msgbus.Miner)
 			r.AddMinerFromMsgBus(minerID, miner)
-			
+
 			//
 			// Delete/Unpublish Event
 			//
@@ -165,7 +173,7 @@ func (r *MinerRepo) SubscribeToMinerMsgBus() {
 			miner := event.Data.(msgbus.Miner)
 			minerJSON := ConvertMinerMSGtoMinerJSON(miner)
 			r.UpdateMiner(string(minerID), minerJSON)
-			
+
 			//
 			// Rut Row...
 			//
@@ -177,14 +185,14 @@ func (r *MinerRepo) SubscribeToMinerMsgBus() {
 
 func ConvertMinerJSONtoMinerMSG(miner MinerJSON) msgbus.Miner {
 	var msg msgbus.Miner
-	
+
 	msg.ID = msgbus.MinerID(miner.ID)
 	msg.State = msgbus.MinerState(miner.State)
 	msg.Dest = msgbus.DestID(miner.Dest)
 	msg.InitialMeasuredHashRate = miner.InitialMeasuredHashRate
 	msg.CurrentHashRate = miner.CurrentHashRate
 
-	return msg	
+	return msg
 }
 
 func ConvertMinerMSGtoMinerJSON(msg msgbus.Miner) (miner MinerJSON) {
@@ -197,5 +205,5 @@ func ConvertMinerMSGtoMinerJSON(msg msgbus.Miner) (miner MinerJSON) {
 	miner.InitialMeasuredHashRate = msg.InitialMeasuredHashRate
 	miner.CurrentHashRate = msg.CurrentHashRate
 
-	return miner	
+	return miner
 }

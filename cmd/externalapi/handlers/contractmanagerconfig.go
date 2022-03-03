@@ -35,15 +35,15 @@ func ContractManagerConfigPOST(contractConfig *msgdata.ContractManagerConfigRepo
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		}
-		for i := range(requestBody) {
+		for i := range requestBody {
 			contractConfig.AddContractManagerConfig(requestBody[i])
 			contractConfigMsg := msgdata.ConvertContractManagerConfigJSONtoContractManagerConfigMSG(requestBody[i])
-			_,err := contractConfig.Ps.PubWait(msgbus.ContractManagerConfigMsg, msgbus.IDString(contractConfigMsg.ID), contractConfigMsg)
+			_, err := contractConfig.Ps.PubWait(msgbus.ContractManagerConfigMsg, msgbus.IDString(contractConfigMsg.ID), contractConfigMsg)
 			if err != nil {
 				log.Printf("Contract Config POST request failed to update msgbus: %s", err)
 			}
 		}
-		
+
 		c.Status(http.StatusOK)
 	}
 }
@@ -63,7 +63,7 @@ func ContractManagerConfigPUT(contractConfig *msgdata.ContractManagerConfigRepo)
 		}
 
 		contractConfigMsg := msgdata.ConvertContractManagerConfigJSONtoContractManagerConfigMSG(requestBody)
-		_,err := contractConfig.Ps.SetWait(msgbus.ContractManagerConfigMsg, msgbus.IDString(contractConfigMsg.ID), contractConfigMsg)
+		_, err := contractConfig.Ps.SetWait(msgbus.ContractManagerConfigMsg, msgbus.IDString(contractConfigMsg.ID), contractConfigMsg)
 		if err != nil {
 			log.Printf("Contract Config PUT request failed to update msgbus: %s", err)
 		}
@@ -81,7 +81,7 @@ func ContractManagerConfigDELETE(contractConfig *msgdata.ContractManagerConfigRe
 			return
 		}
 
-		_,err := contractConfig.Ps.UnpubWait(msgbus.ContractManagerConfigMsg, msgbus.IDString(id))
+		_, err := contractConfig.Ps.UnpubWait(msgbus.ContractManagerConfigMsg, msgbus.IDString(id))
 		if err != nil {
 			log.Printf("Contract Config DELETE request failed to update msgbus: %s", err)
 		}

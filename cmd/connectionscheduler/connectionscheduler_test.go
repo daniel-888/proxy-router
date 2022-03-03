@@ -77,10 +77,10 @@ func TestSellerConnectionScheduler(t *testing.T) {
 
 	time.Sleep(time.Second * 2)
 
-	if cs.ReadyMiners.Exists(miner1.ID) {
+	if cs.ReadyMiners.Exists(string(miner1.ID)) {
 		t.Errorf("Miner 1 was not removed from ready miners map")
 	}
-	if !cs.BusyMiners.Exists(miner1.ID) {
+	if !cs.BusyMiners.Exists(string(miner1.ID)) {
 		t.Errorf("Miner 1 was not moved to busy miners map")
 	}
 
@@ -102,10 +102,10 @@ func TestSellerConnectionScheduler(t *testing.T) {
 	ps.SetWait(msgbus.MinerMsg, msgbus.IDString(miner1.ID), miner1)
 	time.Sleep(time.Second * 2)
 
-	if !cs.ReadyMiners.Exists(miner1.ID) {
+	if !cs.ReadyMiners.Exists(string(miner1.ID)) {
 		t.Errorf("Miner 1 was not moved back to ready miners map")
 	}
-	if cs.BusyMiners.Exists(miner1.ID) {
+	if cs.BusyMiners.Exists(string(miner1.ID)) {
 		t.Errorf("Miner 1 was not removed from busy miners map")
 	}
 
@@ -185,12 +185,12 @@ func TestSellerConnectionScheduler(t *testing.T) {
 	correctBusyMiners := []msgbus.Miner{miner3, miner6}
 
 	for _, v := range correctReadyMiners {
-		if !cs.ReadyMiners.Exists(v.ID) {
+		if !cs.ReadyMiners.Exists(string(v.ID)) {
 			t.Errorf("Ready miners map not correct")
 		}
 	}
 	for _, v := range correctBusyMiners {
-		if !cs.BusyMiners.Exists(v.ID) {
+		if !cs.BusyMiners.Exists(string(v.ID)) {
 			t.Errorf("Busy miners map not correct")
 		}
 	}
@@ -235,12 +235,12 @@ func TestSellerConnectionScheduler(t *testing.T) {
 	correctBusyMiners = []msgbus.Miner{miner5, miner7}
 
 	for _, v := range correctReadyMiners {
-		if !cs.ReadyMiners.Exists(v.ID) {
+		if !cs.ReadyMiners.Exists(string(v.ID)) {
 			t.Errorf("Ready miners map not correct")
 		}
 	}
 	for _, v := range correctBusyMiners {
-		if !cs.BusyMiners.Exists(v.ID) {
+		if !cs.BusyMiners.Exists(string(v.ID)) {
 			t.Errorf("Busy miners map not correct")
 		}
 	}
@@ -275,8 +275,8 @@ func TestSellerConnectionScheduler(t *testing.T) {
 		t.Errorf("Scheduler did not update miner 6 with default dest and empty contract param")
 	}
 
-	fmt.Println("Ready Miners: ", cs.ReadyMiners.m)
-	fmt.Println("Busy Miners: ", cs.BusyMiners.m)
+	fmt.Println("Ready Miners: ", cs.ReadyMiners.M)
+	fmt.Println("Busy Miners: ", cs.BusyMiners.M)
 	time.Sleep(time.Second * 2)
 
 	//
@@ -307,18 +307,18 @@ func TestSellerConnectionScheduler(t *testing.T) {
 	correctBusyMiners = []msgbus.Miner{miner2, miner4, miner5, miner7}
 
 	for _, v := range correctReadyMiners {
-		if !cs.ReadyMiners.Exists(v.ID) {
+		if !cs.ReadyMiners.Exists(string(v.ID)) {
 			t.Errorf("Ready miners map not correct")
 		}
 	}
 	for _, v := range correctBusyMiners {
-		if !cs.BusyMiners.Exists(v.ID) {
+		if !cs.BusyMiners.Exists(string(v.ID)) {
 			t.Errorf("Busy miners map not correct")
 		}
 	}
 
-	fmt.Println("Ready Miners: ", cs.ReadyMiners.m)
-	fmt.Println("Busy Miners: ", cs.BusyMiners.m)
+	fmt.Println("Ready Miners: ", cs.ReadyMiners.M)
+	fmt.Println("Busy Miners: ", cs.BusyMiners.M)
 	time.Sleep(time.Second * 2)
 }
 

@@ -5,7 +5,47 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 )
+
+type ConcurrentMap struct {
+	sync.RWMutex
+	M map[string]interface{}
+}
+
+func (r *ConcurrentMap) Get(key string) interface{} {
+	r.RLock()
+	defer r.RUnlock()
+	return r.M[key]
+}
+
+func (r *ConcurrentMap) GetAll() (vals []interface{}) {
+	r.RLock()
+	defer r.RUnlock()
+	for _, v := range r.M {
+		vals = append(vals, v)
+	}
+	return vals
+}
+
+func (r *ConcurrentMap) Set(key string, val interface{}) {
+	r.Lock()
+	defer r.Unlock()
+	r.M[key] = val
+}
+
+func (r *ConcurrentMap) Exists(key string) bool {
+	r.RLock()
+	defer r.RUnlock()
+	_, ok := r.M[key]
+	return ok
+}
+
+func (r *ConcurrentMap) Delete(key string) {
+	r.Lock()
+	defer r.Unlock()
+	delete(r.M, key)
+}
 
 //
 //
