@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/ecies"
 )
 
-
 func DecryptData(m string, k string) string {
 	privKey, _ := crypto.HexToECDSA(k)
 	privKeyECIES := ecies.ImportECDSA(privKey)

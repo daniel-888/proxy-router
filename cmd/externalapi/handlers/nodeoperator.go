@@ -35,15 +35,15 @@ func NodeOperatorPOST(nodeOperator *msgdata.NodeOperatorRepo) gin.HandlerFunc {
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		}
-		for i := range(requestBody) {
+		for i := range requestBody {
 			nodeOperator.AddNodeOperator(requestBody[i])
 			nodeOperatorMsg := msgdata.ConvertNodeOperatorJSONtoNodeOperatorMSG(requestBody[i])
-			_,err := nodeOperator.Ps.PubWait(msgbus.NodeOperatorMsg, msgbus.IDString(nodeOperatorMsg.ID), nodeOperatorMsg)
+			_, err := nodeOperator.Ps.PubWait(msgbus.NodeOperatorMsg, msgbus.IDString(nodeOperatorMsg.ID), nodeOperatorMsg)
 			if err != nil {
 				log.Printf("NodeOperator POST request failed to update msgbus: %s", err)
 			}
 		}
-		
+
 		c.Status(http.StatusOK)
 	}
 }
@@ -63,7 +63,7 @@ func NodeOperatorPUT(nodeOperator *msgdata.NodeOperatorRepo) gin.HandlerFunc {
 		}
 
 		nodeOperatorMsg := msgdata.ConvertNodeOperatorJSONtoNodeOperatorMSG(requestBody)
-		_,err := nodeOperator.Ps.SetWait(msgbus.NodeOperatorMsg, msgbus.IDString(nodeOperatorMsg.ID), nodeOperatorMsg)
+		_, err := nodeOperator.Ps.SetWait(msgbus.NodeOperatorMsg, msgbus.IDString(nodeOperatorMsg.ID), nodeOperatorMsg)
 		if err != nil {
 			log.Printf("NodeOperator PUT request failed to update msgbus: %s", err)
 		}
@@ -81,7 +81,7 @@ func NodeOperatorDELETE(nodeOperator *msgdata.NodeOperatorRepo) gin.HandlerFunc 
 			return
 		}
 
-		_,err := nodeOperator.Ps.UnpubWait(msgbus.NodeOperatorMsg, msgbus.IDString(id))
+		_, err := nodeOperator.Ps.UnpubWait(msgbus.NodeOperatorMsg, msgbus.IDString(id))
 		if err != nil {
 			log.Printf("NodeOperator DELETE request failed to update msgbus: %s", err)
 		}

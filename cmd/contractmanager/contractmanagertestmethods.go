@@ -5,14 +5,14 @@ import (
 	// "crypto/ecdsa"
 	// "crypto/rand"
 	// "errors"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/big"
-	"time"
 	"os"
 	"path/filepath"
-	"io/ioutil"
-	"encoding/json"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -41,8 +41,8 @@ type TestSetup struct {
 
 func LoadTestConfiguration(pkg string, filePath string) (map[string]interface{}, error) {
 	var data map[string]interface{}
-	var err error = nil 
-	currDir,_ := os.Getwd()
+	var err error = nil
+	currDir, _ := os.Getwd()
 	defer os.Chdir(currDir)
 
 	if err != nil {
@@ -51,14 +51,13 @@ func LoadTestConfiguration(pkg string, filePath string) (map[string]interface{},
 	file := filepath.Base(filePath)
 	filePath = filepath.Dir(filePath)
 	os.Chdir(filePath)
-	
+
 	configFile, err := os.Open(file)
 	if err != nil {
 		return data, err
 	}
 	defer configFile.Close()
-	byteValue,_ := ioutil.ReadAll(configFile)
-	
+	byteValue, _ := ioutil.ReadAll(configFile)
 
 	err = json.Unmarshal(byteValue, &data)
 	return data[pkg].(map[string]interface{}), err
@@ -97,7 +96,7 @@ func DeployContract(client *ethclient.Client,
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)      // in wei
-	auth.GasLimit = uint64(8000000) // in units
+	auth.GasLimit = uint64(6000000) // in units
 	auth.GasPrice = gasPrice
 
 	lmnAddress := constructorParams[0]
@@ -279,7 +278,7 @@ func UpdatePurchaseInformation(client *ethclient.Client,
 	limit := big.NewInt(int64(_limit))
 	speed := big.NewInt(int64(_speed))
 	length := big.NewInt(int64(_length))
-	closeOutType := big.NewInt(int64(3)) 
+	closeOutType := big.NewInt(int64(3))
 	tx, err := instance.SetUpdatePurchaseInformation(auth, price, limit, speed, length, closeOutType)
 	if err != nil {
 		log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
@@ -339,7 +338,7 @@ func UpdateCipherText(client *ethclient.Client,
 
 func createNewGanacheBlock(ts TestSetup, account common.Address, privateKey string, contractLength int, sleepTime int) {
 	time.Sleep(time.Second * time.Duration(contractLength))
-		
+
 	nonce, err := ts.ethClient.PendingNonceAt(context.Background(), account)
 	if err != nil {
 		log.Fatal(err)
@@ -402,7 +401,7 @@ func BeforeEach(configPath string) (ts TestSetup) {
 	constructorParams[0] = ts.lumerinAddress
 	constructorParams[1] = ts.validatorAddress
 	constructorParams[2] = ts.proxyAddress
-	
+
 	ts.cloneFactoryAddress = DeployContract(ts.ethClient, ts.nodeEthereumAccount, ts.nodeEthereumPrivateKey, constructorParams, "CloneFactory")
 	fmt.Println("Clone Factory Contract Address: ", ts.cloneFactoryAddress)
 

@@ -2,7 +2,6 @@ package encryption
 
 import "testing"
 
-
 func TestDecryption1(t *testing.T) {
 	expectedText := "127.0.0.1|joshkeanisawesome|p@$$w0rd|8008"
 	keyString := "b0585373d39ada79aba03b609b8687b1deec3d77a67f69bd4982dd0f9496c077"
