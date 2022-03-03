@@ -10,22 +10,22 @@ import (
 
 // Struct of ConfigInfo parameters in JSON
 type ConfigInfoJSON struct {
-	ID          		string `json:"id"`
-	DefaultDest 		string `json:"defaultDest"`
-	NodeOperator     		 	string `json:"nodeOperator"`
+	ID           string `json:"id"`
+	DefaultDest  string `json:"defaultDest"`
+	NodeOperator string `json:"nodeOperator"`
 }
 
 //Struct that stores slice of all JSON ConfigInfo structs in Repo
 type ConfigInfoRepo struct {
 	ConfigInfoJSONs []ConfigInfoJSON
-	Ps          	*msgbus.PubSub
+	Ps              *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON ConfigInfo structs
 func NewConfigInfo(ps *msgbus.PubSub) *ConfigInfoRepo {
 	return &ConfigInfoRepo{
-		ConfigInfoJSONs:	[]ConfigInfoJSON{},
-		Ps:					ps,
+		ConfigInfoJSONs: []ConfigInfoJSON{},
+		Ps:              ps,
 	}
 }
 
@@ -36,7 +36,7 @@ func (r *ConfigInfoRepo) GetAllConfigInfos() []ConfigInfoJSON {
 
 //Return ConfigInfo Struct by ID
 func (r *ConfigInfoRepo) GetConfigInfo(id string) (ConfigInfoJSON, error) {
-	for i,c := range r.ConfigInfoJSONs {
+	for i, c := range r.ConfigInfoJSONs {
 		if c.ID == id {
 			return r.ConfigInfoJSONs[i], nil
 		}
@@ -52,20 +52,24 @@ func (r *ConfigInfoRepo) AddConfigInfo(conf ConfigInfoJSON) {
 //Converts ConfigInfo struct from msgbus to JSON struct and adds it to Repo
 func (r *ConfigInfoRepo) AddConfigInfoFromMsgBus(confID msgbus.ConfigID, conf msgbus.ConfigInfo) {
 	var confJSON ConfigInfoJSON
-	
+
 	confJSON.ID = string(confID)
 	confJSON.DefaultDest = string(conf.DefaultDest)
 	confJSON.NodeOperator = string(conf.NodeOperator)
-	
+
 	r.ConfigInfoJSONs = append(r.ConfigInfoJSONs, confJSON)
 }
 
 //Update ConfigInfo Struct with specific ID and leave empty parameters unchanged
 func (r *ConfigInfoRepo) UpdateConfigInfo(id string, newConfigInfo ConfigInfoJSON) error {
-	for i,c := range r.ConfigInfoJSONs {
+	for i, c := range r.ConfigInfoJSONs {
 		if c.ID == id {
-			if newConfigInfo.DefaultDest != "" {r.ConfigInfoJSONs[i].DefaultDest = newConfigInfo.DefaultDest}
-			if newConfigInfo.NodeOperator != "" {r.ConfigInfoJSONs[i].NodeOperator = newConfigInfo.NodeOperator}
+			if newConfigInfo.DefaultDest != "" {
+				r.ConfigInfoJSONs[i].DefaultDest = newConfigInfo.DefaultDest
+			}
+			if newConfigInfo.NodeOperator != "" {
+				r.ConfigInfoJSONs[i].NodeOperator = newConfigInfo.NodeOperator
+			}
 
 			return nil
 		}
@@ -75,7 +79,7 @@ func (r *ConfigInfoRepo) UpdateConfigInfo(id string, newConfigInfo ConfigInfoJSO
 
 //Delete ConfigInfo Struct with specific ID
 func (r *ConfigInfoRepo) DeleteConfigInfo(id string) error {
-	for i,c := range r.ConfigInfoJSONs {
+	for i, c := range r.ConfigInfoJSONs {
 		if c.ID == id {
 			r.ConfigInfoJSONs = append(r.ConfigInfoJSONs[:i], r.ConfigInfoJSONs[i+1:]...)
 
@@ -88,7 +92,7 @@ func (r *ConfigInfoRepo) DeleteConfigInfo(id string) error {
 //Subscribe to events for config msgs on msgbus to update API repos with data
 func (r *ConfigInfoRepo) SubscribeToConfigInfoMsgBus() {
 	configCh := r.Ps.NewEventChan()
-	
+
 	// add existing configs to api repo
 	event, err := r.Ps.GetWait(msgbus.ConfigMsg, "")
 	if err != nil {
@@ -105,7 +109,7 @@ func (r *ConfigInfoRepo) SubscribeToConfigInfoMsgBus() {
 			r.AddConfigInfoFromMsgBus(msgbus.ConfigID(configs[i]), config)
 		}
 	}
-	
+
 	event, err = r.Ps.SubWait(msgbus.ConfigMsg, "", configCh)
 	if err != nil {
 		panic(fmt.Sprintf("SubWait failed: %s\n", err))
@@ -115,7 +119,7 @@ func (r *ConfigInfoRepo) SubscribeToConfigInfoMsgBus() {
 	}
 
 	for event = range configCh {
-		loop:
+	loop:
 		switch event.EventType {
 		//
 		// Subscribe Event
@@ -138,7 +142,7 @@ func (r *ConfigInfoRepo) SubscribeToConfigInfoMsgBus() {
 			}
 			config := event.Data.(msgbus.ConfigInfo)
 			r.AddConfigInfoFromMsgBus(configID, config)
-			
+
 			//
 			// Delete/Unpublish Event
 			//
@@ -158,7 +162,7 @@ func (r *ConfigInfoRepo) SubscribeToConfigInfoMsgBus() {
 			config := event.Data.(msgbus.ConfigInfo)
 			configJSON := ConvertConfigInfoMSGtoConfigInfoJSON(config)
 			r.UpdateConfigInfo(string(configID), configJSON)
-			
+
 			//
 			// Rut Row...
 			//
@@ -175,7 +179,7 @@ func ConvertConfigInfoJSONtoConfigInfoMSG(conf ConfigInfoJSON) msgbus.ConfigInfo
 	msg.DefaultDest = msgbus.DestID(conf.DefaultDest)
 	msg.NodeOperator = msgbus.NodeOperatorID(conf.NodeOperator)
 
-	return msg	
+	return msg
 }
 
 func ConvertConfigInfoMSGtoConfigInfoJSON(msg msgbus.ConfigInfo) (conf ConfigInfoJSON) {
@@ -183,5 +187,5 @@ func ConvertConfigInfoMSGtoConfigInfoJSON(msg msgbus.ConfigInfo) (conf ConfigInf
 	conf.DefaultDest = string(msg.DefaultDest)
 	conf.NodeOperator = string(msg.NodeOperator)
 
-	return conf	
+	return conf
 }

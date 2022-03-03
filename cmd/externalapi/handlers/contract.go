@@ -9,7 +9,6 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
-
 func ContractsGET(contract *msgdata.ContractRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		results := contract.GetAllContracts()
@@ -36,15 +35,15 @@ func ContractPOST(contract *msgdata.ContractRepo) gin.HandlerFunc {
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		}
-		for i := range(requestBody) {
+		for i := range requestBody {
 			contract.AddContract(requestBody[i])
 			contractMsg := msgdata.ConvertContractJSONtoContractMSG(requestBody[i])
-			_,err := contract.Ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contractMsg.ID), contractMsg)
+			_, err := contract.Ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contractMsg.ID), contractMsg)
 			if err != nil {
 				log.Printf("Contract POST request failed to update msgbus: %s", err)
 			}
 		}
-		
+
 		c.Status(http.StatusOK)
 	}
 }
@@ -64,7 +63,7 @@ func ContractPUT(contract *msgdata.ContractRepo) gin.HandlerFunc {
 		}
 
 		contractMsg := msgdata.ConvertContractJSONtoContractMSG(requestBody)
-		_,err := contract.Ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contractMsg.ID), contractMsg)
+		_, err := contract.Ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contractMsg.ID), contractMsg)
 		if err != nil {
 			log.Printf("Contract PUT request failed to update msgbus: %s", err)
 		}
@@ -82,7 +81,7 @@ func ContractDELETE(contract *msgdata.ContractRepo) gin.HandlerFunc {
 			return
 		}
 
-		_,err := contract.Ps.UnpubWait(msgbus.ContractMsg, msgbus.IDString(id))
+		_, err := contract.Ps.UnpubWait(msgbus.ContractMsg, msgbus.IDString(id))
 		if err != nil {
 			log.Printf("Contract DELETE request failed to update msgbus: %s", err)
 		}

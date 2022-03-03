@@ -17,31 +17,31 @@ type ContractID IDString
 
 // Do we still need this with the config package in place?
 type ConfigInfo struct {
-	ID          	ConfigID
-	DefaultDest 	DestID
-	NodeOperator	NodeOperatorID
+	ID           ConfigID
+	DefaultDest  DestID
+	NodeOperator NodeOperatorID
 }
 
 type ContractManagerConfig struct {
-	ID			 		ContractManagerConfigID
-	Mnemonic	 		string
-	AccountIndex 		int
-	EthNodeAddr 		string
-	ClaimFunds	 		bool
+	ID                  ContractManagerConfigID
+	Mnemonic            string
+	AccountIndex        int
+	EthNodeAddr         string
+	ClaimFunds          bool
 	CloneFactoryAddress string
 	LumerinTokenAddress string
-	ValidatorAddress	string
-	ProxyAddress		string
+	ValidatorAddress    string
+	ProxyAddress        string
 }
 
 type NodeOperator struct {
 	ID                     NodeOperatorID
 	IsBuyer                bool
 	DefaultDest            DestID
-	EthereumAccount		   string
+	EthereumAccount        string
 	TotalAvailableHashRate int
 	UnusedHashRate         int
-	Contracts       	   map[ContractID]ContractState
+	Contracts              map[ContractID]ContractState
 }
 
 type Contract struct {

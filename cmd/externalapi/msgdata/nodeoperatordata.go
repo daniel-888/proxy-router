@@ -8,27 +8,27 @@ import (
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
-//Struct of NodeOperator parameters in JSON 
+//Struct of NodeOperator parameters in JSON
 type NodeOperatorJSON struct {
-	ID                     	string 										`json:"id"`
-	DefaultDest          	string 										`json:"defaultDest"`
-	EthereumAccount			string										`json:"ethereumAccount"`
-	TotalAvailableHashRate 	int 										`json:"totalAvailableHashrate"`
-	UnusedHashRate         	int 										`json:"unusedHashRate"`
-	Contracts				map[msgbus.ContractID]msgbus.ContractState	`json:"contracts"`
+	ID                     string                                     `json:"id"`
+	DefaultDest            string                                     `json:"defaultDest"`
+	EthereumAccount        string                                     `json:"ethereumAccount"`
+	TotalAvailableHashRate int                                        `json:"totalAvailableHashrate"`
+	UnusedHashRate         int                                        `json:"unusedHashRate"`
+	Contracts              map[msgbus.ContractID]msgbus.ContractState `json:"contracts"`
 }
 
 //Struct that stores slice of all JSON NodeOperator structs in Repo
 type NodeOperatorRepo struct {
 	NodeOperatorJSONs []NodeOperatorJSON
-	Ps          *msgbus.PubSub
+	Ps                *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON NodeOperator structs
 func NewNodeOperator(ps *msgbus.PubSub) *NodeOperatorRepo {
 	return &NodeOperatorRepo{
-		NodeOperatorJSONs:	[]NodeOperatorJSON{},
-		Ps:				ps,
+		NodeOperatorJSONs: []NodeOperatorJSON{},
+		Ps:                ps,
 	}
 }
 
@@ -39,7 +39,7 @@ func (r *NodeOperatorRepo) GetAllNodeOperators() []NodeOperatorJSON {
 
 //Return NodeOperator Struct by ID
 func (r *NodeOperatorRepo) GetNodeOperator(id string) (NodeOperatorJSON, error) {
-	for i,d := range r.NodeOperatorJSONs {
+	for i, d := range r.NodeOperatorJSONs {
 		if d.ID == id {
 			return r.NodeOperatorJSONs[i], nil
 		}
@@ -62,19 +62,29 @@ func (r *NodeOperatorRepo) AddNodeOperatorFromMsgBus(nodeOperatorID msgbus.NodeO
 	nodeOperatorJSON.TotalAvailableHashRate = nodeOperator.TotalAvailableHashRate
 	nodeOperatorJSON.UnusedHashRate = nodeOperator.UnusedHashRate
 	nodeOperatorJSON.Contracts = nodeOperator.Contracts
-	
+
 	r.NodeOperatorJSONs = append(r.NodeOperatorJSONs, nodeOperatorJSON)
 }
 
 //Update NodeOperator Struct with specific ID and leave empty parameters unchanged
 func (r *NodeOperatorRepo) UpdateNodeOperator(id string, newNodeOperator NodeOperatorJSON) error {
-	for i,d := range r.NodeOperatorJSONs {
+	for i, d := range r.NodeOperatorJSONs {
 		if d.ID == id {
-			if newNodeOperator.DefaultDest != "" {r.NodeOperatorJSONs[i].DefaultDest = newNodeOperator.DefaultDest}
-			if newNodeOperator.EthereumAccount != "" {r.NodeOperatorJSONs[i].EthereumAccount = newNodeOperator.EthereumAccount}
-			if newNodeOperator.TotalAvailableHashRate != 0 {r.NodeOperatorJSONs[i].TotalAvailableHashRate = newNodeOperator.TotalAvailableHashRate}
-			if newNodeOperator.UnusedHashRate != 0 {r.NodeOperatorJSONs[i].UnusedHashRate = newNodeOperator.UnusedHashRate}
-			if newNodeOperator.Contracts != nil {r.NodeOperatorJSONs[i].Contracts = newNodeOperator.Contracts}
+			if newNodeOperator.DefaultDest != "" {
+				r.NodeOperatorJSONs[i].DefaultDest = newNodeOperator.DefaultDest
+			}
+			if newNodeOperator.EthereumAccount != "" {
+				r.NodeOperatorJSONs[i].EthereumAccount = newNodeOperator.EthereumAccount
+			}
+			if newNodeOperator.TotalAvailableHashRate != 0 {
+				r.NodeOperatorJSONs[i].TotalAvailableHashRate = newNodeOperator.TotalAvailableHashRate
+			}
+			if newNodeOperator.UnusedHashRate != 0 {
+				r.NodeOperatorJSONs[i].UnusedHashRate = newNodeOperator.UnusedHashRate
+			}
+			if newNodeOperator.Contracts != nil {
+				r.NodeOperatorJSONs[i].Contracts = newNodeOperator.Contracts
+			}
 			return nil
 		}
 	}
@@ -83,7 +93,7 @@ func (r *NodeOperatorRepo) UpdateNodeOperator(id string, newNodeOperator NodeOpe
 
 //Delete NodeOperator Struct with specific ID
 func (r *NodeOperatorRepo) DeleteNodeOperator(id string) error {
-	for i,d := range r.NodeOperatorJSONs {
+	for i, d := range r.NodeOperatorJSONs {
 		if d.ID == id {
 			r.NodeOperatorJSONs = append(r.NodeOperatorJSONs[:i], r.NodeOperatorJSONs[i+1:]...)
 
@@ -96,7 +106,7 @@ func (r *NodeOperatorRepo) DeleteNodeOperator(id string) error {
 //Subscribe to events for nodeOperator msgs on msgbus to update API repos with data
 func (r *NodeOperatorRepo) SubscribeToNodeOperatorMsgBus() {
 	nodeOperatorCh := r.Ps.NewEventChan()
-	
+
 	// add existing nodeOperators to api repo
 	event, err := r.Ps.GetWait(msgbus.NodeOperatorMsg, "")
 	if err != nil {
@@ -113,7 +123,7 @@ func (r *NodeOperatorRepo) SubscribeToNodeOperatorMsgBus() {
 			r.AddNodeOperatorFromMsgBus(msgbus.NodeOperatorID(nodeOperators[i]), nodeOperator)
 		}
 	}
-	
+
 	event, err = r.Ps.SubWait(msgbus.NodeOperatorMsg, "", nodeOperatorCh)
 	if err != nil {
 		panic(fmt.Sprintf("SubWait failed: %s\n", err))
@@ -123,7 +133,7 @@ func (r *NodeOperatorRepo) SubscribeToNodeOperatorMsgBus() {
 	}
 
 	for event = range nodeOperatorCh {
-		loop:
+	loop:
 		switch event.EventType {
 		//
 		// Subscribe Event
@@ -146,7 +156,7 @@ func (r *NodeOperatorRepo) SubscribeToNodeOperatorMsgBus() {
 			}
 			nodeOperator := event.Data.(msgbus.NodeOperator)
 			r.AddNodeOperatorFromMsgBus(nodeOperatorID, nodeOperator)
-			
+
 			//
 			// Delete/Unpublish Event
 			//
@@ -166,7 +176,7 @@ func (r *NodeOperatorRepo) SubscribeToNodeOperatorMsgBus() {
 			nodeOperator := event.Data.(msgbus.NodeOperator)
 			nodeOperatorJSON := ConvertNodeOperatorMSGtoNodeOperatorJSON(nodeOperator)
 			r.UpdateNodeOperator(string(nodeOperatorID), nodeOperatorJSON)
-			
+
 			//
 			// Rut Row...
 			//
@@ -186,7 +196,7 @@ func ConvertNodeOperatorJSONtoNodeOperatorMSG(nodeOperator NodeOperatorJSON) msg
 	msg.UnusedHashRate = nodeOperator.UnusedHashRate
 	msg.Contracts = nodeOperator.Contracts
 
-	return msg	
+	return msg
 }
 
 func ConvertNodeOperatorMSGtoNodeOperatorJSON(msg msgbus.NodeOperator) (nodeOperator NodeOperatorJSON) {
@@ -197,5 +207,5 @@ func ConvertNodeOperatorMSGtoNodeOperatorJSON(msg msgbus.NodeOperator) (nodeOper
 	nodeOperator.UnusedHashRate = msg.UnusedHashRate
 	nodeOperator.Contracts = msg.Contracts
 
-	return nodeOperator	
+	return nodeOperator
 }

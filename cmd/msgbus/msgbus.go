@@ -974,7 +974,7 @@ func (reg *registry) pub(c *cmd) {
 
 	// If no error, copy the event to everyone interested
 	if event.Err == nil {
-		for ech, _ := range reg.notify[c.msg] {
+		for ech := range reg.notify[c.msg] {
 			//sendEvent(ech, event)
 			event.send(ech)
 		}
@@ -1080,11 +1080,11 @@ func (reg *registry) set(c *cmd) {
 	}
 
 	// Notify anyone listening for the message class
-	for nch, _ := range reg.notify[c.msg] {
+	for nch := range reg.notify[c.msg] {
 		event.send(nch)
 	}
 	// Notify anyone listening for the specific ID
-	for ech, _ := range reg.data[c.msg][c.ID].sub.eventchan {
+	for ech := range reg.data[c.msg][c.ID].sub.eventchan {
 		if _, ok := reg.data[c.msg][c.ID].sub.eventchan[ech]; ok {
 			event.send(ech)
 		} else {
@@ -1168,19 +1168,19 @@ func (reg *registry) search(c *cmd) {
 	var index IDIndex
 	switch {
 	case c.Name != "":
-		for i, _ := range reg.data[c.msg] {
+		for i := range reg.data[c.msg] {
 			if reg.data[c.msg][i].data.(Miner).Name == c.Name {
 				index = append(index, i)
 			}
 		}
 	case c.IP != "":
-		for i, _ := range reg.data[c.msg] {
+		for i := range reg.data[c.msg] {
 			if reg.data[c.msg][i].data.(Miner).IP == c.IP {
 				index = append(index, i)
 			}
 		}
 	case c.MAC != "":
-		for i, _ := range reg.data[c.msg] {
+		for i := range reg.data[c.msg] {
 			if reg.data[c.msg][i].data.(Miner).MAC == c.MAC {
 				index = append(index, i)
 			}
@@ -1277,11 +1277,11 @@ func (reg *registry) unpub(c *cmd) {
 		event.send(c.eventch)
 	}
 
-	for ech, _ := range reg.data[c.msg][c.ID].sub.eventchan {
+	for ech := range reg.data[c.msg][c.ID].sub.eventchan {
 		event.send(ech)
 	}
 
-	for ech, _ := range reg.notify[c.msg] {
+	for ech := range reg.notify[c.msg] {
 		event.send(ech)
 	}
 

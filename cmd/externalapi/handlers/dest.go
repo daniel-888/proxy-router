@@ -9,7 +9,6 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
-
 func DestsGET(dest *msgdata.DestRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		results := dest.GetAllDests()
@@ -36,15 +35,15 @@ func DestPOST(dest *msgdata.DestRepo) gin.HandlerFunc {
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		}
-		for i := range(requestBody) {
+		for i := range requestBody {
 			dest.AddDest(requestBody[i])
 			destMsg := msgdata.ConvertDestJSONtoDestMSG(requestBody[i])
-			_,err := dest.Ps.PubWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
+			_, err := dest.Ps.PubWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
 			if err != nil {
 				log.Printf("Dest POST request failed to update msgbus: %s", err)
 			}
 		}
-	
+
 		c.Status(http.StatusOK)
 	}
 }
@@ -64,7 +63,7 @@ func DestPUT(dest *msgdata.DestRepo) gin.HandlerFunc {
 		}
 
 		destMsg := msgdata.ConvertDestJSONtoDestMSG(requestBody)
-		_,err := dest.Ps.SetWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
+		_, err := dest.Ps.SetWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
 		if err != nil {
 			log.Printf("Dest PUT request failed to update msgbus: %s", err)
 		}
@@ -82,7 +81,7 @@ func DestDELETE(dest *msgdata.DestRepo) gin.HandlerFunc {
 			return
 		}
 
-		_,err := dest.Ps.UnpubWait(msgbus.DestMsg, msgbus.IDString(id))
+		_, err := dest.Ps.UnpubWait(msgbus.DestMsg, msgbus.IDString(id))
 		if err != nil {
 			log.Printf("Dest DELETE request failed to update msgbus: %s", err)
 		}
