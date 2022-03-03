@@ -31,14 +31,15 @@ import (
 //
 // -------------------------------------------
 func main() {
+	l := log.New()
+
 	logFile, err := os.OpenFile(config.MustGet(config.ConfigLogFilePath), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
-		fmt.Printf("error opening log file: %v", err)
-		os.Exit(1)
+		l.Logf(log.LevelFatal, "error opening log file: %v", err)
 	}
+	defer logFile.Close()
 
-	l := log.New().SetFormatJSON().SetOutput(logFile)
-	defer l.Close()
+	l.SetFormat(log.FormatJSON).SetOutput(logFile)
 
 	mainContext, mainCancel := context.WithCancel(context.Background())
 	sigInt := make(chan os.Signal, 1)
