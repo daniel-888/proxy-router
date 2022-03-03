@@ -1,13 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
-	"strconv"
-	"time"
-	"context"
 	"os"
 	"os/signal"
+	"strconv"
+	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
@@ -31,7 +31,7 @@ import (
 // -------------------------------------------
 func main() {
 	mainContext, mainCancel := context.WithCancel(context.Background())
-	sigInt := make(chan os.Signal, 1) 
+	sigInt := make(chan os.Signal, 1)
 	signal.Notify(sigInt, os.Interrupt)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -119,8 +119,8 @@ func main() {
 	// Setup Node Operator Msg
 	//
 	nodeOperator := msgbus.NodeOperator{
-		ID: msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
-		IsBuyer: buyer,
+		ID:          msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
+		IsBuyer:     buyer,
 		DefaultDest: dest.ID,
 	}
 	event, err = ps.PubWait(msgbus.NodeOperatorMsg, msgbus.IDString(nodeOperator.ID), nodeOperator)
@@ -238,16 +238,16 @@ func main() {
 			if err != nil {
 				panic(fmt.Sprintf("Getting mnemonic val failed: %s\n", err))
 			}
-		
+
 			accountIndexStr, err := config.ConfigGetVal(config.ConfigContractAccountIndex)
 			if err != nil {
 				panic(fmt.Sprintf("Getting account index val failed: %s\n", err))
 			}
-			contractManagerConfig.AccountIndex,err = strconv.Atoi(accountIndexStr)
+			contractManagerConfig.AccountIndex, err = strconv.Atoi(accountIndexStr)
 			if err != nil {
 				panic(fmt.Sprintf("Converting account index string to int failed: %s\n", err))
 			}
-	
+
 			contractManagerConfig.EthNodeAddr, err = config.ConfigGetVal(config.ConfigContractEthereumNodeAddress)
 			if err != nil {
 				panic(fmt.Sprintf("Getting ethereum node address val failed: %s\n", err))
@@ -261,7 +261,7 @@ func main() {
 				contractManagerConfig.ClaimFunds = true
 			}
 		}
-		
+
 		// Publish Contract Manager Config to MsgBus
 		ps.PubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractManagerConfig)
 
@@ -283,7 +283,7 @@ func main() {
 	if disableapi == "false" {
 		var api externalapi.APIRepos
 		api.InitializeJSONRepos(ps)
-		time.Sleep(time.Millisecond*2000)
+		time.Sleep(time.Millisecond * 2000)
 		go api.RunAPI()
 	}
 
@@ -292,7 +292,7 @@ func main() {
 		fmt.Println("Signal Interupt: Cancelling all contexts and shuting down program")
 		mainCancel()
 	case <-mainContext.Done():
-		time.Sleep(time.Second*5)
+		time.Sleep(time.Second * 5)
 		signal.Stop(sigInt)
 		return
 	}

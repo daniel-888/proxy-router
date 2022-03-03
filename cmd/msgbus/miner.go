@@ -22,11 +22,11 @@ type Miner struct {
 	IP                      string
 	MAC                     string
 	State                   MinerState
-	Contract				ContractID // Updated by Connection Scheduler
-	Dest                    DestID // Updated by Connection Scheduler
+	Contract                ContractID // Updated by Connection Scheduler
+	Dest                    DestID     // Updated by Connection Scheduler
 	InitialMeasuredHashRate int
 	CurrentHashRate         int
-	CsMinerHandlerIgnore	bool // Ignore update in Connection Scheduler Miner Handler
+	CsMinerHandlerIgnore    bool // Ignore update in Connection Scheduler Miner Handler
 }
 
 //---------------------------------------------------------------

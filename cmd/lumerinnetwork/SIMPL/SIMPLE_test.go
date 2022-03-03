@@ -1,11 +1,11 @@
 package simple
 
 import (
-	"testing"
-	_"fmt"
-	_ "reflect"
 	"context"
+	_ "fmt"
 	"net"
+	_ "reflect"
+	"testing"
 )
 
 /*
@@ -39,21 +39,21 @@ func (t testAddr) String() string {
 	return t.x
 }
 
-func generateTestContext() (context.Context) {
+func generateTestContext() context.Context {
 	returnContext := context.TODO()
 	return returnContext
 }
 
 func generateTestAddr() net.Addr {
-	return testAddr{x:"1"}
+	return testAddr{x: "1"}
 }
 
 type ConnectionLayer struct {
 	SimpleConnection *SimpleStruct
 }
 
-func  NewConnLayer(s *SimpleStruct) ConnectionLayer {
-	return ConnectionLayer {
+func NewConnLayer(s *SimpleStruct) ConnectionLayer {
+	return ConnectionLayer{
 		SimpleConnection: s,
 	}
 }
@@ -72,7 +72,6 @@ type ProtocolLayer struct {
 	SimpleStruct SimpleStruct
 }
 
-
 type ProtocolInterface interface {
 	EventHandler(*SimpleEvent)
 }
@@ -89,7 +88,7 @@ func generateSimpleListenStruct() SimpleListenStruct {
 func generateProtocolLayer() ProtocolLayer {
 	listenStruct := generateSimpleListenStruct()
 	simpleStruct, _ := NewSimpleStruct(generateTestContext())
-	return ProtocolLayer {
+	return ProtocolLayer{
 		ListenStruct: listenStruct,
 		SimpleStruct: simpleStruct,
 	}
@@ -117,35 +116,33 @@ func TestInitializeSimpleListenStruct(t *testing.T) {
 //send a message from the protocol layer to the simple layer
 func TestSendMessageFromProtocolToConnectionLayer(t *testing.T) {
 	/*
-	test steps
-	1. create simulated protocol layer
-	2. call function on listening struct to create a new simple struct
-	3. listen for simple struct on listen structs accept channel
-	4. initialize the event handler on the simple struct
-	5. create a dummy SimpleEvent (this could be extentiated outside of the test)
-	6. pass the SimpleEvent into the eventChan channel
-	7. close both structs
+		test steps
+		1. create simulated protocol layer
+		2. call function on listening struct to create a new simple struct
+		3. listen for simple struct on listen structs accept channel
+		4. initialize the event handler on the simple struct
+		5. create a dummy SimpleEvent (this could be extentiated outside of the test)
+		6. pass the SimpleEvent into the eventChan channel
+		7. close both structs
 
-	TODO check to see value of SimpleEvent within connection layer
+		TODO check to see value of SimpleEvent within connection layer
 	*/
 	pc := generateProtocolLayer()
 	listenStruct := pc.ListenStruct
 	listenStruct.NewSimpleStruct(generateTestContext())
-	simpleStruct := <- listenStruct.accept
-	event := SimpleEvent { //create a simpleEvent to pass into event chan
+	simpleStruct := <-listenStruct.accept
+	event := SimpleEvent{ //create a simpleEvent to pass into event chan
 		EventType: eventOne,
-		Data: []byte{},
+		Data:      []byte{},
 	}
 	simpleStruct.EventHandler(event)
 	simpleStruct.Close()
 	listenStruct.Close()
-	
 
-	
 }
 
 //test to initialize a simple layer and protocol layer
-//connection layer will send byte information to the 
+//connection layer will send byte information to the
 //SimpleStruct and the SimpleStruct will pass that information upwards
 //to the protocol layer
 //message will be byte array of string "test sentence one"
@@ -153,17 +150,16 @@ func TestSendMessageFromConnectionLayer(t *testing.T) {
 	pc := generateProtocolLayer()
 	listenStruct := pc.ListenStruct
 	listenStruct.NewSimpleStruct(generateTestContext())
-	simpleStruct := <- listenStruct.accept
+	simpleStruct := <-listenStruct.accept
 	go simpleStruct.Run(listenStruct.ctx)
-
 
 	connLayer := NewConnLayer(simpleStruct)
 	connLayer.ConnToSimple()
 
-	connMsg := <- simpleStruct.protocolChan
+	connMsg := <-simpleStruct.protocolChan
 	//getting an issue where Data is being considered an Interface instead of a byetstring
 	if "test sentence one" != string(connMsg.Data) {
-		t.Error("msg came out wrong",err)
+		t.Error("msg came out wrong", err)
 	}
 }
 
@@ -201,7 +197,7 @@ func TestValidationRequestMessage(t *testing.T) {
 // 1. message from connection layer to protocol layer
 // 2. message from msg.bus to protocol layer
 // 3. message from protocol layer to msgbus
-// this test will be considered successful if the messages 
+// this test will be considered successful if the messages
 // are processed in order and also make it to their final destination
 func TestMessageFrom3Sources(t *testing.T) {
 }
@@ -223,7 +219,7 @@ func TestMultipleMessagesFromConnectionLayer(t *testing.T) {
 }
 
 // test to send a corrupted message through the SIMPLE layer
-// the corrputed message should go through as expected since 
+// the corrputed message should go through as expected since
 // the simple layer doesn't check for message integrity
 func TestCorruptMessage(t *testing.T) {
 }

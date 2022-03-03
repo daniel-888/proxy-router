@@ -11,13 +11,13 @@ import (
 )
 
 type APIRepos struct {
-	Config					*msgdata.ConfigInfoRepo 
-	ContractManagerConfig	*msgdata.ContractManagerConfigRepo
-	Connection 				*msgdata.ConnectionRepo 
-	Contract				*msgdata.ContractRepo 
-	Dest					*msgdata.DestRepo 
-	Miner					*msgdata.MinerRepo 
-	NodeOperator			*msgdata.NodeOperatorRepo
+	Config                *msgdata.ConfigInfoRepo
+	ContractManagerConfig *msgdata.ContractManagerConfigRepo
+	Connection            *msgdata.ConnectionRepo
+	Contract              *msgdata.ContractRepo
+	Dest                  *msgdata.DestRepo
+	Miner                 *msgdata.MinerRepo
+	NodeOperator          *msgdata.NodeOperatorRepo
 }
 
 func (api *APIRepos) InitializeJSONRepos(ps *msgbus.PubSub) {

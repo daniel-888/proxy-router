@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-  func TestLoadConfiguration(t *testing.T) {
+func TestLoadConfiguration(t *testing.T) {
 	const (
 		logLevel = 4
 		filePath = "/var/log/lumerin.log"
@@ -20,17 +20,17 @@ import (
 	if config.FilePath != filePath {
 		t.Errorf("Expected level to be %s but received %s", filePath, config.FilePath)
 	}
-  }
+}
 
-  func TestInitStandardLoggerInitialized(t *testing.T) {
+func TestInitStandardLoggerInitialized(t *testing.T) {
 	Init(true)
 	_, err := GetLogger()
 	if err != nil {
 		t.Error("StandardLogger not initialized")
 	}
-  }
+}
 
-  func TestInitLogFileCreated(t *testing.T) {
+func TestInitLogFileCreated(t *testing.T) {
 	createTestDirectory(t)
 
 	Init(true)
@@ -40,9 +40,9 @@ import (
 	}
 
 	deleteTestDirectoryAndContents(t)
-  }
+}
 
-  func TestStandardLoggerLogsToFile(t *testing.T) {
+func TestStandardLoggerLogsToFile(t *testing.T) {
 	createTestDirectory(t)
 
 	Init(true)
@@ -55,20 +55,20 @@ import (
 	}
 
 	deleteTestDirectoryAndContents(t)
-  }
+}
 
-  // Helper functions
-  func createTestDirectory(t *testing.T) {
+// Helper functions
+func createTestDirectory(t *testing.T) {
 	err := os.MkdirAll("/var/log/test", 0666)
 	if err != nil {
-	t.Errorf("Test directory not created")
+		t.Errorf("Test directory not created")
 	}
-  }
+}
 
-  func deleteTestDirectoryAndContents(t *testing.T) {
+func deleteTestDirectoryAndContents(t *testing.T) {
 	Cleanup()
 	err := os.RemoveAll("/var/log/test")
 	if err != nil {
 		t.Error("Could not delete test directory and contents")
 	}
-  }
+}

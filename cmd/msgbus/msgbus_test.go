@@ -37,7 +37,7 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 	time.Sleep(time.Second * 5)
 	fmt.Println("NO ERROR!!! YAY!")
-	return
+	//return
 	go func(eventChan EventChan) {
 		for event := range eventChan {
 			fmt.Printf("Read Chan: %+v\n", event)
@@ -62,6 +62,7 @@ func TestBoilerPlateFunc(t *testing.T) {
 	}
 
 	for _, params := range pubSetParams {
+		fmt.Println(params)
 		if err := ps.Pub(params.msg, params.id, params.data); err != nil {
 			t.Errorf("trying to pub: %v", err)
 		}

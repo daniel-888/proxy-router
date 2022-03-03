@@ -34,7 +34,7 @@ const (
 	RunningState   uint8 = 1
 )
 
-const HASHRATE_TOLERANCE = .10 
+const HASHRATE_TOLERANCE = .10
 
 type hashrateContractValues struct {
 	State                  uint8
@@ -69,7 +69,7 @@ type SellerContractManager struct {
 	claimFunds          bool
 	currentNonce        nonce
 	nodeOperator        msgbus.NodeOperator
-	ctx 				context.Context
+	ctx                 context.Context
 }
 
 type BuyerContractManager struct {
@@ -80,7 +80,7 @@ type BuyerContractManager struct {
 	privateKey          string
 	currentNonce        nonce
 	nodeOperator        msgbus.NodeOperator
-	ctx 				context.Context
+	ctx                 context.Context
 }
 
 func Run(ctx *context.Context, contractManager ContractManager, ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error) {
@@ -95,7 +95,7 @@ func Run(ctx *context.Context, contractManager ContractManager, ps *msgbus.PubSu
 	if err != nil {
 		return err
 	}
-	
+
 	return err
 }
 
@@ -124,21 +124,21 @@ func newConfigMonitor(ctx *context.Context, cancel context.CancelFunc, contractM
 
 func (seller *SellerContractManager) init(ctx *context.Context, ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error) {
 	seller.ctx = *ctx
-	
-	event, err := ps.GetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID) 
+
+	event, err := ps.GetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID)
 	if err != nil {
 		return err
 	}
 	contractManagerConfig := event.Data.(msgbus.ContractManagerConfig)
-	seller.claimFunds = contractManagerConfig.ClaimFunds 
-	ethNodeAddr := contractManagerConfig.EthNodeAddr 
+	seller.claimFunds = contractManagerConfig.ClaimFunds
+	ethNodeAddr := contractManagerConfig.EthNodeAddr
 	mnemonic := contractManagerConfig.Mnemonic
 	accountIndex := contractManagerConfig.AccountIndex
 
-	account,privateKey := hdWalletKeys(mnemonic, accountIndex)
+	account, privateKey := hdWalletKeys(mnemonic, accountIndex)
 	seller.account = account.Address
 	seller.privateKey = privateKey
-	
+
 	var client *ethclient.Client
 	client, err = setUpClient(ethNodeAddr, seller.account)
 	if err != nil {
@@ -147,14 +147,14 @@ func (seller *SellerContractManager) init(ctx *context.Context, ps *msgbus.PubSu
 	seller.ps = ps
 	seller.ethClient = client
 	seller.cloneFactoryAddress = common.HexToAddress(contractManagerConfig.CloneFactoryAddress)
-	
+
 	seller.nodeOperator = *nodeOperatorMsg
 	seller.nodeOperator.EthereumAccount = seller.account.Hex()
 
 	if seller.nodeOperator.Contracts == nil {
 		seller.nodeOperator.Contracts = make(map[msgbus.ContractID]msgbus.ContractState)
 	}
-	
+
 	return err
 }
 
@@ -220,7 +220,7 @@ func (seller *SellerContractManager) setupExistingContracts() (err error) {
 		return err
 	}
 	fmt.Println("Existing Seller Contracts: ", sellerContracts)
-	
+
 	for i := range sellerContracts {
 		id := msgbus.ContractID(sellerContracts[i].Hex())
 		if _, ok := seller.nodeOperator.Contracts[id]; !ok {
@@ -230,7 +230,7 @@ func (seller *SellerContractManager) setupExistingContracts() (err error) {
 			}
 			contractValues = append(contractValues, contract)
 			contractMsgs = append(contractMsgs, createContractMsg(sellerContracts[i], contractValues[i], true))
-			
+
 			seller.nodeOperator.Contracts[msgbus.ContractID(sellerContracts[i].Hex())] = msgbus.ContAvailableState
 
 			if contractValues[i].State == RunningState {
@@ -248,8 +248,8 @@ func (seller *SellerContractManager) setupExistingContracts() (err error) {
 					panic(fmt.Sprintf("Reading dest url failed, Fileline::%s, Error::%v", lumerinlib.FileLine(), err))
 				}
 
-				// if msgbus has dest with same target address, use that as contract msg dest 
-				for _,v := range existingDests {
+				// if msgbus has dest with same target address, use that as contract msg dest
+				for _, v := range existingDests {
 					existingDest, err := seller.ps.DestGetWait(msgbus.DestID(v))
 					if err != nil {
 						panic(fmt.Sprintf("Getting existing dest Failed: %s", err))
@@ -266,9 +266,9 @@ func (seller *SellerContractManager) setupExistingContracts() (err error) {
 						NetUrl: msgbus.DestNetUrl(destUrl),
 					}
 					seller.ps.PubWait(msgbus.DestMsg, msgbus.IDString(destMsg.ID), destMsg)
-	
+
 					contractMsgs[i].Dest = destMsg.ID
-				}	
+				}
 			}
 
 			seller.ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contractMsgs[i].ID), contractMsgs[i])
@@ -276,7 +276,7 @@ func (seller *SellerContractManager) setupExistingContracts() (err error) {
 	}
 
 	seller.ps.SetWait(msgbus.NodeOperatorMsg, msgbus.IDString(seller.nodeOperator.ID), seller.nodeOperator)
-	
+
 	return err
 }
 
@@ -537,7 +537,7 @@ func (seller *SellerContractManager) closeOutMonitor(contractMsg msgbus.Contract
 	defer close(headers)
 	defer sub.Unsubscribe()
 
-	loop:
+loop:
 	for {
 		select {
 		case err := <-sub.Err():
@@ -585,20 +585,20 @@ func (seller *SellerContractManager) closeOutMonitor(contractMsg msgbus.Contract
 
 func (buyer *BuyerContractManager) init(ctx *context.Context, ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error) {
 	buyer.ctx = *ctx
-	
-	event, err := ps.GetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID) 
+
+	event, err := ps.GetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID)
 	if err != nil {
 		return err
 	}
 	contractManagerConfig := event.Data.(msgbus.ContractManagerConfig)
-	ethNodeAddr := contractManagerConfig.EthNodeAddr 
+	ethNodeAddr := contractManagerConfig.EthNodeAddr
 	mnemonic := contractManagerConfig.Mnemonic
 	accountIndex := contractManagerConfig.AccountIndex
 
-	account,privateKey := hdWalletKeys(mnemonic, accountIndex)
+	account, privateKey := hdWalletKeys(mnemonic, accountIndex)
 	buyer.account = account.Address
 	buyer.privateKey = privateKey
-	
+
 	var client *ethclient.Client
 	client, err = setUpClient(ethNodeAddr, buyer.account)
 	if err != nil {
@@ -607,7 +607,7 @@ func (buyer *BuyerContractManager) init(ctx *context.Context, ps *msgbus.PubSub,
 	buyer.ps = ps
 	buyer.ethClient = client
 	buyer.cloneFactoryAddress = common.HexToAddress(contractManagerConfig.CloneFactoryAddress)
-	
+
 	buyer.nodeOperator = *nodeOperatorMsg
 	buyer.nodeOperator.EthereumAccount = buyer.account.Hex()
 
@@ -713,10 +713,10 @@ func (buyer *BuyerContractManager) setupExistingContracts() (err error) {
 			contractValues = append(contractValues, contract)
 			contractMsgs = append(contractMsgs, createContractMsg(buyerContracts[i], contractValues[i], false))
 			buyer.ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contractMsgs[i].ID), contractMsgs[i])
-	
+
 			buyer.nodeOperator.Contracts[msgbus.ContractID(buyerContracts[i].Hex())] = msgbus.ContRunningState
 			nodeOperatorUpdated = true
-		}	
+		}
 	}
 
 	if nodeOperatorUpdated {
@@ -907,7 +907,7 @@ func (buyer *BuyerContractManager) closeOutMonitor(minerCh msgbus.EventChan, con
 			fmt.Println("Cancelling current contract manager context: cancelling closeOutMonitor go routine")
 			return
 		case event := <-minerCh:
-			if event.EventType == msgbus.PublishEvent || event.EventType == msgbus.UpdateEvent || event.EventType == msgbus.UnpublishEvent{
+			if event.EventType == msgbus.PublishEvent || event.EventType == msgbus.UpdateEvent || event.EventType == msgbus.UnpublishEvent {
 				// check hashrate is being fulfilled for all running contracts
 				time.Sleep(time.Second * 10) // give buffer time for total hashrate to adjust to multiple updates
 				contractClosed := buyer.checkHashRate(contractId)
@@ -926,26 +926,26 @@ func (buyer *BuyerContractManager) closeOutMonitor(minerCh msgbus.EventChan, con
 					return
 				}
 			}
-		}	
+		}
 	}
 }
 
 func (buyer *BuyerContractManager) checkHashRate(contractId msgbus.ContractID) bool {
 	// check for miners delivering hashrate for this contract
 	totalHashrate := 0
-	event,err := buyer.ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contractId))
+	event, err := buyer.ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contractId))
 	if err != nil {
 		panic(fmt.Sprintf("Getting Hashrate Contract Failed: %s", err))
 	}
 	contract := event.Data.(msgbus.Contract)
-	miners,err := buyer.ps.MinerGetAllWait()
+	miners, err := buyer.ps.MinerGetAllWait()
 	if err != nil {
 		panic(fmt.Sprintf("Failed to get all miners, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err))
 	}
 
 	var miner *msgbus.Miner
 	for i := range miners {
-		miner,err = buyer.ps.MinerGetWait(miners[i]) 
+		miner, err = buyer.ps.MinerGetWait(miners[i])
 		if err != nil {
 			panic(fmt.Sprintf("Failed to get miner, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err))
 		}
@@ -954,7 +954,7 @@ func (buyer *BuyerContractManager) checkHashRate(contractId msgbus.ContractID) b
 		}
 	}
 
-	promisedHashrateMin := int(float32(contract.Speed)*(1 - HASHRATE_TOLERANCE))
+	promisedHashrateMin := int(float32(contract.Speed) * (1 - HASHRATE_TOLERANCE))
 
 	fmt.Printf("Hashrate being sent to contract %s: %d\n", contractId, totalHashrate)
 	if totalHashrate <= promisedHashrateMin {
@@ -989,7 +989,6 @@ func hdWalletKeys(mnemonic string, accountIndex int) (accounts.Account, string) 
 	}
 	return account, privateKey
 }
-
 
 func setUpClient(clientAddress string, contractManagerAccount common.Address) (client *ethclient.Client, err error) {
 	client, err = ethclient.Dial(clientAddress)
@@ -1038,8 +1037,8 @@ func readHashrateContract(client *ethclient.Client, contractAddress common.Addre
 		log.Printf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
 		return contractValues, err
 	}
-	
-	state,price,limit,speed,length,startingBlockTimestamp,buyer,seller,_,err := instance.GetPublicVariables(&bind.CallOpts{})
+
+	state, price, limit, speed, length, startingBlockTimestamp, buyer, seller, _, err := instance.GetPublicVariables(&bind.CallOpts{})
 	if err != nil {
 		log.Printf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
 		return contractValues, err
@@ -1072,22 +1071,22 @@ func readDestUrl(client *ethclient.Client, contractAddress common.Address, priva
 	}
 
 	/*
-	// Decryption Logic
-	destUrlBytes,_ := hex.DecodeString(encryptedDestUrl)
-	privateKey, err := crypto.HexToECDSA(privateKeyString)
-	if err != nil {
-		log.Printf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
-		return "", err
-	}
-	privateKeyECIES := ecies.ImportECDSA(privateKey)
-	decryptedDestUrlBytes, err := privateKeyECIES.Decrypt(destUrlBytes, nil, nil)
-	if err != nil {
-		log.Printf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
-		return "", err
-	}
-	decryptedDestUrl := string(decryptedDestUrlBytes)
+		// Decryption Logic
+		destUrlBytes,_ := hex.DecodeString(encryptedDestUrl)
+		privateKey, err := crypto.HexToECDSA(privateKeyString)
+		if err != nil {
+			log.Printf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
+			return "", err
+		}
+		privateKeyECIES := ecies.ImportECDSA(privateKey)
+		decryptedDestUrlBytes, err := privateKeyECIES.Decrypt(destUrlBytes, nil, nil)
+		if err != nil {
+			log.Printf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
+			return "", err
+		}
+		decryptedDestUrl := string(decryptedDestUrlBytes)
 
-	return decryptedDestUrl, err
+		return decryptedDestUrl, err
 	*/
 	return encryptedDestUrl, err
 }
