@@ -10,21 +10,21 @@ import (
 
 // Struct of Dest parameters in JSON
 type DestJSON struct {
-	ID			string	`json:"id"`
-	NetUrl 		string	`json:"netUrl"`
+	ID     string `json:"id"`
+	NetUrl string `json:"netUrl"`
 }
 
 //Struct that stores slice of all JSON Dest structs in Repo
 type DestRepo struct {
 	DestJSONs []DestJSON
-	Ps          *msgbus.PubSub
+	Ps        *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON Dest structs
 func NewDest(ps *msgbus.PubSub) *DestRepo {
 	return &DestRepo{
-		DestJSONs:	[]DestJSON{},
-		Ps:			ps,
+		DestJSONs: []DestJSON{},
+		Ps:        ps,
 	}
 }
 
@@ -35,7 +35,7 @@ func (r *DestRepo) GetAllDests() []DestJSON {
 
 //Return Dest Struct by ID
 func (r *DestRepo) GetDest(id string) (DestJSON, error) {
-	for i,d := range r.DestJSONs {
+	for i, d := range r.DestJSONs {
 		if d.ID == id {
 			return r.DestJSONs[i], nil
 		}
@@ -51,18 +51,20 @@ func (r *DestRepo) AddDest(dest DestJSON) {
 //Converts Dest struct from msgbus to JSON struct and adds it to Repo
 func (r *DestRepo) AddDestFromMsgBus(destID msgbus.DestID, dest msgbus.Dest) {
 	var destJSON DestJSON
-	
+
 	destJSON.ID = string(destID)
 	destJSON.NetUrl = string(dest.NetUrl)
-	
+
 	r.DestJSONs = append(r.DestJSONs, destJSON)
 }
 
 //Update Dest Struct with specific ID and leave empty parameters unchanged
 func (r *DestRepo) UpdateDest(id string, newDest DestJSON) error {
-	for i,d := range r.DestJSONs {
+	for i, d := range r.DestJSONs {
 		if d.ID == id {
-			if newDest.NetUrl != "" {r.DestJSONs[i].NetUrl = newDest.NetUrl}
+			if newDest.NetUrl != "" {
+				r.DestJSONs[i].NetUrl = newDest.NetUrl
+			}
 
 			return nil
 		}
@@ -72,7 +74,7 @@ func (r *DestRepo) UpdateDest(id string, newDest DestJSON) error {
 
 //Delete Dest Struct with specific ID
 func (r *DestRepo) DeleteDest(id string) error {
-	for i,d := range r.DestJSONs {
+	for i, d := range r.DestJSONs {
 		if d.ID == id {
 			r.DestJSONs = append(r.DestJSONs[:i], r.DestJSONs[i+1:]...)
 
@@ -84,8 +86,8 @@ func (r *DestRepo) DeleteDest(id string) error {
 
 //Subscribe to events for dest msgs on msgbus to update API repos with data
 func (r *DestRepo) SubscribeToDestMsgBus() {
-	destCh := r.Ps.NewEventChan()
-	
+	destCh := msgbus.NewEventChan()
+
 	// add existing dests to api repo
 	event, err := r.Ps.GetWait(msgbus.DestMsg, "")
 	if err != nil {
@@ -112,7 +114,7 @@ func (r *DestRepo) SubscribeToDestMsgBus() {
 	}
 
 	for event = range destCh {
-		loop:
+	loop:
 		switch event.EventType {
 		//
 		// Subscribe Event
@@ -135,7 +137,7 @@ func (r *DestRepo) SubscribeToDestMsgBus() {
 			}
 			dest := event.Data.(msgbus.Dest)
 			r.AddDestFromMsgBus(destID, dest)
-			
+
 			//
 			// Delete/Unpublish Event
 			//
@@ -155,7 +157,7 @@ func (r *DestRepo) SubscribeToDestMsgBus() {
 			dest := event.Data.(msgbus.Dest)
 			destJSON := ConvertDestMSGtoDestJSON(dest)
 			r.UpdateDest(string(destID), destJSON)
-			
+
 			//
 			// Rut Row...
 			//
@@ -168,16 +170,16 @@ func (r *DestRepo) SubscribeToDestMsgBus() {
 
 func ConvertDestJSONtoDestMSG(dest DestJSON) msgbus.Dest {
 	var msg msgbus.Dest
-	
+
 	msg.ID = msgbus.DestID(dest.ID)
 	msg.NetUrl = msgbus.DestNetUrl(dest.NetUrl)
 
-	return msg	
+	return msg
 }
 
 func ConvertDestMSGtoDestJSON(msg msgbus.Dest) (dest DestJSON) {
 	dest.ID = string(msg.ID)
 	dest.NetUrl = string(msg.NetUrl)
 
-	return dest	
+	return dest
 }

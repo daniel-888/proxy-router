@@ -186,7 +186,7 @@ func (cs *ConnectionScheduler) Start() (err error) {
 	}
 
 	// Monitor New Contracts
-	contractEventChan := cs.ps.NewEventChan()
+	contractEventChan := msgbus.NewEventChan()
 	_, err = cs.ps.Sub(msgbus.ContractMsg, "", contractEventChan)
 	if err != nil {
 		log.Printf("Failed to subscribe to contract events, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
@@ -216,7 +216,7 @@ func (cs *ConnectionScheduler) Start() (err error) {
 	}
 
 	// Monitor New OnlineMiners
-	minerEventChan := cs.ps.NewEventChan()
+	minerEventChan := msgbus.NewEventChan()
 	_, err = cs.ps.Sub(msgbus.MinerMsg, "", minerEventChan)
 	if err != nil {
 		log.Printf("Failed to subscribe to miner events, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)

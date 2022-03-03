@@ -146,31 +146,9 @@ func New(capacity int, l *log.Logger) *PubSub {
 	return ps
 }
 
-//--------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------
-func (ps *PubSub) NewEventChanPtr() *EventChan {
-	ech := ps.NewEventChan()
-	return &ech
-}
-
-//--------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------
-func (ps *PubSub) NewEventChan() EventChan {
+// NewEventChan creates a new event channel for passing events.
+func NewEventChan() EventChan {
 	return make(EventChan)
-}
-
-//--------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------
-func (ps *PubSub) NewEventPtr() *Event {
-	e := ps.NewEvent()
-	return &e
-}
-
-//--------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------
-func (ps *PubSub) NewEvent() Event {
-	e := Event{EventType: NoEvent}
-	return e
 }
 
 // GetRandomIDString returns a random string.

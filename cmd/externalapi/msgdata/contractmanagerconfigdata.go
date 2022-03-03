@@ -10,28 +10,28 @@ import (
 
 // Struct of ContractManagerConfig parameters in JSON
 type ContractManagerConfigJSON struct {
-	ID          		string 	`json:"id"`
-	Mnemonic 			string 	`json:"mnemonic"`
-	AccountIndex     	int 	`json:"accountIndex"`
-	EthNodeAddr 		string	`json:"ethNodeAddr"`
-	ClaimFunds	 		bool	`json:"claimFunds"`
-	CloneFactoryAddress string	`json:"cloneFactoryAddress"`
-	LumerinTokenAddress string	`json:"lumerinTokenAddress"`
-	ValidatorAddress	string	`json:"validatorAddress"`
-	ProxyAddress		string	`json:"proxyAddress"`
+	ID                  string `json:"id"`
+	Mnemonic            string `json:"mnemonic"`
+	AccountIndex        int    `json:"accountIndex"`
+	EthNodeAddr         string `json:"ethNodeAddr"`
+	ClaimFunds          bool   `json:"claimFunds"`
+	CloneFactoryAddress string `json:"cloneFactoryAddress"`
+	LumerinTokenAddress string `json:"lumerinTokenAddress"`
+	ValidatorAddress    string `json:"validatorAddress"`
+	ProxyAddress        string `json:"proxyAddress"`
 }
 
 //Struct that stores slice of all JSON ContractManagerConfig structs in Repo
 type ContractManagerConfigRepo struct {
 	ContractManagerConfigJSONs []ContractManagerConfigJSON
-	Ps          	*msgbus.PubSub
+	Ps                         *msgbus.PubSub
 }
 
 //Initialize Repo with empty slice of JSON ContractManagerConfig structs
 func NewContractManagerConfig(ps *msgbus.PubSub) *ContractManagerConfigRepo {
 	return &ContractManagerConfigRepo{
-		ContractManagerConfigJSONs:	[]ContractManagerConfigJSON{},
-		Ps:					ps,
+		ContractManagerConfigJSONs: []ContractManagerConfigJSON{},
+		Ps:                         ps,
 	}
 }
 
@@ -42,7 +42,7 @@ func (r *ContractManagerConfigRepo) GetAllContractManagerConfigs() []ContractMan
 
 //Return ContractManagerConfig Struct by ID
 func (r *ContractManagerConfigRepo) GetContractManagerConfig(id string) (ContractManagerConfigJSON, error) {
-	for i,c := range r.ContractManagerConfigJSONs {
+	for i, c := range r.ContractManagerConfigJSONs {
 		if c.ID == id {
 			return r.ContractManagerConfigJSONs[i], nil
 		}
@@ -58,7 +58,7 @@ func (r *ContractManagerConfigRepo) AddContractManagerConfig(contractConf Contra
 //Converts ContractManagerConfig struct from msgbus to JSON struct and adds it to Repo
 func (r *ContractManagerConfigRepo) AddContractManagerConfigFromMsgBus(contractConfID msgbus.ContractManagerConfigID, contractConf msgbus.ContractManagerConfig) {
 	var contractConfJSON ContractManagerConfigJSON
-	
+
 	contractConfJSON.ID = string(contractConfID)
 	contractConfJSON.Mnemonic = string(contractConf.Mnemonic)
 	contractConfJSON.AccountIndex = int(contractConf.AccountIndex)
@@ -68,22 +68,34 @@ func (r *ContractManagerConfigRepo) AddContractManagerConfigFromMsgBus(contractC
 	contractConfJSON.LumerinTokenAddress = string(contractConf.LumerinTokenAddress)
 	contractConfJSON.ValidatorAddress = string(contractConf.ValidatorAddress)
 	contractConfJSON.ProxyAddress = string(contractConf.ProxyAddress)
-	
+
 	r.ContractManagerConfigJSONs = append(r.ContractManagerConfigJSONs, contractConfJSON)
 }
 
 //Update ContractManagerConfig Struct with specific ID and leave empty parameters unchanged
 func (r *ContractManagerConfigRepo) UpdateContractManagerConfig(id string, newContractManagerConfig ContractManagerConfigJSON) error {
-	for i,c := range r.ContractManagerConfigJSONs {
+	for i, c := range r.ContractManagerConfigJSONs {
 		if c.ID == id {
-			if newContractManagerConfig.Mnemonic != "" {r.ContractManagerConfigJSONs[i].Mnemonic = newContractManagerConfig.Mnemonic}
+			if newContractManagerConfig.Mnemonic != "" {
+				r.ContractManagerConfigJSONs[i].Mnemonic = newContractManagerConfig.Mnemonic
+			}
 			r.ContractManagerConfigJSONs[i].AccountIndex = newContractManagerConfig.AccountIndex
-			if newContractManagerConfig.EthNodeAddr != "" {r.ContractManagerConfigJSONs[i].EthNodeAddr = newContractManagerConfig.EthNodeAddr}
+			if newContractManagerConfig.EthNodeAddr != "" {
+				r.ContractManagerConfigJSONs[i].EthNodeAddr = newContractManagerConfig.EthNodeAddr
+			}
 			r.ContractManagerConfigJSONs[i].ClaimFunds = newContractManagerConfig.ClaimFunds
-			if newContractManagerConfig.CloneFactoryAddress != "" {r.ContractManagerConfigJSONs[i].CloneFactoryAddress = newContractManagerConfig.CloneFactoryAddress}
-			if newContractManagerConfig.LumerinTokenAddress != "" {r.ContractManagerConfigJSONs[i].LumerinTokenAddress = newContractManagerConfig.LumerinTokenAddress}
-			if newContractManagerConfig.ValidatorAddress != "" {r.ContractManagerConfigJSONs[i].ValidatorAddress = newContractManagerConfig.ValidatorAddress}
-			if newContractManagerConfig.ProxyAddress != "" {r.ContractManagerConfigJSONs[i].ProxyAddress = newContractManagerConfig.ProxyAddress}
+			if newContractManagerConfig.CloneFactoryAddress != "" {
+				r.ContractManagerConfigJSONs[i].CloneFactoryAddress = newContractManagerConfig.CloneFactoryAddress
+			}
+			if newContractManagerConfig.LumerinTokenAddress != "" {
+				r.ContractManagerConfigJSONs[i].LumerinTokenAddress = newContractManagerConfig.LumerinTokenAddress
+			}
+			if newContractManagerConfig.ValidatorAddress != "" {
+				r.ContractManagerConfigJSONs[i].ValidatorAddress = newContractManagerConfig.ValidatorAddress
+			}
+			if newContractManagerConfig.ProxyAddress != "" {
+				r.ContractManagerConfigJSONs[i].ProxyAddress = newContractManagerConfig.ProxyAddress
+			}
 
 			return nil
 		}
@@ -93,7 +105,7 @@ func (r *ContractManagerConfigRepo) UpdateContractManagerConfig(id string, newCo
 
 //Delete ContractManagerConfig Struct with specific ID
 func (r *ContractManagerConfigRepo) DeleteContractManagerConfig(id string) error {
-	for i,c := range r.ContractManagerConfigJSONs {
+	for i, c := range r.ContractManagerConfigJSONs {
 		if c.ID == id {
 			r.ContractManagerConfigJSONs = append(r.ContractManagerConfigJSONs[:i], r.ContractManagerConfigJSONs[i+1:]...)
 
@@ -105,8 +117,8 @@ func (r *ContractManagerConfigRepo) DeleteContractManagerConfig(id string) error
 
 //Subscribe to events for contractConfig msgs on msgbus to update API repos with data
 func (r *ContractManagerConfigRepo) SubscribeToContractManagerConfigMsgBus() {
-	contractConfigCh := r.Ps.NewEventChan()
-	
+	contractConfigCh := msgbus.NewEventChan()
+
 	// add existing contractConfigs to api repo
 	event, err := r.Ps.GetWait(msgbus.ContractManagerConfigMsg, "")
 	if err != nil {
@@ -123,7 +135,7 @@ func (r *ContractManagerConfigRepo) SubscribeToContractManagerConfigMsgBus() {
 			r.AddContractManagerConfigFromMsgBus(msgbus.ContractManagerConfigID(contractConfigs[i]), contractConfig)
 		}
 	}
-	
+
 	event, err = r.Ps.SubWait(msgbus.ContractManagerConfigMsg, "", contractConfigCh)
 	if err != nil {
 		panic(fmt.Sprintf("SubWait failed: %s\n", err))
@@ -133,7 +145,7 @@ func (r *ContractManagerConfigRepo) SubscribeToContractManagerConfigMsgBus() {
 	}
 
 	for event = range contractConfigCh {
-		loop:
+	loop:
 		switch event.EventType {
 		//
 		// Subscribe Event
@@ -147,7 +159,7 @@ func (r *ContractManagerConfigRepo) SubscribeToContractManagerConfigMsgBus() {
 		case msgbus.PublishEvent:
 			fmt.Printf(lumerinlib.Funcname()+" Publish Event: %v\n", event)
 			contractConfigID := msgbus.ContractManagerConfigID(event.ID)
-			
+
 			// do not push to api repo if it already exists
 			for i := range r.ContractManagerConfigJSONs {
 				if r.ContractManagerConfigJSONs[i].ID == string(contractConfigID) {
@@ -156,7 +168,7 @@ func (r *ContractManagerConfigRepo) SubscribeToContractManagerConfigMsgBus() {
 			}
 			contractConfig := event.Data.(msgbus.ContractManagerConfig)
 			r.AddContractManagerConfigFromMsgBus(contractConfigID, contractConfig)
-			
+
 			//
 			// Delete/Unpublish Event
 			//
@@ -176,7 +188,7 @@ func (r *ContractManagerConfigRepo) SubscribeToContractManagerConfigMsgBus() {
 			contractConfig := event.Data.(msgbus.ContractManagerConfig)
 			contractConfigJSON := ConvertContractManagerConfigMSGtoContractManagerConfigJSON(contractConfig)
 			r.UpdateContractManagerConfig(string(contractConfigID), contractConfigJSON)
-			
+
 			//
 			// Rut Row...
 			//
@@ -199,7 +211,7 @@ func ConvertContractManagerConfigJSONtoContractManagerConfigMSG(contractConf Con
 	msg.ValidatorAddress = contractConf.ValidatorAddress
 	msg.ProxyAddress = contractConf.ProxyAddress
 
-	return msg	
+	return msg
 }
 
 func ConvertContractManagerConfigMSGtoContractManagerConfigJSON(msg msgbus.ContractManagerConfig) (contractConf ContractManagerConfigJSON) {
@@ -213,5 +225,5 @@ func ConvertContractManagerConfigMSGtoContractManagerConfigJSON(msg msgbus.Contr
 	contractConf.ValidatorAddress = msg.ValidatorAddress
 	contractConf.ProxyAddress = msg.ProxyAddress
 
-	return contractConf	
+	return contractConf
 }
