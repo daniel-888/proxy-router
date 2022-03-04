@@ -12,6 +12,34 @@ import (
 )
 
 type Fields map[string]interface{}
+type Level uint32
+type Format string
+
+const (
+	// LevelPanic level, highest level of severity. Logs and then calls panic with the
+	// message passed to Debug, Info, ...
+	LevelPanic Level = iota
+	// LevelFatal level. Logs and then calls `logger.Exit(1)`. It will exit even if the
+	// logging level is set to Panic.
+	LevelFatal
+	// LevelError level. Logs. Used for errors that should definitely be noted.
+	// Commonly used for hooks to send errors to an error tracking service.
+	LevelError
+	// LevelWarn level. Non-critical entries that deserve eyes.
+	LevelWarn
+	// LevelInfo level. General operational entries about what's going on inside the
+	// application.
+	LevelInfo
+	// LevelDebug level. Usually only enabled when debugging. Very verbose logging.
+	LevelDebug
+	// LevelTrace level. Designates finer-grained informational events than the Debug.
+	LevelTrace
+
+	// FormatJSON will log entries in JSON format.
+	FormatJSON = Format("json")
+	// FormatInline will log entires inline.
+	FormatInline = Format("inline")
+)
 
 type Logger struct {
 	logger *logrus.Logger
@@ -38,87 +66,54 @@ func (l *Logger) SetOutput(output io.Writer) *Logger {
 }
 
 // SetFormatJSON sets the logger to JSON format.
-func (l *Logger) SetFormatJSON() *Logger {
+func (l *Logger) SetFormat(format Format) *Logger {
 	l.logger.SetFormatter(&logrus.JSONFormatter{})
 
 	return l
 }
 
-// Tracef logs a trace event.
-func (l *Logger) Tracef(format string, args ...interface{}) {
-	l.logger.Tracef(format, args...)
+// Logf logs inline output at a given level.
+func (l *Logger) Logf(level Level, format string, args ...interface{}) {
+	switch level {
+	case LevelInfo:
+		l.logger.Infof(format, args...)
+	case LevelTrace:
+		l.logger.Tracef(format, args...)
+	case LevelWarn:
+		l.logger.Warnf(format, args...)
+	case LevelDebug:
+		l.logger.Debugf(format, args...)
+	case LevelError:
+		l.logger.Errorf(format, args...)
+	case LevelPanic:
+		l.logger.Panicf(format, args...)
+	case LevelFatal:
+		l.logger.Fatalf(format, args...)
+	default:
+		panic("invalid log level provided")
+	}
 }
 
-// TraceJSON logs a trace event with fields, in JSON format.
-func (l *Logger) TraceJSON(fields Fields, args ...interface{}) {
-	l.withFields(fields).Trace(args...)
-}
-
-// Debugf logs a debug event.
-func (l *Logger) Debugf(format string, args ...interface{}) {
-	l.logger.Debugf(format, args...)
-}
-
-// DebugJSON logs a debug event with fields, in JSON format.
-func (l *Logger) DebugJSON(fields Fields, args ...interface{}) {
-	l.withFields(fields).Debug(args...)
-}
-
-// Infof logs an info event.
-func (l *Logger) Infof(format string, args ...interface{}) {
-	l.logger.Infof(format, args...)
-}
-
-// InfoJSON logs an info event with fields, in JSON format.
-func (l *Logger) InfoJSON(fields Fields, args ...interface{}) {
-	l.withFields(fields).Info(args...)
-}
-
-// Warnf logs a warning event.
-func (l *Logger) Warnf(format string, args ...interface{}) {
-	l.logger.Warnf(format, args...)
-}
-
-// WarnJSON logs a warning event with fields, in JSON format.
-func (l *Logger) WarnJSON(fields Fields, args ...interface{}) {
-	l.withFields(fields).Warn(args...)
-}
-
-// Errorf logs an error event.
-func (l *Logger) Errorf(format string, args ...interface{}) {
-	l.logger.Errorf(format, args...)
-}
-
-// ErrorJSON logs an error event with fields, in JSON format.
-func (l *Logger) ErrorJSON(fields Fields, args ...interface{}) {
-	l.withFields(fields).Error(args...)
-}
-
-// Fatalf logs a fatal event, calls os.Exit(1) aftering logging.
-func (l *Logger) Fatalf(format string, args ...interface{}) {
-	l.logger.Fatalf(format, args...)
-}
-
-// FatalJSON logs a fatal event with fields, in JSON format.
-// Calls os.Exit(1) aftering logging.
-func (l *Logger) FatalJSON(fields Fields, args ...interface{}) {
-	l.withFields(fields).Fatal(args...)
-}
-
-// Panicf logs a panic event, calls panic() after logging.
-func (l *Logger) Panicf(format string, args ...interface{}) {
-	l.logger.Panicf(format, args...)
-}
-
-// PanicJSON logs a panic event with fields, in JSON format.
-// Calls panic() after logging.
-func (l *Logger) PanicJSON(fields Fields, args ...interface{}) {
-	l.withFields(fields).Panic(args...)
-}
-
-// Close will close the logger's writer.
-func (l *Logger) Close() error {
-	return l.logger.Writer().Close()
+// LogWithFields logs an event with fields.
+func (l *Logger) LogWithFields(level Level, fields Fields, args ...interface{}) {
+	switch level {
+	case LevelInfo:
+		l.withFields(fields).Info(args...)
+	case LevelTrace:
+		l.withFields(fields).Trace(args...)
+	case LevelWarn:
+		l.withFields(fields).Warn(args...)
+	case LevelDebug:
+		l.withFields(fields).Debug(args...)
+	case LevelError:
+		l.withFields(fields).Error(args...)
+	case LevelPanic:
+		l.withFields(fields).Panic(args...)
+	case LevelFatal:
+		l.withFields(fields).Fatal(args...)
+	default:
+		panic("invalid log level provided")
+	}
 }
 
 func (l *Logger) withFields(fields Fields) *logrus.Entry {
