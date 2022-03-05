@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 //
@@ -17,6 +18,9 @@ import (
 func TestSetupListenCancel(t *testing.T) {
 
 	ctx := context.Background()
+
+	cs := &contextlib.ContextStruct{}
+	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
 	testaddr := &testAddr{
 		network: "tcp",
@@ -56,6 +60,9 @@ func TestDial(t *testing.T) {
 		network: "tcp",
 		ipaddr:  "127.0.0.1:12346",
 	}
+
+	cs := &contextlib.ContextStruct{}
+	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
 	l, e := testListen(ctx, testaddr)
 	if e != nil {
@@ -107,7 +114,6 @@ func testListen(ctx context.Context, addr net.Addr) (l *LumerinListenStruct, e e
 // func testDial(ctx context.Context, network LumProto, port int, ip net.IPAddr) (s *LumerinSocketStruct) {
 func testDial(ctx context.Context, addr net.Addr) (s *LumerinSocketStruct) {
 
-	// s, e := Dial(ctx, network, port, ip)
 	s, e := Dial(ctx, addr)
 	if e != nil {
 		fmt.Printf(lumerinlib.FileLine()+" Dial Test Failed: %s\n", e)

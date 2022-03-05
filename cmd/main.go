@@ -17,13 +17,14 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 // -------------------------------------------
 //
 // Start up the modules one by one
 // Config
-// Logger
+// Log
 // MsgBus
 // Connection Manager
 // Scheduling Manager
@@ -44,9 +45,6 @@ func main() {
 	mainContext, mainCancel := context.WithCancel(context.Background())
 	sigInt := make(chan os.Signal, 1)
 	signal.Notify(sigInt, os.Interrupt)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	_ = cancel
 
 	var buyer bool = false
 
@@ -90,10 +88,21 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Getting Listen IP val failed: %s\n", err))
 	}
+
+	defaultpooladdr, err := config.ConfigGetVal(config.DefaultPoolAddr)
+	if err != nil {
+		panic(fmt.Sprintf("Getting Default Pool Address/URL: %s\n", err))
+	}
+
 	disableapi, err := config.ConfigGetVal(config.DisableAPI)
 	if err != nil {
 		panic(fmt.Sprintf("Getting Disable API val failed: %s\n", err))
 	}
+
+	//
+	// Fire up logger
+	//
+	log := log.New()
 
 	//
 	// Fire up the Message Bus
@@ -101,12 +110,26 @@ func main() {
 	ps := msgbus.New(10, l)
 
 	//
+	// Add the various Context variables here
+	// msgbus, logger, defailt listen address, defalt desitnation address
+	//
+
+	src := lumerinlib.NewNetAddr(lumerinlib.TCP, listenip+":"+listenport)
+	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, defaultpooladdr)
+
+	//
+	// the proro argument (#1) gets set in the Protocol sus-system
+	//
+	cs := contextlib.NewContextStruct(nil, ps, log, src, dst)
+
+	//
+	//  All of the various needed subsystem values get passed into the context here.
+	//
+	mainContext = context.WithValue(mainContext, contextlib.ContextKey, cs)
+
+	//
 	// Setup Default Dest
 	//
-	defaultpooladdr, err := config.ConfigGetVal(config.DefaultPoolAddr)
-	if err != nil {
-		panic(fmt.Sprintf("Getting Default Pool Address/URL: %s\n", err))
-	}
 	dest := msgbus.Dest{
 		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
 		NetUrl: msgbus.DestNetUrl(defaultpooladdr),
@@ -136,19 +159,7 @@ func main() {
 		panic(fmt.Sprintf("Adding Node Operator Failed: %s", event.Err))
 	}
 
-	//
-	// Fire up the connection Manager
-	//
 	if disableconnection == "false" {
-
-		//	cm, err := connectionmanager.New(ps)
-		//	if err != nil {
-		//		panic(fmt.Sprintf("connection manager failed:%s", err))
-		//	}
-		//	err = cm.Start()
-		//	if err != nil {
-		//		panic(fmt.Sprintf("connection manager failed to start:%s", err))
-		//	}
 	}
 
 	//
@@ -166,7 +177,7 @@ func main() {
 			lumerinlib.PanicHere("")
 		}
 
-		stratum, err := stratumv1.New(ctx, ps, src, dst)
+		stratum, err := stratumv1.New(mainContext, ps, src, dst)
 		if err != nil {
 			panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
 		}
