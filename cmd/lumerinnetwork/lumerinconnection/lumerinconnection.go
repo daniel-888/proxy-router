@@ -8,6 +8,7 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/sockettcp"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 //
@@ -39,10 +40,12 @@ const ANYAVAILABLE LumProto = "anyavailable"
 // This will contain a regular socket or virtual socket structure
 //
 type LumerinListenStruct struct {
+	ctx      context.Context
 	listener interface{}
 }
 
 type LumerinSocketStruct struct {
+	ctx    context.Context
 	socket interface{}
 }
 
@@ -71,6 +74,8 @@ var ErrLumSocClosed = errors.New("lumerin socket: virt socket closed")
 // func Listen(ctx context.Context, p LumProto, port int, ip net.IPAddr) (l *LumerinListenStruct, e error) {
 func Listen(ctx context.Context, addr net.Addr) (l *LumerinListenStruct, e error) {
 
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+
 	proto := addr.Network()
 	ipaddr := addr.String()
 
@@ -87,6 +92,7 @@ func Listen(ctx context.Context, addr net.Addr) (l *LumerinListenStruct, e error
 		tcp, e := sockettcp.Listen(ctx, proto, ipaddr)
 		if e == nil {
 			l = &LumerinListenStruct{
+				ctx:      ctx,
 				listener: tcp,
 			}
 		}
@@ -104,11 +110,10 @@ func Listen(ctx context.Context, addr net.Addr) (l *LumerinListenStruct, e error
 	case UDPTRUNK:
 		fallthrough
 	case ANYAVAILABLE:
-		panic(fmt.Sprintf(lumerinlib.FileLine()+" Protocol not implemented:%s", string(lumproto)))
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLine()+" Protocol not implemented:%s", string(lumproto))
 
 	default:
-		panic(fmt.Sprintf(lumerinlib.FileLine()+":"+lumerinlib.Funcname()+" Proto:'%s' not supported\n", lumproto))
-
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLine()+" Proto:'%s' not supported\n", lumproto)
 	}
 
 	return l, e
@@ -119,6 +124,8 @@ func Listen(ctx context.Context, addr net.Addr) (l *LumerinListenStruct, e error
 //
 func (ll *LumerinListenStruct) Accept() (lci *LumerinSocketStruct, e error) {
 
+	contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+
 	switch ll.listener.(type) {
 	case *sockettcp.ListenTCPStruct:
 		tcp := ll.listener.(*sockettcp.ListenTCPStruct)
@@ -126,6 +133,7 @@ func (ll *LumerinListenStruct) Accept() (lci *LumerinSocketStruct, e error) {
 		soc, e = tcp.Accept()
 		if e == nil {
 			lci = &LumerinSocketStruct{
+				ctx:    ll.ctx,
 				socket: soc,
 			}
 		}
@@ -140,6 +148,8 @@ func (ll *LumerinListenStruct) Accept() (lci *LumerinSocketStruct, e error) {
 //
 func (ll *LumerinListenStruct) Cancel() {
 
+	contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+
 	switch ll.listener.(type) {
 	case *sockettcp.ListenTCPStruct:
 		tcp := ll.listener.(*sockettcp.ListenTCPStruct)
@@ -153,6 +163,8 @@ func (ll *LumerinListenStruct) Cancel() {
 //
 //
 func (ll *LumerinListenStruct) Close() (e error) {
+
+	contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
 
 	switch ll.listener.(type) {
 	case *sockettcp.ListenTCPStruct:
@@ -169,6 +181,8 @@ func (ll *LumerinListenStruct) Close() (e error) {
 //
 // func Dial(ctx context.Context, p LumProto, port int, ip net.IPAddr) (lci *LumerinSocketStruct, e error) {
 func Dial(ctx context.Context, addr net.Addr) (lci *LumerinSocketStruct, e error) {
+
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
 
 	proto := addr.Network()
 	ipaddr := addr.String()
@@ -187,6 +201,7 @@ func Dial(ctx context.Context, addr net.Addr) (lci *LumerinSocketStruct, e error
 		tcp, e = sockettcp.Dial(ctx, string(lumproto), ipaddr)
 		if e == nil {
 			lci = &LumerinSocketStruct{
+				ctx:    ctx,
 				socket: tcp,
 			}
 		}
@@ -218,6 +233,8 @@ func Dial(ctx context.Context, addr net.Addr) (lci *LumerinSocketStruct, e error
 //
 func (l *LumerinSocketStruct) ReadReady() (ready bool) {
 
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:
 		ready = l.socket.(*sockettcp.SocketTCPStruct).ReadReady()
@@ -233,6 +250,8 @@ func (l *LumerinSocketStruct) ReadReady() (ready bool) {
 //
 func (l *LumerinSocketStruct) Read(buf []byte) (int, error) {
 
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:
 		return l.socket.(*sockettcp.SocketTCPStruct).Read(buf)
@@ -245,6 +264,8 @@ func (l *LumerinSocketStruct) Read(buf []byte) (int, error) {
 //
 //
 func (l *LumerinSocketStruct) Write(buf []byte) (count int, e error) {
+
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
 
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:
@@ -260,6 +281,8 @@ func (l *LumerinSocketStruct) Write(buf []byte) (count int, e error) {
 //
 //
 func (l *LumerinSocketStruct) Status() (stat LumerinConnectionStatusStruct, e error) {
+
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
 
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:
@@ -279,6 +302,8 @@ func (l *LumerinSocketStruct) Status() (stat LumerinConnectionStatusStruct, e er
 //
 //
 func (l *LumerinSocketStruct) Close() (e error) {
+
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
 
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:

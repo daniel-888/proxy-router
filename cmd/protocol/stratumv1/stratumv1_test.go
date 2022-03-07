@@ -9,6 +9,9 @@ import (
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
+//
+//
+//
 func TestNewProto(t *testing.T) {
 
 	ps := msgbus.New(1, nil)

@@ -10,7 +10,6 @@ import (
 
 func TestNew(t *testing.T) {
 	l := New()
-	defer l.Close()
 
 	if l == nil {
 		t.Error("creating new logger resulted in nil")
@@ -20,16 +19,15 @@ func TestNew(t *testing.T) {
 func TestWriteToFile(t *testing.T) {
 	testFilePath := strconv.Itoa(time.Now().Nanosecond())
 
-	writeTo, err := os.OpenFile(testFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0755)
+	logFile, err := os.OpenFile(testFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0755)
 	if err != nil {
 		t.Errorf("creating test log file: %v", err)
 	}
 	defer os.Remove(testFilePath)
 
-	l := New().SetOutput(writeTo)
-	defer l.Close()
+	l := New().SetOutput(logFile)
 
-	l.WarnJSON(Fields{
+	l.LogWithFields(LevelInfo, Fields{
 		"test_key":   "age",
 		"test_value": 33,
 	}, "just a test")

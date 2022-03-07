@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net"
 	_ "time"
-
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	//"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	//the below packages need to have their gitlab branches sorted out prior to being
 	//imported via go mod tidy
@@ -29,6 +27,8 @@ Refer to proxy router document
 https://titanind.atlassian.net/wiki/spaces/PR/pages/5570561/Lumerin+Node
 */
 
+type SimpleStructProtocolFunc func(*SimpleStruct) chan *SimpleEvent
+
 type ConnUniqueID uint
 type URL string
 type MsgType string
@@ -38,16 +38,18 @@ type EventHandler string
 type SearchString string
 
 type EventType string
-type SimpleContextValue string
 
-const SimpleContext SimpleContextValue = "SimpleContextKey"
+// type SimpleContextValue string
 
-type SimpleContextStruct struct {
-	Protocol func(*SimpleStruct) chan *SimpleEvent
-	MsgBus   *msgbus.PubSub
-	Src      net.Addr
-	Dst      net.Addr
-}
+// const SimpleContext SimpleContextValue = "SimpleContextKey"
+
+// type SimpleContextStruct struct {
+// 	Protocol func(*SimpleStruct) chan *SimpleEvent
+// 	MsgBus   *msgbus.PubSub
+// 	Src      net.Addr
+// 	Dst      net.Addr
+// 	Log      *log.Logger
+// }
 
 const NoEvent EventType = "noevent"
 const MsgUpdateEvent EventType = "msgupdate"

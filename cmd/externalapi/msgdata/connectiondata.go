@@ -111,9 +111,7 @@ func (r *ConnectionRepo) DeleteConnection(id string) error {
 
 //Subscribe to events for connection msgs on msgbus to update API repos with data
 func (r *ConnectionRepo) SubscribeToConnectionMsgBus() {
-	// connectionCh := r.Ps.NewEventChan()
-	r.EventChan = r.Ps.NewEventChan()
-	// r.EventChan = connectionCh
+	r.EventChan = msgbus.NewEventChan()
 
 	// add existing connections to api repo
 	event, err := r.Ps.GetWait(msgbus.ConnectionMsg, "")

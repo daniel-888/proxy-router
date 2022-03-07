@@ -124,7 +124,7 @@ func (r *ContractRepo) DeleteContract(id string) error {
 
 //Subscribe to events for contract msgs on msgbus to update API repos with data
 func (r *ContractRepo) SubscribeToContractMsgBus() {
-	contractCh := r.Ps.NewEventChan()
+	contractCh := msgbus.NewEventChan()
 
 	// add existing contracts to api repo
 	event, err := r.Ps.GetWait(msgbus.ContractMsg, "")

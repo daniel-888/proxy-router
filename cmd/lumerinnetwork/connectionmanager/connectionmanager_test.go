@@ -5,25 +5,29 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"testing"
 
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 var TestString = "This is a test string\n"
 
 func TestSetupListenCancel(t *testing.T) {
 
-	ctx := context.Background()
-
 	testaddr := &testAddr{
 		network: "tcp",
 		ipaddr:  "127.0.0.1:12345",
 	}
 
-	l, e := testListen(ctx, testaddr)
+	ctx := context.Background()
+	cs := &contextlib.ContextStruct{}
+	cs.SetSrc(testaddr)
+	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
+
+	l, e := testListen(ctx)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
@@ -49,14 +53,18 @@ func TestSetupListenCancel(t *testing.T) {
 //
 func TestSrcDial(t *testing.T) {
 
-	ctx := context.Background()
-
 	testaddr := &testAddr{
 		network: "tcp",
 		ipaddr:  "127.0.0.1:12346",
 	}
 
-	l, e := testListen(ctx, testaddr)
+	ctx := context.Background()
+	cs := &contextlib.ContextStruct{}
+	cs.SetLog(log.New())
+	cs.SetSrc(testaddr)
+	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
+
+	l, e := testListen(ctx)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
@@ -104,14 +112,18 @@ func TestSrcDial(t *testing.T) {
 //
 func TestSrcDefDstDial(t *testing.T) {
 
-	ctx := context.Background()
-
 	testaddr := &testAddr{
 		network: "tcp",
 		ipaddr:  "127.0.0.1:12347",
 	}
 
-	l, e := testListen(ctx, testaddr)
+	ctx := context.Background()
+	cs := &contextlib.ContextStruct{}
+	cs.SetLog(log.New())
+	cs.SetSrc(testaddr)
+	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
+
+	l, e := testListen(ctx)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
@@ -154,14 +166,18 @@ func TestSrcDefDstDial(t *testing.T) {
 //
 func TestSrcIdxDstDial(t *testing.T) {
 
-	ctx := context.Background()
-
 	testaddr := &testAddr{
 		network: "tcp",
 		ipaddr:  "127.0.0.1:12348",
 	}
 
-	l, e := testListen(ctx, testaddr)
+	ctx := context.Background()
+	cs := &contextlib.ContextStruct{}
+	cs.SetLog(log.New())
+	cs.SetSrc(testaddr)
+	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
+
+	l, e := testListen(ctx)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
@@ -205,8 +221,8 @@ func TestSrcIdxDstDial(t *testing.T) {
 //
 //
 // func testListen(ctx context.Context, port int, ip net.IPAddr) (l *ConnectionListenStruct, e error) {
-func testListen(ctx context.Context, addr net.Addr) (l *ConnectionListenStruct, e error) {
-	return Listen(ctx, addr)
+func testListen(ctx context.Context) (l *ConnectionListenStruct, e error) {
+	return Listen(ctx)
 }
 
 //

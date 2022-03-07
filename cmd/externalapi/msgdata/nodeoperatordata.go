@@ -105,7 +105,7 @@ func (r *NodeOperatorRepo) DeleteNodeOperator(id string) error {
 
 //Subscribe to events for nodeOperator msgs on msgbus to update API repos with data
 func (r *NodeOperatorRepo) SubscribeToNodeOperatorMsgBus() {
-	nodeOperatorCh := r.Ps.NewEventChan()
+	nodeOperatorCh := msgbus.NewEventChan()
 
 	// add existing nodeOperators to api repo
 	event, err := r.Ps.GetWait(msgbus.NodeOperatorMsg, "")
