@@ -8,6 +8,7 @@ import (
 	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 func TestNewProto(t *testing.T) {
@@ -16,19 +17,17 @@ func TestNewProto(t *testing.T) {
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, "127.0.0.1:12345")
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, "127.0.0.1:12345")
 
-	sc := simple.SimpleContextStruct{
-		Protocol: newProtcolFunc,
-		MsgBus:   ps,
-		Src:      src,
-		Dst:      dst,
-	}
-
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, simple.SimpleContext, sc)
+	cs := &contextlib.ContextStruct{}
+	cs.SetMsgBus(ps)
+	cs.SetSrc(src)
+	cs.SetDst(dst)
+	cs.SetProtocol(newProtcolFunc)
+	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
 	pls, e := NewListen(ctx)
 	if e != nil {
-		lumerinlib.PanicHere(fmt.Sprintf("New() problem:%s", e))
+		contextlib.Logf(ctx, contextlib.LevelPanic, fmt.Sprintf("New() problem:%s", e))
 	}
 
 	pls.Run()

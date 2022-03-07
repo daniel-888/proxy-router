@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 var TestString = "This is the the test string\n"
 
 func TestTCPSetupTestCancel(t *testing.T) {
 
-	ctx := context.Background()
+	ctx, _ := contextlib.CreateNewContext(context.Background())
 
 	addr := ":12347"
 
@@ -46,7 +47,7 @@ func TestTCPSetupTestCancel(t *testing.T) {
 //
 func TestTCPListenAddr(t *testing.T) {
 
-	ctx := context.Background()
+	ctx, _ := contextlib.CreateNewContext(context.Background())
 
 	addr := ":55667"
 
@@ -76,7 +77,7 @@ func TestTCPListenAddr(t *testing.T) {
 
 func TestTCPSetupListener(t *testing.T) {
 
-	ctx := context.Background()
+	ctx, _ := contextlib.CreateNewContext(context.Background())
 
 	addr := "127.0.0.1:12346"
 
