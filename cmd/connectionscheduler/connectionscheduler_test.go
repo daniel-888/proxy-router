@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/log"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 func TestSellerConnectionScheduler(t *testing.T) {

@@ -7,8 +7,8 @@ import (
 	"sort"
 	"sync"
 
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/log"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
@@ -16,7 +16,7 @@ const HASHRATE_TOLERANCE = .10
 
 type ConnectionScheduler struct {
 	ps                  *msgbus.PubSub
-	l					*log.Logger
+	l                   *log.Logger
 	Contracts           lumerinlib.ConcurrentMap
 	ReadyMiners         lumerinlib.ConcurrentMap // miners with no contract
 	BusyMiners          lumerinlib.ConcurrentMap // miners fulfilling a contract
@@ -43,7 +43,7 @@ func (m MinerList) Less(i, j int) bool { return m[i].hashrate < m[j].hashrate }
 func New(ctx *context.Context, ps *msgbus.PubSub, l *log.Logger, nodeOperator *msgbus.NodeOperator) (cs *ConnectionScheduler, err error) {
 	cs = &ConnectionScheduler{
 		ps:           ps,
-		l:			  l,
+		l:            l,
 		nodeOperator: *nodeOperator,
 		ctx:          *ctx,
 	}
@@ -79,7 +79,7 @@ func (cs *ConnectionScheduler) Start() (err error) {
 	}
 
 	// Monitor New Contracts
-	contractEventChan := cs.ps.NewEventChan()
+	contractEventChan := msgbus.NewEventChan()
 	_, err = cs.ps.Sub(msgbus.ContractMsg, "", contractEventChan)
 	if err != nil {
 		cs.l.Logf(log.LevelError, "Failed to subscribe to contract events, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
@@ -109,7 +109,7 @@ func (cs *ConnectionScheduler) Start() (err error) {
 	}
 
 	// Monitor New OnlineMiners
-	minerEventChan := cs.ps.NewEventChan()
+	minerEventChan := msgbus.NewEventChan()
 	_, err = cs.ps.Sub(msgbus.MinerMsg, "", minerEventChan)
 	if err != nil {
 		cs.l.Logf(log.LevelError, "Failed to subscribe to miner events, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
@@ -438,7 +438,7 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 	}
 
 	if destid == "" {
-		cs.l.Logf(log.LevelPanic, lumerinlib.FileLine() + " Error DestID is empty")
+		cs.l.Logf(log.LevelPanic, lumerinlib.FileLine()+" Error DestID is empty")
 	}
 
 	// sort miners by hashrate from least to greatest

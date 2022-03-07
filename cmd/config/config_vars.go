@@ -21,6 +21,7 @@ const (
 	ConfigLogFilePath                 ConfigConst = "ConfigLogFilePath"
 	ConfigLogLevel                    ConfigConst = "ConfigLogLevel"
 	DefaultPoolAddr                   ConfigConst = "DefaultPoolAddr"
+	ConfigRESTPort                    ConfigConst = "ConfigRESTPort"
 	DisableConnection                 ConfigConst = "DisableConnection"
 	DisableContract                   ConfigConst = "DisableContract"
 	DisableSchedule                   ConfigConst = "DisableSchedule"
@@ -178,6 +179,16 @@ var ConfigMap = map[ConfigConst]configitem{
 		configval: nil,
 		envval:    nil,
 		flagval:   nil,
+	},
+	ConfigRESTPort: {
+		flagname:   "rest_port",
+		flagusage:  "REST API Port",
+		envname:    "RESTPORT",
+		configname: "externalAPI.port",
+		defval:     "8080",
+		configval:  nil,
+		envval:     nil,
+		flagval:    nil,
 	},
 	DisableConnection: {
 		flagname:  "disableconnection",

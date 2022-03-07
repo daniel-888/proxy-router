@@ -2,11 +2,14 @@ package externalapi
 
 import (
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/handlers"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
@@ -43,7 +46,7 @@ func (api *APIRepos) InitializeJSONRepos(ps *msgbus.PubSub) {
 	go api.NodeOperator.SubscribeToNodeOperatorMsgBus()
 }
 
-func (api *APIRepos) RunAPI() {
+func (api *APIRepos) RunAPI(port string, l *log.Logger) {
 	r := gin.Default()
 
 	configRoutes := r.Group("/config")
@@ -114,7 +117,18 @@ func (api *APIRepos) RunAPI() {
 		nodeOperatorRoutes.DELETE("/:id", handlers.NodeOperatorDELETE(api.NodeOperator))
 	}
 
-	if err := r.Run(); err != nil {
-		panic(fmt.Sprintf("external api failed to run:%s", err))
+	server := &http.Server{
+		Addr:              fmt.Sprintf(":%s", port),
+		Handler:           r,
+		IdleTimeout:       20 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		ReadHeaderTimeout: 20 * time.Second,
+		MaxHeaderBytes:    http.DefaultMaxHeaderBytes,
+	}
+
+	fmt.Printf("REST listening on port :%v\n", port)
+
+	if err := server.ListenAndServe(); err != nil {
+		l.Logf(log.LevelError, "serving REST API: %v", err)
 	}
 }
