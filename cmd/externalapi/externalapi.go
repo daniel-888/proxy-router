@@ -129,6 +129,6 @@ func (api *APIRepos) RunAPI(port string, l *log.Logger) {
 	fmt.Printf("REST listening on port :%v\n", port)
 
 	if err := server.ListenAndServe(); err != nil {
-		l.Fatalf("serving REST API: %v", err)
+		l.Logf(log.LevelError, "serving REST API: %v", err)
 	}
 }
