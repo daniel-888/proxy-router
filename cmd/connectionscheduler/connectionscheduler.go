@@ -3,12 +3,12 @@ package connectionscheduler
 import (
 	"context"
 	"fmt"
-	"log"
 	"math"
 	"sort"
 	"sync"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
@@ -16,6 +16,7 @@ const HASHRATE_TOLERANCE = .10
 
 type ConnectionScheduler struct {
 	ps                  *msgbus.PubSub
+	l					*log.Logger
 	Contracts           lumerinlib.ConcurrentMap
 	ReadyMiners         lumerinlib.ConcurrentMap // miners with no contract
 	BusyMiners          lumerinlib.ConcurrentMap // miners fulfilling a contract
@@ -39,9 +40,10 @@ func (m MinerList) Less(i, j int) bool { return m[i].hashrate < m[j].hashrate }
 //------------------------------------------
 //
 //------------------------------------------
-func New(ctx *context.Context, ps *msgbus.PubSub, nodeOperator *msgbus.NodeOperator) (cs *ConnectionScheduler, err error) {
+func New(ctx *context.Context, ps *msgbus.PubSub, l *log.Logger, nodeOperator *msgbus.NodeOperator) (cs *ConnectionScheduler, err error) {
 	cs = &ConnectionScheduler{
 		ps:           ps,
+		l:			  l,
 		nodeOperator: *nodeOperator,
 		ctx:          *ctx,
 	}
@@ -62,14 +64,14 @@ func (cs *ConnectionScheduler) Start() (err error) {
 	// Update connection scheduler with current contracts
 	event, err := cs.ps.GetWait(msgbus.ContractMsg, "")
 	if err != nil {
-		log.Printf("Failed to get all contract ids, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
+		cs.l.Logf(log.LevelError, "Failed to get all contract ids, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
 		return err
 	}
 	contracts := event.Data.(msgbus.IDIndex)
 	for i := range contracts {
 		event, err := cs.ps.GetWait(msgbus.ContractMsg, contracts[i])
 		if err != nil {
-			log.Printf("Failed to get contract, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
+			cs.l.Logf(log.LevelError, "Failed to get contract, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
 			return err
 		}
 		contract := event.Data.(msgbus.Contract)
@@ -80,7 +82,7 @@ func (cs *ConnectionScheduler) Start() (err error) {
 	contractEventChan := cs.ps.NewEventChan()
 	_, err = cs.ps.Sub(msgbus.ContractMsg, "", contractEventChan)
 	if err != nil {
-		log.Printf("Failed to subscribe to contract events, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
+		cs.l.Logf(log.LevelError, "Failed to subscribe to contract events, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
 		return err
 	}
 	go cs.goContractHandler(contractEventChan)
@@ -88,13 +90,13 @@ func (cs *ConnectionScheduler) Start() (err error) {
 	// Update connection scheduler with current miners in online state
 	miners, err := cs.ps.MinerGetAllWait()
 	if err != nil {
-		log.Printf("Failed to get all miner ids, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
+		cs.l.Logf(log.LevelError, "Failed to get all miner ids, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
 		return err
 	}
 	for i := range miners {
 		miner, err := cs.ps.MinerGetWait(miners[i])
 		if err != nil {
-			log.Printf("Failed to get miner, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
+			cs.l.Logf(log.LevelError, "Failed to get miner, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
 			return err
 		}
 		if miner.State == msgbus.OnlineState {
@@ -110,7 +112,7 @@ func (cs *ConnectionScheduler) Start() (err error) {
 	minerEventChan := cs.ps.NewEventChan()
 	_, err = cs.ps.Sub(msgbus.MinerMsg, "", minerEventChan)
 	if err != nil {
-		log.Printf("Failed to subscribe to miner events, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
+		cs.l.Logf(log.LevelError, "Failed to subscribe to miner events, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
 		return err
 	}
 	minerMux := &sync.Mutex{}
@@ -131,7 +133,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 	for {
 		select {
 		case <-cs.ctx.Done():
-			fmt.Println("Cancelling current connection scheduler context: cancelling ContractHandler go routine")
+			cs.l.Logf(log.LevelInfo, "Cancelling current connection scheduler context: cancelling ContractHandler go routine")
 			return
 
 		case event := <-ch:
@@ -149,7 +151,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 				if !cs.Contracts.Exists(string(id)) {
 					cs.Contracts.Set(string(id), contract)
 				} else {
-					panic(fmt.Sprintf(lumerinlib.FileLine()+" got PubEvent, but already had the ID: %v\n", event))
+					cs.l.Logf(log.LevelPanic, fmt.Sprintf(lumerinlib.FileLine()+" got PubEvent, but already had the ID:"), event)
 				}
 
 				// pusblished contract is already running
@@ -177,7 +179,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 					cs.minerUpdatedChans.Delete(string(id))
 					cs.contractClosedChans.Delete(string(id))
 				} else {
-					panic(fmt.Sprintf(lumerinlib.FileLine()+" got UnsubscribeEvent, but dont have the ID: %v\n", event))
+					cs.l.Logf(log.LevelPanic, fmt.Sprintf(lumerinlib.FileLine()+" got UnsubscribeEvent, but dont have the ID:"), event)
 				}
 
 				//
@@ -187,7 +189,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 				fmt.Printf(lumerinlib.Funcname()+" UpdateEvent: %v\n", event)
 
 				if !cs.Contracts.Exists(string(id)) {
-					panic(fmt.Sprintf(lumerinlib.FileLine()+" got contract ID does not exist: %v\n", event))
+					cs.l.Logf(log.LevelPanic, fmt.Sprintf(lumerinlib.FileLine()+" got contract ID does not exist:"), event)
 				}
 
 				// Update the current contract data
@@ -219,7 +221,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 						}
 
 					default:
-						panic(fmt.Sprintf(lumerinlib.FileLine()+" got bad State: %v\n", event))
+						cs.l.Logf(log.LevelPanic, fmt.Sprintf(lumerinlib.FileLine()+" got bad State:"), event)
 					}
 				}
 			}
@@ -267,7 +269,7 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 							}
 						}
 					} else {
-						panic(fmt.Sprintf("Got PubEvent, but already had the ID: %v\n", event))
+						cs.l.Logf(log.LevelPanic, "Got PubEvent, but already had the ID: %v\n", event)
 					}
 				default:
 					if !cs.BusyMiners.Exists(string(id)) {
@@ -279,7 +281,7 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 							}
 						}
 					} else {
-						panic(fmt.Sprintf("Got PubEvent, but already had the ID: %v\n", event))
+						cs.l.Logf(log.LevelPanic, "Got PubEvent, but already had the ID: %v\n", event)
 					}
 				}
 				fmt.Println("Ready Miners: ", cs.ReadyMiners.M)
@@ -354,7 +356,7 @@ func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
 
 	event, err := cs.ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contractId))
 	if err != nil {
-		panic(fmt.Sprint(lumerinlib.FileLine()+"Error:%v", event))
+		cs.l.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", event)
 	}
 	contract := event.Data.(msgbus.Contract)
 
@@ -372,7 +374,7 @@ func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
 			if v.(msgbus.Miner).Contract == contract.ID {
 				err := cs.ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, cs.nodeOperator.DefaultDest, true)
 				if err != nil {
-					panic(fmt.Sprintf(lumerinlib.FileLine()+" Error:%s\n", err))
+					cs.l.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 				}
 			}
 		}
@@ -395,7 +397,7 @@ func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
 				if v.(msgbus.Miner).Contract == contract.ID {
 					err := cs.ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, cs.nodeOperator.DefaultDest, true)
 					if err != nil {
-						panic(fmt.Sprintf(lumerinlib.FileLine()+" Error:%s\n", err))
+						cs.l.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 					}
 				}
 			}
@@ -417,7 +419,7 @@ func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
 					if v.(msgbus.Miner).Contract == contract.ID {
 						err := cs.ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, cs.nodeOperator.DefaultDest, true)
 						if err != nil {
-							panic(fmt.Sprintf(lumerinlib.FileLine()+" Error:%s\n", err))
+							cs.l.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 						}
 					}
 				}
@@ -436,7 +438,7 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 	}
 
 	if destid == "" {
-		panic(fmt.Sprint(lumerinlib.FileLine() + " Error DestID is empty"))
+		cs.l.Logf(log.LevelPanic, lumerinlib.FileLine() + " Error DestID is empty")
 	}
 
 	// sort miners by hashrate from least to greatest
@@ -453,7 +455,7 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 			if v.(msgbus.Miner).Contract == contract.ID {
 				err := cs.ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, cs.nodeOperator.DefaultDest, true)
 				if err != nil {
-					panic(fmt.Sprintf(lumerinlib.FileLine()+" Error:%s\n", err))
+					cs.l.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 				}
 			}
 		}
@@ -469,7 +471,7 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 	for _, v := range minerCombination {
 		err := cs.ps.MinerSetContractWait(v.id, contract.ID, destid, true)
 		if err != nil {
-			panic(fmt.Sprintf(lumerinlib.FileLine()+" Error:%s\n", err))
+			cs.l.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 		}
 	}
 
@@ -484,7 +486,7 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 			if v.(msgbus.Miner).Contract == contract.ID {
 				err := cs.ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, cs.nodeOperator.DefaultDest, true)
 				if err != nil {
-					panic(fmt.Sprintf(lumerinlib.FileLine()+" Error:%s\n", err))
+					cs.l.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 				}
 			}
 		}

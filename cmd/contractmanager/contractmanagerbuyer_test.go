@@ -6,9 +6,9 @@ import (
 	//"errors"
 	"context"
 	"fmt"
-	"log"
 	"testing"
 	"time"
+	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -17,6 +17,7 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
@@ -30,6 +31,17 @@ func TestBuyerRoutine(t *testing.T) {
 	contractManagerCtx, contractManagerCancel := context.WithCancel(mainCtx)
 	var contractManagerConfig msgbus.ContractManagerConfig
 	contractManagerConfigID := msgbus.GetRandomIDString()
+
+	l := log.New()
+	logFilePath := ""
+
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	if err != nil {
+		l.Logf(log.LevelFatal, "error opening log file: %v", err)
+	}
+	defer logFile.Close()
+
+	l.SetFormat(log.FormatJSON).SetOutput(logFile)
 
 	contractLength := 10000
 
@@ -83,7 +95,7 @@ func TestBuyerRoutine(t *testing.T) {
 	}
 
 	// start connection scheduler look at miners
-	cs, err := connectionscheduler.New(&mainCtx, ps, &nodeOperator)
+	cs, err := connectionscheduler.New(&mainCtx, ps, l, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -93,8 +105,8 @@ func TestBuyerRoutine(t *testing.T) {
 	}
 
 	var cman BuyerContractManager
-	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, contractManagerConfigID, &nodeOperator)
-	err = cman.init(&contractManagerCtx, ps, contractManagerConfigID, &nodeOperator)
+	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, l, contractManagerConfigID, &nodeOperator)
+	err = cman.init(&contractManagerCtx, ps, l, contractManagerConfigID, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("contract manager init failed:%s", err))
 	}
@@ -112,7 +124,7 @@ func TestBuyerRoutine(t *testing.T) {
 		for {
 			select {
 			case err := <-cfSub.Err():
-				log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
+				panic(fmt.Sprintf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err))
 			case cfLog := <-cfLogs:
 				switch {
 				case cfLog.Topics[0].Hex() == contractCreatedSigHash.Hex():

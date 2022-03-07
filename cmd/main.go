@@ -179,13 +179,13 @@ func main() {
 	// Fire up schedule manager
 	//
 	if disableschedule == "false" {
-		cs, err := connectionscheduler.New(&mainContext, ps, &nodeOperator)
+		cs, err := connectionscheduler.New(&mainContext, ps, l, &nodeOperator)
 		if err != nil {
-			panic(fmt.Sprintf("schedule manager failed:%s", err))
+			l.Logf(log.LevelPanic, "Schedule manager failed: %v", err)
 		}
 		err = cs.Start()
 		if err != nil {
-			panic(fmt.Sprintf("schedule manager failed to start:%s", err))
+			l.Logf(log.LevelPanic, "Schedule manager to start: %v", err)
 		}
 	}
 
@@ -198,7 +198,7 @@ func main() {
 
 		network, err := config.ConfigGetVal(config.ConfigContractNetwork)
 		if err != nil {
-			panic(fmt.Sprintf("Getting network val failed %s\n", err))
+			l.Logf(log.LevelPanic, "Getting network val failed: %v", err)
 		}
 
 		switch network {
@@ -227,7 +227,7 @@ func main() {
 		if configFile != "" { // if a config file was specified use it instead of flag params
 			contractManagerConfigFile, err := config.LoadConfiguration("contractManager")
 			if err != nil {
-				panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
+				l.Logf(log.LevelPanic, "Failed to load contract manager configuration: %v", err)
 			}
 
 			contractManagerConfig.Mnemonic = contractManagerConfigFile["mnemonic"].(string)
@@ -241,26 +241,26 @@ func main() {
 		} else {
 			contractManagerConfig.Mnemonic, err = config.ConfigGetVal(config.ConfigContractMnemonic)
 			if err != nil {
-				panic(fmt.Sprintf("Getting mnemonic val failed: %s\n", err))
+				l.Logf(log.LevelPanic, "Getting mnemonic val failed: %v", err)
 			}
 
 			accountIndexStr, err := config.ConfigGetVal(config.ConfigContractAccountIndex)
 			if err != nil {
-				panic(fmt.Sprintf("Getting account index val failed: %s\n", err))
+				l.Logf(log.LevelPanic, "Getting account index val failed: %v", err)
 			}
 			contractManagerConfig.AccountIndex, err = strconv.Atoi(accountIndexStr)
 			if err != nil {
-				panic(fmt.Sprintf("Converting account index string to int failed: %s\n", err))
+				l.Logf(log.LevelPanic, "Converting account index string to int failed: %v", err)
 			}
 
 			contractManagerConfig.EthNodeAddr, err = config.ConfigGetVal(config.ConfigContractEthereumNodeAddress)
 			if err != nil {
-				panic(fmt.Sprintf("Getting ethereum node address val failed: %s\n", err))
+				l.Logf(log.LevelPanic, "Getting ethereum node address val failed: %v", err)
 			}
 			contractManagerConfig.ClaimFunds = false
 			claimFundsStr, err := config.ConfigGetVal(config.ConfigContractClaimFunds)
 			if err != nil {
-				panic(fmt.Sprintf("Getting claim funds val failed: %s\n", err))
+				l.Logf(log.LevelPanic, "Getting claim funds val failed: %v", err)
 			}
 			if claimFundsStr == "true" {
 				contractManagerConfig.ClaimFunds = true
@@ -272,13 +272,13 @@ func main() {
 
 		if buyer {
 			var buyerCM contractmanager.BuyerContractManager
-			err = contractmanager.Run(&mainContext, &buyerCM, ps, contractManagerConfigID, &nodeOperator)
+			err = contractmanager.Run(&mainContext, &buyerCM, ps, l, contractManagerConfigID, &nodeOperator)
 		} else {
 			var sellerCM contractmanager.SellerContractManager
-			err = contractmanager.Run(&mainContext, &sellerCM, ps, contractManagerConfigID, &nodeOperator)
+			err = contractmanager.Run(&mainContext, &sellerCM, ps, l, contractManagerConfigID, &nodeOperator)
 		}
 		if err != nil {
-			panic(fmt.Sprintf("contract manager failed to run:%s", err))
+			l.Logf(log.LevelPanic, "Contract manager failed to run: %v", err)
 		}
 	}
 

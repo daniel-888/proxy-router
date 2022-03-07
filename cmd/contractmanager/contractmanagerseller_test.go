@@ -6,10 +6,10 @@ import (
 	//"errors"
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"testing"
 	"time"
+	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -18,6 +18,7 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
@@ -31,6 +32,15 @@ func TestSellerRoutine(t *testing.T) {
 	contractManagerCtx, contractManagerCancel := context.WithCancel(mainCtx)
 	var contractManagerConfig msgbus.ContractManagerConfig
 	contractManagerConfigID := msgbus.GetRandomIDString()
+
+	l := log.New()
+	logFilePath := ""
+
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	if err != nil {
+		l.Logf(log.LevelFatal, "error opening log file: %v", err)
+	}
+	defer logFile.Close()
 
 	// encrpted cipher text generated from node code using buyer's public key
 	//encryptedDest := "04d9b65eada6828aad11f7956e92a5afaa46718e95c2229b21b371c3c6e317bad00018d15f2cedb6400d2156a3cc1c3360b7f747d5ab7e72926937776fc133ae5b9ada0e1d95b57f29b917220a92ed28ff1f57301b6688f7e5ef4ae87015508aefb7156aba0de5cc25d65d1f11a7d3c75330d54d045ebc22231af70fb1aa02b38a6cf93b34a974076db109433ba4191171b2292885"
@@ -89,7 +99,7 @@ func TestSellerRoutine(t *testing.T) {
 	}
 
 	// start connection scheduler look at miners
-	cs, err := connectionscheduler.New(&mainCtx, ps, &nodeOperator)
+	cs, err := connectionscheduler.New(&mainCtx, ps, l, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -99,8 +109,8 @@ func TestSellerRoutine(t *testing.T) {
 	}
 
 	var cman SellerContractManager
-	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, contractManagerConfigID, &nodeOperator)
-	err = cman.init(&contractManagerCtx, ps, contractManagerConfigID, &nodeOperator)
+	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, l, contractManagerConfigID, &nodeOperator)
+	err = cman.init(&contractManagerCtx, ps, l, contractManagerConfigID, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("contract manager init failed:%s", err))
 	}
@@ -119,7 +129,7 @@ func TestSellerRoutine(t *testing.T) {
 		for {
 			select {
 			case err := <-cfSub.Err():
-				log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
+				panic(fmt.Sprintf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err))
 			case cfLog := <-cfLogs:
 				switch {
 				case cfLog.Topics[0].Hex() == contractCreatedSigHash.Hex():

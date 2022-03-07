@@ -5,13 +5,24 @@ import (
 	"fmt"
 	"testing"
 	"time"
+	"os"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 )
 
 func TestSellerConnectionScheduler(t *testing.T) {
 	ps := msgbus.New(10, nil)
 	mainCtx := context.Background()
+
+	l := log.New()
+	logFilePath := "lumerin.log"
+
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	if err != nil {
+		l.Logf(log.LevelFatal, "error opening log file: %v", err)
+	}
+	defer logFile.Close()
 
 	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"
 	defaultDest := msgbus.Dest{
@@ -32,7 +43,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 		IsBuyer:     false,
 	}
 
-	cs, err := New(&mainCtx, ps, &nodeOperator)
+	cs, err := New(&mainCtx, ps, l, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -326,6 +337,15 @@ func TestBuyerConnectionScheduler(t *testing.T) {
 	ps := msgbus.New(10, nil)
 	mainCtx := context.Background()
 
+	l := log.New()
+	logFilePath := "lumerin.log"
+
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	if err != nil {
+		l.Logf(log.LevelFatal, "error opening log file: %v", err)
+	}
+	defer logFile.Close()
+
 	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"
 	defaultDest := msgbus.Dest{
 		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
@@ -345,7 +365,7 @@ func TestBuyerConnectionScheduler(t *testing.T) {
 		IsBuyer:     true,
 	}
 
-	cs, err := New(&mainCtx, ps, &nodeOperator)
+	cs, err := New(&mainCtx, ps, l, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
