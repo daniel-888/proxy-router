@@ -104,7 +104,7 @@ func (r *MinerRepo) DeleteMiner(id string) error {
 
 //Subscribe to events for miner msgs on msgbus to update API repo with data
 func (r *MinerRepo) SubscribeToMinerMsgBus() {
-	minerCh := r.Ps.NewEventChan()
+	minerCh := msgbus.NewEventChan()
 
 	// add existing miners to api repo
 	miners, err := r.Ps.MinerGetAllWait()

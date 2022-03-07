@@ -100,7 +100,7 @@ func Run(ctx *context.Context, contractManager ContractManager, ps *msgbus.PubSu
 }
 
 func newConfigMonitor(ctx *context.Context, cancel context.CancelFunc, contractManager ContractManager, ps *msgbus.PubSub, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) {
-	contractConfigCh := ps.NewEventChan()
+	contractConfigCh := msgbus.NewEventChan()
 	event, err := ps.SubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractConfigCh)
 	if err != nil {
 		panic(fmt.Sprintf("SubWait failed: %s\n", err))
@@ -183,7 +183,7 @@ func (seller *SellerContractManager) start() (err error) {
 		}
 
 		// monitor new contracts getting created and start hashrate conrtract monitor routine when they are created
-		contractEventChan := seller.ps.NewEventChan()
+		contractEventChan := msgbus.NewEventChan()
 		_, err = seller.ps.Sub(msgbus.ContractMsg, "", contractEventChan)
 		if err != nil {
 			panic(fmt.Sprintf("Failed to subscribe to contract events on msgbus, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err))
@@ -363,7 +363,7 @@ func (seller *SellerContractManager) watchContractCreation(cfLogs chan types.Log
 }
 
 func (seller *SellerContractManager) watchHashrateContract(addr msgbus.ContractID, hrLogs chan types.Log, hrSub ethereum.Subscription) {
-	contractEventChan := seller.ps.NewEventChan()
+	contractEventChan := msgbus.NewEventChan()
 
 	// check if contract is already in the running state and needs to be monitored for closeout
 	event, err := seller.ps.GetWait(msgbus.ContractMsg, msgbus.IDString(addr))
@@ -634,7 +634,7 @@ func (buyer *BuyerContractManager) start() (err error) {
 	go buyer.watchContractPurchase(cfLogs, cfSub)
 
 	// miner event channel for miner monitor that checks miner publishes, updates, and deletes
-	minerEventChan := buyer.ps.NewEventChan()
+	minerEventChan := msgbus.NewEventChan()
 	_, err = buyer.ps.Sub(msgbus.MinerMsg, msgbus.IDString(""), minerEventChan)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to subscribe to miner events on msgbus, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err))
@@ -650,7 +650,7 @@ func (buyer *BuyerContractManager) start() (err error) {
 			}
 			go buyer.watchHashrateContract(addr, hrLogs, hrSub)
 
-			contractEventChan := buyer.ps.NewEventChan()
+			contractEventChan := msgbus.NewEventChan()
 			_, err = buyer.ps.Sub(msgbus.ContractMsg, msgbus.IDString(addr), contractEventChan)
 			if err != nil {
 				panic(fmt.Sprintf("Failed to subscribe to contract %s events, Fileline::%s, Error::%s\n", addr, lumerinlib.FileLine(), err))
@@ -659,7 +659,7 @@ func (buyer *BuyerContractManager) start() (err error) {
 		}
 
 		// monitor new contracts getting purchased and start watch hashrate conrtract routine when they are purchased
-		contractEventChan := buyer.ps.NewEventChan()
+		contractEventChan := msgbus.NewEventChan()
 		_, err := buyer.ps.Sub(msgbus.ContractMsg, "", contractEventChan)
 		if err != nil {
 			panic(fmt.Sprintf("Failed to subscribe to contract events on msgbus, Fileline::%s, Error::%s\n", lumerinlib.FileLine(), err))
@@ -679,7 +679,7 @@ func (buyer *BuyerContractManager) start() (err error) {
 					}
 					go buyer.watchHashrateContract(msgbus.ContractID(addr.Hex()), hrLogs, hrSub)
 
-					newContractEventChan := buyer.ps.NewEventChan()
+					newContractEventChan := msgbus.NewEventChan()
 					_, err = buyer.ps.Sub(msgbus.ContractMsg, msgbus.IDString(newContract.ID), newContractEventChan)
 					if err != nil {
 						panic(fmt.Sprintf("Failed to subscribe to contract %s events, Fileline::%s, Error::%s\n", newContract.ID, lumerinlib.FileLine(), err))

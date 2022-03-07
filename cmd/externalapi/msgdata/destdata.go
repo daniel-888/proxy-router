@@ -86,7 +86,7 @@ func (r *DestRepo) DeleteDest(id string) error {
 
 //Subscribe to events for dest msgs on msgbus to update API repos with data
 func (r *DestRepo) SubscribeToDestMsgBus() {
-	destCh := r.Ps.NewEventChan()
+	destCh := msgbus.NewEventChan()
 
 	// add existing dests to api repo
 	event, err := r.Ps.GetWait(msgbus.DestMsg, "")
