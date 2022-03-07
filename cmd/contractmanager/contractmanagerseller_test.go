@@ -9,7 +9,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -23,7 +22,7 @@ import (
 )
 
 func TestSellerRoutine(t *testing.T) {
-	configPath := "../../ropstenconfig.json"
+	configPath := "../../ganacheconfig.json"
 	ps := msgbus.New(10, nil)
 	ts := BeforeEach(configPath)
 	var hashrateContractAddress [4]common.Address
@@ -34,13 +33,6 @@ func TestSellerRoutine(t *testing.T) {
 	contractManagerConfigID := msgbus.GetRandomIDString()
 
 	l := log.New()
-	logFilePath := ""
-
-	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
-	if err != nil {
-		l.Logf(log.LevelFatal, "error opening log file: %v", err)
-	}
-	defer logFile.Close()
 
 	// encrpted cipher text generated from node code using buyer's public key
 	//encryptedDest := "04d9b65eada6828aad11f7956e92a5afaa46718e95c2229b21b371c3c6e317bad00018d15f2cedb6400d2156a3cc1c3360b7f747d5ab7e72926937776fc133ae5b9ada0e1d95b57f29b917220a92ed28ff1f57301b6688f7e5ef4ae87015508aefb7156aba0de5cc25d65d1f11a7d3c75330d54d045ebc22231af70fb1aa02b38a6cf93b34a974076db109433ba4191171b2292885"

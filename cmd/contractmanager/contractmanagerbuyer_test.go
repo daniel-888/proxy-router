@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 	"time"
-	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -33,15 +32,6 @@ func TestBuyerRoutine(t *testing.T) {
 	contractManagerConfigID := msgbus.GetRandomIDString()
 
 	l := log.New()
-	logFilePath := ""
-
-	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
-	if err != nil {
-		l.Logf(log.LevelFatal, "error opening log file: %v", err)
-	}
-	defer logFile.Close()
-
-	l.SetFormat(log.FormatJSON).SetOutput(logFile)
 
 	contractLength := 10000
 

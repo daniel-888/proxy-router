@@ -62,10 +62,6 @@ func main() {
 		buyer = true
 	}
 
-	disableconnection, err := config.ConfigGetVal(config.DisableConnection)
-	if err != nil {
-		panic(fmt.Sprintf("Getting Disable Connection val failed: %s\n", err))
-	}
 	disablecontract, err := config.ConfigGetVal(config.DisableContract)
 	if err != nil {
 		panic(fmt.Sprintf("Getting Disable Contract val failed: %s\n", err))
@@ -102,7 +98,7 @@ func main() {
 	//
 	// Fire up logger
 	//
-	log := log.New()
+	// log := log.New()
 
 	//
 	// Fire up the Message Bus
@@ -120,7 +116,7 @@ func main() {
 	//
 	// the proro argument (#1) gets set in the Protocol sus-system
 	//
-	cs := contextlib.NewContextStruct(nil, ps, log, src, dst)
+	cs := contextlib.NewContextStruct(nil, ps, l, src, dst)
 
 	//
 	//  All of the various needed subsystem values get passed into the context here.
@@ -157,9 +153,6 @@ func main() {
 	}
 	if event.Err != nil {
 		panic(fmt.Sprintf("Adding Node Operator Failed: %s", event.Err))
-	}
-
-	if disableconnection == "false" {
 	}
 
 	//
