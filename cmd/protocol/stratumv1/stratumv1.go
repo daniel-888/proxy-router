@@ -91,8 +91,10 @@ func newProtoFunc(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
 		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Create OpenConn() failed: %s", err)
 	}
 
+	// Launch the event handler
 	go svs.goEvent()
 
+	// return the event handler channel
 	return svs.protocol.Event()
 }
 
@@ -134,6 +136,10 @@ func (s *StratumV1ListenStruct) Cancel() {
 
 	s.protocollisten.Cancel()
 }
+
+// ---------------------------------------------------------------------
+//  StratumV1Struct
+//
 
 //
 //

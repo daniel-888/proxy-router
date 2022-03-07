@@ -44,11 +44,9 @@ func newProtcolFunc(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
 	sec := make(chan *simple.SimpleEvent)
 
 	go func(sec chan *simple.SimpleEvent) {
-		for {
-			select {
-			case e := <-sec:
-				fmt.Printf("Event Recieved:%v", e)
-			}
+
+		for e := range sec {
+			fmt.Printf("Event Recieved:%v", e)
 		}
 
 	}(sec)
