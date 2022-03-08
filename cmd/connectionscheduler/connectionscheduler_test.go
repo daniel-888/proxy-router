@@ -6,12 +6,15 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 )
 
 func TestSellerConnectionScheduler(t *testing.T) {
 	ps := msgbus.New(10, nil)
 	mainCtx := context.Background()
+
+	l := log.New()
 
 	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"
 	defaultDest := msgbus.Dest{
@@ -32,7 +35,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 		IsBuyer:     false,
 	}
 
-	cs, err := New(&mainCtx, ps, &nodeOperator)
+	cs, err := New(&mainCtx, ps, l, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -326,6 +329,8 @@ func TestBuyerConnectionScheduler(t *testing.T) {
 	ps := msgbus.New(10, nil)
 	mainCtx := context.Background()
 
+	l := log.New()
+
 	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"
 	defaultDest := msgbus.Dest{
 		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
@@ -345,7 +350,7 @@ func TestBuyerConnectionScheduler(t *testing.T) {
 		IsBuyer:     true,
 	}
 
-	cs, err := New(&mainCtx, ps, &nodeOperator)
+	cs, err := New(&mainCtx, ps, l, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}

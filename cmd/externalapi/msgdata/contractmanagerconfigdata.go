@@ -117,7 +117,7 @@ func (r *ContractManagerConfigRepo) DeleteContractManagerConfig(id string) error
 
 //Subscribe to events for contractConfig msgs on msgbus to update API repos with data
 func (r *ContractManagerConfigRepo) SubscribeToContractManagerConfigMsgBus() {
-	contractConfigCh := r.Ps.NewEventChan()
+	contractConfigCh := msgbus.NewEventChan()
 
 	// add existing contractConfigs to api repo
 	event, err := r.Ps.GetWait(msgbus.ContractManagerConfigMsg, "")

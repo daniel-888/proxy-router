@@ -91,7 +91,7 @@ func (r *ConfigInfoRepo) DeleteConfigInfo(id string) error {
 
 //Subscribe to events for config msgs on msgbus to update API repos with data
 func (r *ConfigInfoRepo) SubscribeToConfigInfoMsgBus() {
-	configCh := r.Ps.NewEventChan()
+	configCh := msgbus.NewEventChan()
 
 	// add existing configs to api repo
 	event, err := r.Ps.GetWait(msgbus.ConfigMsg, "")

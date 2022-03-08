@@ -6,7 +6,6 @@ import (
 	//"errors"
 	"context"
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	//"github.com/ethereum/go-ethereum/crypto/ecies"
 
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
@@ -30,6 +30,8 @@ func TestBuyerRoutine(t *testing.T) {
 	contractManagerCtx, contractManagerCancel := context.WithCancel(mainCtx)
 	var contractManagerConfig msgbus.ContractManagerConfig
 	contractManagerConfigID := msgbus.GetRandomIDString()
+
+	l := log.New()
 
 	contractLength := 10000
 
@@ -83,7 +85,7 @@ func TestBuyerRoutine(t *testing.T) {
 	}
 
 	// start connection scheduler look at miners
-	cs, err := connectionscheduler.New(&mainCtx, ps, &nodeOperator)
+	cs, err := connectionscheduler.New(&mainCtx, ps, l, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -93,8 +95,8 @@ func TestBuyerRoutine(t *testing.T) {
 	}
 
 	var cman BuyerContractManager
-	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, contractManagerConfigID, &nodeOperator)
-	err = cman.init(&contractManagerCtx, ps, contractManagerConfigID, &nodeOperator)
+	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, l, contractManagerConfigID, &nodeOperator)
+	err = cman.init(&contractManagerCtx, ps, l, contractManagerConfigID, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("contract manager init failed:%s", err))
 	}
@@ -112,7 +114,7 @@ func TestBuyerRoutine(t *testing.T) {
 		for {
 			select {
 			case err := <-cfSub.Err():
-				log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
+				panic(fmt.Sprintf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err))
 			case cfLog := <-cfLogs:
 				switch {
 				case cfLog.Topics[0].Hex() == contractCreatedSigHash.Hex():
