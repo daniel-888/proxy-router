@@ -24,9 +24,9 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 
-	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/clonefactory"
-	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/implementation"
-	"gitlab.com/TitanInd/lumerin/cmd/contractmanager/contractartifacts/lumerintoken"
+	"gitlab.com/TitanInd/lumerin/lumerinlib/clonefactory"
+	"gitlab.com/TitanInd/lumerin/lumerinlib/implementation"
+	"gitlab.com/TitanInd/lumerin/lumerinlib/lumerintoken"
 )
 
 type TestSetup struct {
