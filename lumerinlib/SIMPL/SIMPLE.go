@@ -1,19 +1,18 @@
 package simple
 
 import (
-	"context" //this can probably be removed once gitlab packages can be imported
+	"context"
 	"errors"
 	"fmt"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"net"
 	_ "time"
-	//"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	//the below packages need to have their gitlab branches sorted out prior to being
 	//imported via go mod tidy
-	//_ "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
-	//double check that these imports were formatted correctly
-	//_ "gitlab.com/TitanInd/lumerin/cmd/config"
-	//_ "gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	//_ "gitlab.com/TitanInd/lumerin/lumerinlib"
+	_ "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
+	_ "gitlab.com/TitanInd/lumerin/cmd/config"
+	_ "gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
 /*
@@ -39,17 +38,17 @@ type SearchString string
 
 type EventType string
 
-// type SimpleContextValue string
+type SimpleContextValue string
 
-// const SimpleContext SimpleContextValue = "SimpleContextKey"
+const SimpleContext SimpleContextValue = "SimpleContextKey"
 
-// type SimpleContextStruct struct {
-// 	Protocol func(*SimpleStruct) chan *SimpleEvent
-// 	MsgBus   *msgbus.PubSub
-// 	Src      net.Addr
-// 	Dst      net.Addr
-// 	Log      *log.Logger
-// }
+type SimpleContextStruct struct {
+	Protocol func(*SimpleStruct) chan *SimpleEvent
+	MsgBus   *msgbus.PubSub
+	Src      net.Addr
+	Dst      net.Addr
+	Log      *log.Logger
+}
 
 const NoEvent EventType = "noevent"
 const MsgUpdateEvent EventType = "msgupdate"
