@@ -134,6 +134,8 @@ func (pls *ProtocolListenStruct) goAccept() {
 //
 // NewProtocol() takes a simple struct and creates a ProtocolStruct, pulls the Src and Dst from the context
 // and initiates a connection to the defualt Dst address
+// This function is called from the layer above to initalize the common protocol functions, and enable
+// access to the standard functions provided by this layer.
 //
 func NewProtocol(s *simple.SimpleStruct) (pls *ProtocolStruct, e error) {
 
@@ -160,7 +162,11 @@ func NewProtocol(s *simple.SimpleStruct) (pls *ProtocolStruct, e error) {
 		msgbus: ProtocolMsgBusStruct{},
 	}
 
-	_, e = ps.dstconn.openConn(dst)
+	index, e := ps.dstconn.openConn(dst)
+	// First connection should be zero
+	if index != 0 {
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" called")
+	}
 
 	return pls, e
 }
