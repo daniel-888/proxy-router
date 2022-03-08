@@ -42,13 +42,39 @@ type SimpleContextValue string
 
 const SimpleContext SimpleContextValue = "SimpleContextKey"
 
-type SimpleContextStruct struct {
-	Protocol func(*SimpleStruct) chan *SimpleEvent
-	MsgBus   *msgbus.PubSub
-	Src      net.Addr
-	Dst      net.Addr
-	Log      *log.Logger
+/*
+The simple listen struct is used to establish a Listen port
+(TCP, UDP, or TRUNK) and accept connections. The accepted
+connections create a SimpleStruct{}, and are passed up to the
+protocol layer where the connection is initialized with a new
+context, which contains a protocol structure that allows for event handling.
+*/
+/*
+accept chan should have a SimpleStruct pushed into it when creating a
+new SimpleStruct for an individual connection
+*/
+type SimpleListenStruct struct {
+	ctx    context.Context
+	cancel func()
+	accept chan *SimpleStruct //channel to accept simple structs and process their message
 }
+
+/*
+The simple struct is used to point to a specific instance
+of a connection manager and MsgBus. The structure ties these
+to a protocol struct where events are directed to be handled.
+*/
+type SimpleStruct struct {
+	ctx    context.Context
+	cancel func() //it might make sense to use the WithCancel function instead
+	//the event handler portion can be removed since the
+	//EventHandler method in implemented on the SimpleStruct
+	eventHandler interface{}      //this is a SimpleEvent struct
+	eventChan    chan SimpleEvent //channel to listen for simple events
+	protocolChan chan SimpleEvent //channel for protocol to receive simple events
+	commChan     chan []byte      //channel to listen for simple events
+}
+
 
 const NoEvent EventType = "noevent"
 const MsgUpdateEvent EventType = "msgupdate"
@@ -86,7 +112,7 @@ func (d *dummyStruct) dummy() {
 create and return a struct with channels to listen to
 call goroutine embedded in the struct
 */
-func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
+func New(ctx context.Context, listen net.Addr, newproto interface{}) (SimpleListenStruct, error) {
 	myStruct := SimpleListenStruct{
 		ctx:    ctx,
 		cancel: dummyFunc,
@@ -254,39 +280,6 @@ func (s *SimpleStruct) Set(MsgType, ID, Data) error            { return errors.N
 func (s *SimpleStruct) SearchIP(MsgType, SearchString) error   { return errors.New("") }
 func (s *SimpleStruct) SearchMac(MsgType, SearchString) error  { return errors.New("") }
 func (s *SimpleStruct) SearchName(MsgType, SearchString) error { return errors.New("") }
-
-/*
-The simple listen struct is used to establish a Listen port
-(TCP, UDP, or TRUNK) and accept connections. The accepted
-connections create a SimpleStruct{}, and are passed up to the
-protocol layer where the connection is initialized with a new
-context, which contains a protocol structure that allows for event handling.
-*/
-/*
-accept chan should have a SimpleStruct pushed into it when creating a
-new SimpleStruct for an individual connection
-*/
-type SimpleListenStruct struct {
-	ctx    context.Context
-	cancel func()
-	accept chan *SimpleStruct //channel to accept simple structs and process their message
-}
-
-/*
-The simple struct is used to point to a specific instance
-of a connection manager and MsgBus. The structure ties these
-to a protocol struct where events are directed to be handled.
-*/
-type SimpleStruct struct {
-	ctx    context.Context
-	cancel func() //it might make sense to use the WithCancel function instead
-	//the event handler portion can be removed since the
-	//EventHandler method in implemented on the SimpleStruct
-	eventHandler interface{}      //this is a SimpleEvent struct
-	eventChan    chan SimpleEvent //channel to listen for simple events
-	protocolChan chan SimpleEvent //channel for protocol to receive simple events
-	commChan     chan []byte      //channel to listen for simple events
-}
 
 func (ss *SimpleStruct) Ctx() context.Context {
 	return ss.ctx
