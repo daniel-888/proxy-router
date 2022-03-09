@@ -19,20 +19,24 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 func TestSellerRoutine(t *testing.T) {
 	configPath := "../../ganacheconfig.json"
 	ps := msgbus.New(10, nil)
+	l := log.New()
 	ts := BeforeEach(configPath)
 	var hashrateContractAddress [4]common.Address
 	var purchasedHashrateContractAddress [4]common.Address
-	mainCtx := context.Background()
+
+	ctxStruct := contextlib.NewContextStruct(nil, ps, l, nil, nil)
+	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)
+
 	contractManagerCtx, contractManagerCancel := context.WithCancel(mainCtx)
+	
 	var contractManagerConfig msgbus.ContractManagerConfig
 	contractManagerConfigID := msgbus.GetRandomIDString()
-
-	l := log.New()
 
 	// encrpted cipher text generated from node code using buyer's public key
 	//encryptedDest := "04d9b65eada6828aad11f7956e92a5afaa46718e95c2229b21b371c3c6e317bad00018d15f2cedb6400d2156a3cc1c3360b7f747d5ab7e72926937776fc133ae5b9ada0e1d95b57f29b917220a92ed28ff1f57301b6688f7e5ef4ae87015508aefb7156aba0de5cc25d65d1f11a7d3c75330d54d045ebc22231af70fb1aa02b38a6cf93b34a974076db109433ba4191171b2292885"
@@ -91,7 +95,7 @@ func TestSellerRoutine(t *testing.T) {
 	}
 
 	// start connection scheduler look at miners
-	cs, err := connectionscheduler.New(&mainCtx, ps, l, &nodeOperator)
+	cs, err := connectionscheduler.New(&mainCtx, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -101,8 +105,8 @@ func TestSellerRoutine(t *testing.T) {
 	}
 
 	var cman SellerContractManager
-	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, l, contractManagerConfigID, &nodeOperator)
-	err = cman.init(&contractManagerCtx, ps, l, contractManagerConfigID, &nodeOperator)
+	go newConfigMonitor(&mainCtx, contractManagerCtx, contractManagerCancel, &cman, contractManagerConfigID, &nodeOperator)
+	err = cman.init(&contractManagerCtx, contractManagerConfigID, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("contract manager init failed:%s", err))
 	}

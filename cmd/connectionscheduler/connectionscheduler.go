@@ -10,6 +10,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 const HASHRATE_TOLERANCE = .10
@@ -40,10 +41,11 @@ func (m MinerList) Less(i, j int) bool { return m[i].hashrate < m[j].hashrate }
 //------------------------------------------
 //
 //------------------------------------------
-func New(ctx *context.Context, ps *msgbus.PubSub, l *log.Logger, nodeOperator *msgbus.NodeOperator) (cs *ConnectionScheduler, err error) {
+func New(ctx *context.Context, nodeOperator *msgbus.NodeOperator) (cs *ConnectionScheduler, err error) {
+	ctxStruct := contextlib.GetContextStruct(*ctx)
 	cs = &ConnectionScheduler{
-		ps:           ps,
-		l:            l,
+		ps:           ctxStruct.MsgBus,
+		l:            ctxStruct.Log,
 		nodeOperator: *nodeOperator,
 		ctx:          *ctx,
 	}
@@ -59,7 +61,7 @@ func New(ctx *context.Context, ps *msgbus.PubSub, l *log.Logger, nodeOperator *m
 //
 //------------------------------------------
 func (cs *ConnectionScheduler) Start() (err error) {
-	fmt.Printf("Connection Scheduler Starting\n")
+	cs.l.Logf(log.LevelInfo, "Connection Scheduler Starting\n")
 
 	// Update connection scheduler with current contracts
 	event, err := cs.ps.GetWait(msgbus.ContractMsg, "")

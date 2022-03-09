@@ -23,7 +23,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
-
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 	"gitlab.com/TitanInd/lumerin/lumerinlib/clonefactory"
 	"gitlab.com/TitanInd/lumerin/lumerinlib/implementation"
 )
@@ -53,7 +53,7 @@ type nonce struct {
 
 type ContractManager interface {
 	start() (err error)
-	init(ctx *context.Context, ps *msgbus.PubSub, l *log.Logger, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error)
+	init(ctx *context.Context, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error)
 	setupExistingContracts() (err error)
 	readContracts() ([]common.Address, error)
 	watchHashrateContract(addr msgbus.ContractID, hrLogs chan types.Log, hrSub ethereum.Subscription)
@@ -84,11 +84,11 @@ type BuyerContractManager struct {
 	ctx                 context.Context
 }
 
-func Run(ctx *context.Context, contractManager ContractManager, ps *msgbus.PubSub, l *log.Logger, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error) {
+func Run(ctx *context.Context, contractManager ContractManager, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error) {
 	contractManagerCtx, contractManagerCancel := context.WithCancel(*ctx)
-	go newConfigMonitor(ctx, contractManagerCancel, contractManager, ps, l, contractManagerConfigID, nodeOperatorMsg)
-
-	err = contractManager.init(&contractManagerCtx, ps, l, contractManagerConfigID, nodeOperatorMsg)
+	go newConfigMonitor(ctx, contractManagerCtx, contractManagerCancel, contractManager, contractManagerConfigID, nodeOperatorMsg)
+		
+	err = contractManager.init(&contractManagerCtx, contractManagerConfigID, nodeOperatorMsg)
 	if err != nil {
 		return err
 	}
@@ -100,8 +100,13 @@ func Run(ctx *context.Context, contractManager ContractManager, ps *msgbus.PubSu
 	return err
 }
 
-func newConfigMonitor(ctx *context.Context, cancel context.CancelFunc, contractManager ContractManager, ps *msgbus.PubSub, l *log.Logger, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) {
+func newConfigMonitor(ctx *context.Context, contractManagerCtx context.Context, contractManagerCancel context.CancelFunc, contractManager ContractManager, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) {
 	contractConfigCh := msgbus.NewEventChan()
+	cs := contextlib.GetContextStruct(contractManagerCtx) 
+	//contractManagerCtx.Value(contextlib.ContextKey).(*contextlib.ContextStruct)
+	ps := cs.MsgBus
+	l := cs.Log
+
 	event, err := ps.SubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractConfigCh)
 	if err != nil {
 		l.Logf(log.LevelPanic, "SubWait failed: %v", err)
@@ -113,8 +118,8 @@ func newConfigMonitor(ctx *context.Context, cancel context.CancelFunc, contractM
 	for event = range contractConfigCh {
 		if event.EventType == msgbus.UpdateEvent {
 			l.Logf(log.LevelInfo, "Updated Contract Manager Configuration: Restarting Contract Manager: %v\n", event)
-			cancel()
-			err = Run(ctx, contractManager, ps, l, contractManagerConfigID, nodeOperatorMsg)
+			contractManagerCancel()
+			err = Run(ctx, contractManager, contractManagerConfigID, nodeOperatorMsg)
 			if err != nil {
 				l.Logf(log.LevelPanic, "Contract manager failed to run: %v", err)
 			}
@@ -123,10 +128,14 @@ func newConfigMonitor(ctx *context.Context, cancel context.CancelFunc, contractM
 	}
 }
 
-func (seller *SellerContractManager) init(ctx *context.Context, ps *msgbus.PubSub, l *log.Logger, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error) {
+func (seller *SellerContractManager) init(ctx *context.Context, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error) {
 	seller.ctx = *ctx
+	cs := contextlib.GetContextStruct(seller.ctx)
+	//seller.ctx.Value(contextlib.ContextKey).(*contextlib.ContextStruct)
+	seller.ps = cs.MsgBus
+	seller.l = cs.Log
 
-	event, err := ps.GetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID)
+	event, err := seller.ps.GetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID)
 	if err != nil {
 		return err
 	}
@@ -145,8 +154,6 @@ func (seller *SellerContractManager) init(ctx *context.Context, ps *msgbus.PubSu
 	if err != nil {
 		return err
 	}
-	seller.ps = ps
-	seller.l = l
 	seller.ethClient = client
 	seller.cloneFactoryAddress = common.HexToAddress(contractManagerConfig.CloneFactoryAddress)
 
@@ -585,10 +592,14 @@ loop:
 	}
 }
 
-func (buyer *BuyerContractManager) init(ctx *context.Context, ps *msgbus.PubSub, l *log.Logger, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error) {
+func (buyer *BuyerContractManager) init(ctx *context.Context, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error) {
 	buyer.ctx = *ctx
+	cs := contextlib.GetContextStruct(buyer.ctx) 
+	//buyer.ctx.Value(contextlib.ContextKey).(*contextlib.ContextStruct)
+	buyer.ps = cs.MsgBus
+	buyer.l = cs.Log
 
-	event, err := ps.GetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID)
+	event, err := buyer.ps.GetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID)
 	if err != nil {
 		return err
 	}
@@ -606,8 +617,6 @@ func (buyer *BuyerContractManager) init(ctx *context.Context, ps *msgbus.PubSub,
 	if err != nil {
 		return err
 	}
-	buyer.ps = ps
-	buyer.l = l
 	buyer.ethClient = client
 	buyer.cloneFactoryAddress = common.HexToAddress(contractManagerConfig.CloneFactoryAddress)
 

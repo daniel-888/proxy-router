@@ -8,13 +8,15 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 func TestSellerConnectionScheduler(t *testing.T) {
 	ps := msgbus.New(10, nil)
-	mainCtx := context.Background()
-
 	l := log.New()
+
+	ctxStruct := contextlib.NewContextStruct(nil, ps, l, nil, nil)
+	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)
 
 	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"
 	defaultDest := msgbus.Dest{
@@ -35,7 +37,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 		IsBuyer:     false,
 	}
 
-	cs, err := New(&mainCtx, ps, l, &nodeOperator)
+	cs, err := New(&mainCtx, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -327,9 +329,10 @@ func TestSellerConnectionScheduler(t *testing.T) {
 
 func TestBuyerConnectionScheduler(t *testing.T) {
 	ps := msgbus.New(10, nil)
-	mainCtx := context.Background()
-
 	l := log.New()
+
+	ctxStruct := contextlib.NewContextStruct(nil, ps, l, nil, nil)
+	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)
 
 	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"
 	defaultDest := msgbus.Dest{
@@ -350,7 +353,7 @@ func TestBuyerConnectionScheduler(t *testing.T) {
 		IsBuyer:     true,
 	}
 
-	cs, err := New(&mainCtx, ps, l, &nodeOperator)
+	cs, err := New(&mainCtx, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}

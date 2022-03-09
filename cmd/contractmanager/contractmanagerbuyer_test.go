@@ -18,20 +18,24 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 func TestBuyerRoutine(t *testing.T) {
 	configPath := "../../ganacheconfig.json"
 	ps := msgbus.New(10, nil)
+	l := log.New()
 	ts := BeforeEach(configPath)
 	var hashrateContractAddress [3]common.Address
 	var purchasedHashrateContractAddress [3]common.Address
-	mainCtx := context.Background()
+
+	ctxStruct := contextlib.NewContextStruct(nil, ps, l, nil, nil)
+	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)
+
 	contractManagerCtx, contractManagerCancel := context.WithCancel(mainCtx)
+
 	var contractManagerConfig msgbus.ContractManagerConfig
 	contractManagerConfigID := msgbus.GetRandomIDString()
-
-	l := log.New()
 
 	contractLength := 10000
 
@@ -85,7 +89,7 @@ func TestBuyerRoutine(t *testing.T) {
 	}
 
 	// start connection scheduler look at miners
-	cs, err := connectionscheduler.New(&mainCtx, ps, l, &nodeOperator)
+	cs, err := connectionscheduler.New(&mainCtx, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -95,8 +99,8 @@ func TestBuyerRoutine(t *testing.T) {
 	}
 
 	var cman BuyerContractManager
-	go newConfigMonitor(&contractManagerCtx, contractManagerCancel, &cman, ps, l, contractManagerConfigID, &nodeOperator)
-	err = cman.init(&contractManagerCtx, ps, l, contractManagerConfigID, &nodeOperator)
+	go newConfigMonitor(&mainCtx, contractManagerCtx, contractManagerCancel, &cman, contractManagerConfigID, &nodeOperator)
+	err = cman.init(&contractManagerCtx, contractManagerConfigID, &nodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("contract manager init failed:%s", err))
 	}

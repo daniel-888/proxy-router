@@ -183,7 +183,7 @@ func main() {
 	// Fire up schedule manager
 	//
 	if disableschedule == "false" {
-		cs, err := connectionscheduler.New(&mainContext, ps, l, &nodeOperator)
+		cs, err := connectionscheduler.New(&mainContext, &nodeOperator)
 		if err != nil {
 			l.Logf(log.LevelPanic, "Schedule manager failed: %v", err)
 		}
@@ -276,10 +276,10 @@ func main() {
 
 		if buyer {
 			var buyerCM contractmanager.BuyerContractManager
-			err = contractmanager.Run(&mainContext, &buyerCM, ps, l, contractManagerConfigID, &nodeOperator)
+			err = contractmanager.Run(&mainContext, &buyerCM, contractManagerConfigID, &nodeOperator)
 		} else {
 			var sellerCM contractmanager.SellerContractManager
-			err = contractmanager.Run(&mainContext, &sellerCM, ps, l, contractManagerConfigID, &nodeOperator)
+			err = contractmanager.Run(&mainContext, &sellerCM, contractManagerConfigID, &nodeOperator)
 		}
 		if err != nil {
 			l.Logf(log.LevelPanic, "Contract manager failed to run: %v", err)
