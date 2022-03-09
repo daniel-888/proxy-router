@@ -62,9 +62,9 @@ const (
 //
 // Used for recieving incoming stratum JSON  messages
 //
-type stratumMsg struct {
+type StratumMsgStruct struct {
 	ID      interface{} `json:"id,omitempty"`
-	Jsonrpc interface{} `jsonrpc:"jsonrpc,omitempty"`
+	Jsonrpc interface{} `json:"jsonrpc,omitempty"`
 	Method  interface{} `json:"method,omitempty"`
 	Error   interface{} `json:"error,omitempty"`
 	Params  interface{} `json:"params,omitempty"`
@@ -119,12 +119,12 @@ type responce struct {
 	Reject interface{} `json:"reject-reason,omitempty"`
 }
 
-//------------------------------------------------------
 //
-//------------------------------------------------------
+// unmarshalMsg() take []byte and translate it into a StratumMsgStruct
+//
 func unmarshalMsg(b []byte) (ret interface{}, err error) {
 
-	msg := stratumMsg{}
+	msg := StratumMsgStruct{}
 	j := map[string]interface{}{}
 
 	err = json.Unmarshal(b, &j)

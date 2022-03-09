@@ -31,7 +31,7 @@ type ProtocolStruct struct {
 }
 
 //
-// New() Create a new ProtocolListenStruct
+// NewListen() Create a new ProtocolListenStruct
 //
 func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 	var ok bool
@@ -116,20 +116,26 @@ func (pls *ProtocolListenStruct) goAccept() {
 	contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
 
 	go func() {
-		select {
-		case <-pls.ctx.Done():
-			return
-		case newSimpleStruct := <-pls.simplelisten.Accept():
-			newSimpleStruct.Run(pls.ctx)
+		for {
+			select {
+			case <-pls.ctx.Done():
+				return
+			case newSimpleStruct := <-pls.simplelisten.Accept():
+				newSimpleStruct.Run(pls.ctx)
+			}
 		}
 	}()
-	pls.simplelisten.Run()
 }
 
 // --------------------------------------------
+// ProtocolStruct functions
+//
 
 //
-//
+// NewProtocol() takes a simple struct and creates a ProtocolStruct, pulls the Src and Dst from the context
+// and initiates a connection to the defualt Dst address
+// This function is called from the layer above to initalize the common protocol functions, and enable
+// access to the standard functions provided by this layer.
 //
 func NewProtocol(s *simple.SimpleStruct) (pls *ProtocolStruct, e error) {
 
@@ -156,13 +162,17 @@ func NewProtocol(s *simple.SimpleStruct) (pls *ProtocolStruct, e error) {
 		msgbus: ProtocolMsgBusStruct{},
 	}
 
-	_, e = ps.dstconn.openConn(dst)
+	index, e := ps.dstconn.openConn(dst)
+	// First connection should be zero
+	if index != 0 {
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" called")
+	}
 
 	return pls, e
 }
 
 //
-// Ctx() gets the context of the ProtocolStruct
+// Ctx() returns the context of the ProtocolStruct
 //
 func (p *ProtocolStruct) Ctx() context.Context {
 	return p.ctx
