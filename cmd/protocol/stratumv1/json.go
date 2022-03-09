@@ -75,14 +75,14 @@ type StratumMsgStruct struct {
 //
 // Used to build outgoing JSON message
 //
-type request struct {
+type stratumRequest struct {
 	ID     int           `json:"id"`
 	Method string        `json:"method"`
 	Params []interface{} `json:"params"`
 }
 
 // notice ID is always null
-type notice struct {
+type stratumNotice struct {
 	ID     *string     `json:"id"`
 	Params interface{} `json:"params"`
 	Method string      `json:"method"`
@@ -112,7 +112,7 @@ type noticeMiningNotify struct {
 	Params  noticeMiningNotifyParams `json:"params"`
 }
 
-type responce struct {
+type stratumResponse struct {
 	ID     int         `json:"id"`
 	Error  *string     `json:"error"`
 	Result interface{} `json:"result"`
@@ -191,9 +191,9 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 			}
 		}
 
-		// Is this a Responce Msg?
+		// Is this a Response Msg?
 		if msg.Result != nil {
-			r := responce{}
+			r := stratumResponse{}
 			r.ID = msg.ID.(int)
 			r.Result = msg.Result
 			if msg.Error == nil {
@@ -211,7 +211,7 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 
 			// Is this a Notice?
 		} else if msg.ID == nil {
-			ret = &notice{
+			ret = &stratumNotice{
 				ID:     nil,
 				Method: msg.Method.(string),
 				Params: msg.Params,
@@ -219,7 +219,7 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 
 		} else {
 			// Must be a Request
-			r := &request{
+			r := &stratumRequest{
 				ID:     msg.ID.(int),
 				Method: msg.Method.(string),
 				Params: make([]interface{}, 0),
@@ -293,11 +293,38 @@ func getStratumMsg(msg []byte) (ret interface{}, err error) {
 	return ret, err
 }
 
+// ---------------------------------------------------------------------------------------
+//                   *StratumRequest
+// ---------------------------------------------------------------------------------------
+
 //------------------------------------------------------
 //
 // {"id":2,"method":"mining.authorize","params":["testrig.worker1",""]}
 //------------------------------------------------------
-func (r *request) getAuthName() (name string, err error) {
+func (r *stratumRequest) getID() (id int, err error) {
+
+	switch r.Method {
+	case string(CLIENT_MINING_AUTHORIZE):
+	case string(CLIENT_MINING_CAPABILITIES):
+	case string(CLIENT_MINING_EXTRANONCE):
+	case string(CLIENT_MINING_SUBMIT):
+	case string(CLIENT_MINING_SUBSCRIBE):
+	case string(CLIENT_MINING_SUGGEST_DIFFICULTY):
+	case string(CLIENT_MINING_SUGGEST_TARGET):
+	default:
+		return 0, fmt.Errorf(lumerinlib.FileLine()+" wrong method, got: %s", r.Method)
+	}
+
+	id = r.ID
+
+	return id, err
+}
+
+//------------------------------------------------------
+//
+// {"id":2,"method":"mining.authorize","params":["testrig.worker1",""]}
+//------------------------------------------------------
+func (r *stratumRequest) getAuthName() (name string, err error) {
 
 	if r.Method != string(CLIENT_MINING_AUTHORIZE) {
 		return "", fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.authorize, got: %s", r.Method)
@@ -315,7 +342,7 @@ func (r *request) getAuthName() (name string, err error) {
 //
 // {"id":0,"jsonrpc":"2.0","method":"mining.set_difficulty","params":[65535]}
 //------------------------------------------------------
-func (r *request) getSetDifficulty() (difficulty float64, err error) {
+func (r *stratumRequest) getSetDifficulty() (difficulty float64, err error) {
 
 	difficulty = 0.0
 
@@ -358,7 +385,7 @@ func (r *request) getSetDifficulty() (difficulty float64, err error) {
 //	]
 // }
 //------------------------------------------------------
-func (r *request) getMiningNotifyJobID() (jobid string, err error) {
+func (r *stratumRequest) getMiningNotifyJobID() (jobid string, err error) {
 
 	if r.Method != string(SERVER_MINING_NOTIFY) {
 		err = fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.notify, got: %s", r.Method)
@@ -372,9 +399,82 @@ func (r *request) getMiningNotifyJobID() (jobid string, err error) {
 
 //------------------------------------------------------
 //
+//------------------------------------------------------
+func (r *stratumRequest) createRequestMsg() (msg []byte, err error) {
+
+	err = nil
+	// fmt.Printf("Create Stratum Request: %v\n", r)
+
+	msg, err = json.Marshal(r)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Request Err:%s\n", err)
+		return nil, err
+	}
+
+	return msg, err
+}
+
+//------------------------------------------------------
+//
+//------------------------------------------------------
+func (r *stratumRequest) createNoticeMiningNotifyStruct() (nsd noticeMiningNotify, err error) {
+
+	fmt.Printf(lumerinlib.Funcname()+": %v\n", r)
+
+	err = nil
+
+	// nsd.ID = r.ID
+	nsd.Method = r.Method
+
+	params := r.Params
+
+	if len(params) != 9 {
+		panic(fmt.Sprintf(lumerinlib.FileLine() + " Not enough parameter for Notify\n"))
+	}
+
+	for i, v := range params {
+		switch i {
+		case 0:
+			nsd.Params.jobID = v.(string)
+		case 1:
+			nsd.Params.prevBlockHash = v.(string)
+		case 2:
+			nsd.Params.gen1 = v.(string)
+			fallthrough
+		case 3:
+			nsd.Params.gen2 = v.(string)
+
+		case 4:
+			nsd.Params.merkelBranches = make([]string, 0)
+			if len(v.([]interface{})) > 0 {
+				for _, w := range v.([]interface{}) {
+					nsd.Params.merkelBranches = append(nsd.Params.merkelBranches, w.(string))
+				}
+			}
+
+		case 5:
+			nsd.Params.blockVersion = v.(string)
+		case 6:
+			nsd.Params.nBits = v.(string)
+		case 7:
+			nsd.Params.nTime = v.(string)
+		case 8:
+			nsd.Params.CleanJob = (v == "true")
+		}
+	}
+
+	return nsd, err
+}
+
+// ---------------------------------------------------------------------------------------
+//                   *StratumNotice
+// ---------------------------------------------------------------------------------------
+
+//------------------------------------------------------
+//
 // -->> {"id":0,"jsonrpc":"2.0","method":"mining.set_difficulty","params":[65535]}
 //------------------------------------------------------
-func (n *notice) getSetDifficulty() (difficulty float64, err error) {
+func (n *stratumNotice) getSetDifficulty() (difficulty float64, err error) {
 
 	difficulty = 0.0
 
@@ -424,7 +524,7 @@ func (n *notice) getSetDifficulty() (difficulty float64, err error) {
 //	]
 // }
 //------------------------------------------------------
-func (n *notice) getMiningNotifyJobID() (jobid string, err error) {
+func (n *stratumNotice) getMiningNotifyJobID() (jobid string, err error) {
 
 	if n.Method != string(SERVER_MINING_NOTIFY) {
 		err = fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.notify, got: %s", n.Method)
@@ -449,56 +549,7 @@ func (n *notice) getMiningNotifyJobID() (jobid string, err error) {
 //------------------------------------------------------
 //
 //------------------------------------------------------
-func (r *request) createRequestMsg() (msg []byte, err error) {
-
-	err = nil
-	// fmt.Printf("Create Stratum Request: %v\n", r)
-
-	msg, err = json.Marshal(r)
-	if err != nil {
-		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Request Err:%s\n", err)
-		return nil, err
-	}
-
-	return msg, err
-}
-
-//------------------------------------------------------
-//
-//------------------------------------------------------
-func (r *responce) getAuthResult() (ret bool, err error) {
-
-	_, ok := r.Result.(bool)
-	if !ok {
-		err = fmt.Errorf(lumerinlib.FileLine()+" result is wrong type:%T", r.Result)
-	} else {
-		ret = r.Result.(bool)
-	}
-
-	return ret, err
-}
-
-//------------------------------------------------------
-//
-//------------------------------------------------------
-func (r *responce) createResponceMsg() (msg []byte, err error) {
-
-	err = nil
-	// fmt.Printf("Create Stratum Responce: %v\n", r)
-
-	msg, err = json.Marshal(r)
-	if err != nil {
-		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Responce Err:%s\n", err)
-		return nil, err
-	}
-
-	return msg, err
-}
-
-//------------------------------------------------------
-//
-//------------------------------------------------------
-func (n *notice) createNoticeMsg() (msg []byte, err error) {
+func (n *stratumNotice) createNoticeMsg() (msg []byte, err error) {
 
 	err = nil
 	// fmt.Printf("Create Stratum Notice: %v\n", n)
@@ -523,7 +574,7 @@ func (n *notice) createNoticeMsg() (msg []byte, err error) {
 //------------------------------------------------------
 //
 //------------------------------------------------------
-func (n *notice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
+func (n *stratumNotice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
 
 	// fmt.Printf(lumerinlib.Funcname()+": %v\n", n)
 
@@ -584,7 +635,7 @@ func (n *notice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
 //
 //
 //------------------------------------------------------
-func (n *notice) createNoticeMiningNotify() (msg []byte, err error) {
+func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 
 	err = nil
 
@@ -642,59 +693,7 @@ func (n *notice) createNoticeMiningNotify() (msg []byte, err error) {
 //------------------------------------------------------
 //
 //------------------------------------------------------
-func (r *request) createNoticeMiningNotifyStruct() (nsd noticeMiningNotify, err error) {
-
-	fmt.Printf(lumerinlib.Funcname()+": %v\n", r)
-
-	err = nil
-
-	// nsd.ID = r.ID
-	nsd.Method = r.Method
-
-	params := r.Params
-
-	if len(params) != 9 {
-		panic(fmt.Sprintf(lumerinlib.FileLine() + " Not enough parameter for Notify\n"))
-	}
-
-	for i, v := range params {
-		switch i {
-		case 0:
-			nsd.Params.jobID = v.(string)
-		case 1:
-			nsd.Params.prevBlockHash = v.(string)
-		case 2:
-			nsd.Params.gen1 = v.(string)
-			fallthrough
-		case 3:
-			nsd.Params.gen2 = v.(string)
-
-		case 4:
-			nsd.Params.merkelBranches = make([]string, 0)
-			if len(v.([]interface{})) > 0 {
-				for _, w := range v.([]interface{}) {
-					nsd.Params.merkelBranches = append(nsd.Params.merkelBranches, w.(string))
-				}
-			}
-
-		case 5:
-			nsd.Params.blockVersion = v.(string)
-		case 6:
-			nsd.Params.nBits = v.(string)
-		case 7:
-			nsd.Params.nTime = v.(string)
-		case 8:
-			nsd.Params.CleanJob = (v == "true")
-		}
-	}
-
-	return nsd, err
-}
-
-//------------------------------------------------------
-//
-//------------------------------------------------------
-func (n *notice) createNoticeMiningNotifyStruct() (nsd noticeMiningNotify, err error) {
+func (n *stratumNotice) createNoticeMiningNotifyStruct() (nsd noticeMiningNotify, err error) {
 
 	fmt.Printf(lumerinlib.Funcname()+": %v\n", n)
 
@@ -740,4 +739,40 @@ func (n *notice) createNoticeMiningNotifyStruct() (nsd noticeMiningNotify, err e
 	}
 
 	return nsd, err
+}
+
+// ---------------------------------------------------------------------------------------
+//                   *StratumResponse
+// ---------------------------------------------------------------------------------------
+
+//------------------------------------------------------
+//
+//------------------------------------------------------
+func (r *stratumResponse) getAuthResult() (ret bool, err error) {
+
+	_, ok := r.Result.(bool)
+	if !ok {
+		err = fmt.Errorf(lumerinlib.FileLine()+" result is wrong type:%T", r.Result)
+	} else {
+		ret = r.Result.(bool)
+	}
+
+	return ret, err
+}
+
+//------------------------------------------------------
+//
+//------------------------------------------------------
+func (r *stratumResponse) createResponseMsg() (msg []byte, err error) {
+
+	err = nil
+	// fmt.Printf("Create Stratum Response: %v\n", r)
+
+	msg, err = json.Marshal(r)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Response Err:%s\n", err)
+		return nil, err
+	}
+
+	return msg, err
 }

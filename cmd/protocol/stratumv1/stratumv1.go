@@ -118,6 +118,7 @@ func newStratumV1Func(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
 	}
 
 	// inialize a new ProtocolStruct to gain access to the standard protocol functions
+	// The default Dst should be opened when this returns
 	pls, err := protocol.NewProtocol(ss)
 	if err != nil {
 		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Create NewProtocol() failed: %s", err)
@@ -126,11 +127,6 @@ func newStratumV1Func(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
 	svs := &StratumV1Struct{
 		protocol: pls,
 		// Fill in other state information here
-	}
-
-	_, err = pls.OpenConn(dst)
-	if err != nil {
-		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Create OpenConn() failed: %s", err)
 	}
 
 	// Launch the event handler
