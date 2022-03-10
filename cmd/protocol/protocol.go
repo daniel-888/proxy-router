@@ -68,7 +68,7 @@ func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	listenaddr := contextlib.GetSrc(ctx)
-	sls, err := simple.New(ctx, listenaddr, func() {})
+	sls, err := simple.New(ctx, listenaddr)
 	if err != nil {
 		lumerinlib.PanicHere(fmt.Sprintf("Error:%s", err))
 	}

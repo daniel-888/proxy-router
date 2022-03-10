@@ -280,15 +280,7 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 //
 func getStratumMsg(msg []byte) (ret interface{}, err error) {
 
-	// fmt.Printf(lumerinlib.FileLine()+"Stratum Msg: %s\n", msg)
-
 	ret, err = unmarshalMsg(msg)
-
-	if err != nil {
-		panic(fmt.Sprintf(lumerinlib.FileLine() + "Error unmarshaling Notice msg\n"))
-	}
-
-	// fmt.Printf(lumerinlib.FileLine()+"unmarshaled Stratum %T, Msg: %v\n", ret, ret)
 
 	return ret, err
 }
