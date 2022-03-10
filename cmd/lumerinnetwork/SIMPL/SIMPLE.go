@@ -1,19 +1,18 @@
 package simple
 
 import (
-	"context" //this can probably be removed once gitlab packages can be imported
+	"context"
 	"errors"
 	"fmt"
+	_"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	_"gitlab.com/TitanInd/lumerin/cmd/log"
 	"net"
-	_ "time"
-	//"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	_"time"
 	//the below packages need to have their gitlab branches sorted out prior to being
 	//imported via go mod tidy
-	//_ "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
-	//double check that these imports were formatted correctly
+	_"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
 	//_ "gitlab.com/TitanInd/lumerin/cmd/config"
-	//_ "gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	//_ "gitlab.com/TitanInd/lumerin/lumerinlib"
+	_"gitlab.com/TitanInd/lumerin/lumerinlib"
 )
 
 /*
@@ -27,7 +26,7 @@ Refer to proxy router document
 https://titanind.atlassian.net/wiki/spaces/PR/pages/5570561/Lumerin+Node
 */
 
-type SimpleStructProtocolFunc func(*SimpleStruct) chan *SimpleEvent
+//type SimpleStructProtocolFunc func(*SimpleStruct) chan *SimpleEvent
 
 type ConnUniqueID uint
 type URL string
@@ -37,20 +36,42 @@ type Data string
 type EventHandler string
 type SearchString string
 
+type SimpleContextValue string
+
+const SimpleContext SimpleContextValue = "SimpleContextKey"
+
+/*
+The simple listen struct is used to establish a Listen port
+(TCP, UDP, or TRUNK) and accept connections. The accepted
+connections create a SimpleStruct{}, and are passed up to the
+protocol layer where the connection is initialized with a new
+context, which contains a protocol structure that allows for event handling.
+*/
+type SimpleListenStruct struct {
+	ctx    context.Context
+	cancel func()
+	accept chan *SimpleStruct //channel to accept simple structs and process their message
+}
+
+/*
+The simple struct is used to point to a specific instance
+of a connection manager and MsgBus. The structure ties these
+to a protocol struct where events are directed to be handled.
+*/
+type SimpleStruct struct {
+	ctx    context.Context
+	cancel func() //it might make sense to use the WithCancel function instead
+	//the event handler portion can be removed since the
+	//EventHandler method in implemented on the SimpleStruct
+	eventHandler interface{}      //this is a SimpleEvent struct
+	eventChan    chan SimpleEvent //channel to listen for simple events
+	protocolChan chan SimpleEvent //channel for protocol to receive simple events
+	commChan     chan []byte      //channel to listen for simple events
+	maxMessageSize uint //this value is not initially set so defaults to 0
+}
+
+
 type EventType string
-
-// type SimpleContextValue string
-
-// const SimpleContext SimpleContextValue = "SimpleContextKey"
-
-// type SimpleContextStruct struct {
-// 	Protocol func(*SimpleStruct) chan *SimpleEvent
-// 	MsgBus   *msgbus.PubSub
-// 	Src      net.Addr
-// 	Dst      net.Addr
-// 	Log      *log.Logger
-// }
-
 const NoEvent EventType = "noevent"
 const MsgUpdateEvent EventType = "msgupdate"
 const MsgDeleteEvent EventType = "msgdelete"
@@ -87,26 +108,14 @@ func (d *dummyStruct) dummy() {
 create and return a struct with channels to listen to
 call goroutine embedded in the struct
 */
-func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
+func New(ctx context.Context, listen net.Addr, newproto interface{}) (SimpleListenStruct, error) {
 	myStruct := SimpleListenStruct{
 		ctx:    ctx,
-		cancel: dummyFunc,
+		cancel: dummyFunc, //need to replace dummy func with an actual cancel function
 		accept: make(chan *SimpleStruct),
 	}
 	// determine if a more robust error message is needed
 	return myStruct, nil
-}
-
-func NewSimpleStruct(ctx context.Context) (SimpleStruct, error) {
-	myStruct := SimpleStruct{
-		ctx:          ctx,
-		cancel:       dummyFunc,
-		eventHandler: dummyStruct{},
-		eventChan:    make(chan SimpleEvent),
-		commChan:     make(chan []byte),
-	}
-	// determine if a more robust error message is needed
-	return myStruct, errors.New("unable to create a SimpleListenStruct")
 }
 
 //consider calling this as a gorouting from protocol layer, assuming
@@ -156,40 +165,62 @@ All of the SimpleStruct functions that follow can be called
 before and after Run() is called
 It is assumed that Run() can only be called once
 */
+/*
+TODO pass context to SimpleListenStruct's designated connection layer
+*/
 func (s *SimpleStruct) Run(c context.Context) error {
 	// loop to continuously listen for messages coming in
 	// on the channels assigned to the connection layer
 	// and the msgbus
 
-	for {
-		select {
-		case x := <-s.commChan:
-			//create SimpleEvent and pass to event handler
-			newMessage := SimpleEvent{
-				EventType: MsgToProtocol,
-				Data:      x,
-			}
-			s.EventHandler(newMessage)
-		default:
-			return errors.New("error in receiving commchan value")
-		}
+	if s.maxMessageSize == 0 {
+		s.maxMessageSize = 10 //setting the default max message size to 10 bytes
 	}
+
+	var res error
+
+	go func() {
+		for {
+			select {
+			case x := <-s.commChan:
+				//create SimpleEvent and pass to event handler
+				newMessage := SimpleEvent{
+					EventType: MsgToProtocol,
+					Data:      x,
+				}
+				s.EventHandler(newMessage)
+			default:
+				res = errors.New("error in receiving commchan value")
+				return
+			}
+		}
+	}()
+	return res
 }
 
 /*
 Calls the connection context cancel function which closes out the
 currently established SRC connection and all of the associated DST connections
 */
-func (s *SimpleStruct) Close() {}
+func (s *SimpleStruct) Close() {
+	_, cancel := context.WithCancel(s.ctx)
+	cancel()
+}
 
 // Set IO buffer parameters
+// this IO buffer parameters apply to the deque used to stage/proess messages
+// for stage 1 this can be assumed to be unconfigurable and use defaults only
 func (s *SimpleStruct) SetBuffer() {}
 
 // Set message buffering to a certain delimiter, for example a newline character: ‘\n’
+// for stage 1 this will assumed to be unconfigurable and only use '\n' as the 
+// new line
 func (s *SimpleStruct) SetMessageDelimiterDefault() {}
 
 // Set message buffering to be of a certain size
-func (s *SimpleStruct) SetMessageSizeDefault() {}
+func (s *SimpleStruct) SetMessageSizeDefault(mSize uint) {
+	s.maxMessageSize = mSize
+}
 
 // TODO not part of stage 1
 // Set encryption parameters
@@ -203,10 +234,10 @@ func (s *SimpleStruct) SetCompressionDefault() {}
 func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) { return 0, nil } //return of 1 to appease compiler
 
 // Reconnect dropped connection
-func (s *SimpleStruct) Redial(u ConnUniqueID) {} //return of 1 to appease compiler
+func (s *SimpleStruct) Redial(u ConnUniqueID) {} 
 
 // Used later to direct the default route
-func (s *SimpleStruct) SetRoute(u ConnUniqueID) {} //return of 1 to appease compiler
+func (s *SimpleStruct) SetRoute(u ConnUniqueID) {} 
 
 // Used later to direct the default route
 func (s *SimpleStruct) GetRoute() {} //return of 1 to appease compiler
@@ -255,39 +286,6 @@ func (s *SimpleStruct) Set(MsgType, ID, Data) error            { return errors.N
 func (s *SimpleStruct) SearchIP(MsgType, SearchString) error   { return errors.New("") }
 func (s *SimpleStruct) SearchMac(MsgType, SearchString) error  { return errors.New("") }
 func (s *SimpleStruct) SearchName(MsgType, SearchString) error { return errors.New("") }
-
-/*
-The simple listen struct is used to establish a Listen port
-(TCP, UDP, or TRUNK) and accept connections. The accepted
-connections create a SimpleStruct{}, and are passed up to the
-protocol layer where the connection is initialized with a new
-context, which contains a protocol structure that allows for event handling.
-*/
-/*
-accept chan should have a SimpleStruct pushed into it when creating a
-new SimpleStruct for an individual connection
-*/
-type SimpleListenStruct struct {
-	ctx    context.Context
-	cancel func()
-	accept chan *SimpleStruct //channel to accept simple structs and process their message
-}
-
-/*
-The simple struct is used to point to a specific instance
-of a connection manager and MsgBus. The structure ties these
-to a protocol struct where events are directed to be handled.
-*/
-type SimpleStruct struct {
-	ctx    context.Context
-	cancel func() //it might make sense to use the WithCancel function instead
-	//the event handler portion can be removed since the
-	//EventHandler method in implemented on the SimpleStruct
-	eventHandler interface{}      //this is a SimpleEvent struct
-	eventChan    chan SimpleEvent //channel to listen for simple events
-	protocolChan chan SimpleEvent //channel for protocol to receive simple events
-	commChan     chan []byte      //channel to listen for simple events
-}
 
 func (ss *SimpleStruct) Ctx() context.Context {
 	return ss.ctx
