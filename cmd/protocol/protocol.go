@@ -312,3 +312,77 @@ func (ps *ProtocolStruct) WriteDst(index int, msg []byte) (count int, e error) {
 
 	return count, e
 }
+
+//
+// Pub() publishes data, and stores the request ID to match the Completion Event
+//
+func (ps *ProtocolStruct) Pub(msgtype simple.MsgType, id simple.ID, data simple.Data) (rID int, e error) {
+
+	rID, e = ps.simple.Pub(msgtype, id, data)
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) Unpub(msgtype simple.MsgType, id simple.ID) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) Sub(msgtype simple.MsgType, id simple.ID, eh func()) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) Unsub(msgtype simple.MsgType, id simple.ID, eh func()) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) Get(msgtype simple.MsgType, id simple.ID, eh func()) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) Set(msgtype simple.MsgType, id simple.ID, data interface{}) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) SearchIP(msgtype simple.MsgType, search string) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) SearchMac(msgtype simple.MsgType, search string) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) SearchName(msgtype simple.MsgType, search string) (rID int, e error) {
+
+	return 0, nil
+}

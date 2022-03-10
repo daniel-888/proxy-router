@@ -1,4 +1,4 @@
-package lumerinprotocol
+package lumerintrunk
 
 ////
 //// Table of connections to other Lumerin Hosts by IP

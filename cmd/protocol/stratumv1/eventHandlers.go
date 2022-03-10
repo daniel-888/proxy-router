@@ -17,6 +17,8 @@ func (svs *StratumV1Struct) handleMsgUpdateEvent(event msgbus.Event) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
 
+	// Parse Event Msg
+
 }
 
 //
@@ -146,6 +148,28 @@ func (svs *StratumV1Struct) handleConnReadEvent(event *simple.SimpleEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
 
+	// index: -1 = SRC, 0 = default, >0 = Dst
+	var index int = 0
+
+	// Get ConnectionID
+	// Is Src or Dst
+	// Translate to index int
+	// Parse Message
+
+	ret, e := unmarshalMsg([]byte(event.Data.(string)))
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Called")
+	}
+	switch ret.(type) {
+	case *stratumRequest:
+		svs.handleRequest(index, ret.(*stratumRequest))
+	case *stratumResponse:
+		svs.handleResponse(index, ret.(*stratumResponse))
+	case *stratumNotice:
+		svs.handleNotice(index, ret.(*stratumNotice))
+	default:
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Called")
+	}
 }
 
 //
@@ -155,7 +179,9 @@ func (svs *StratumV1Struct) handleConnReadEvent(event *simple.SimpleEvent) {
 //
 func (svs *StratumV1Struct) handleConnEOFEvent(event *simple.SimpleEvent) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	// contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Not Handled Yet!")
 
 }
 
@@ -165,8 +191,9 @@ func (svs *StratumV1Struct) handleConnEOFEvent(event *simple.SimpleEvent) {
 //
 func (svs *StratumV1Struct) handleConnErrorEvent(event *simple.SimpleEvent) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	// contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
 
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Not Handled Yet!")
 }
 
 //
@@ -174,6 +201,37 @@ func (svs *StratumV1Struct) handleConnErrorEvent(event *simple.SimpleEvent) {
 // Perform Error handling
 //
 func (svs *StratumV1Struct) handleErrorEvent(event *simple.SimpleEvent) {
+
+	// contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Not Handled Yet!")
+}
+
+//
+// handleRequest()
+// index: -1 = SRC, 0 = default, >0 = Dst
+//
+func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) {
+
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+
+}
+
+//
+// handleResponse()
+// index: -1 = SRC, 0 = default, >0 = Dst
+//
+func (svs *StratumV1Struct) handleResponse(index int, request *stratumResponse) {
+
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+
+}
+
+//
+// handleNotice()
+// index: -1 = SRC, 0 = default, >0 = Dst
+//
+func (svs *StratumV1Struct) handleNotice(index int, request *stratumNotice) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
 
