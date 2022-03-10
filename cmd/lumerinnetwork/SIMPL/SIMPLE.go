@@ -8,7 +8,7 @@ import (
 	_"gitlab.com/TitanInd/lumerin/cmd/log"
 	"net"
 	_"time"
-	_"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
+	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
 	//_ "gitlab.com/TitanInd/lumerin/cmd/config"
 	_"gitlab.com/TitanInd/lumerin/lumerinlib"
 	_"gitlab.com/TitanInd/lumerin/lumerinlib/context"
@@ -67,7 +67,7 @@ type SimpleStruct struct {
 	protocolChan chan SimpleEvent //channel for protocol to receive simple events
 	commChan     chan []byte      //channel to listen for simple events
 	maxMessageSize uint //this value is not initially set so defaults to 0
-	connectionMapping map[ConnUniqueID]net.Conn //mapping of uint to connections
+	connectionMapping map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct //mapping of uint to connections
 	connectionIndex ConnUniqueID //keeps track of connections in the mapping
 }
 
@@ -249,7 +249,7 @@ ConnUniqueID is returned from this function
 */
 func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) { 
 	var err error //empty error value which can be changed upon results of net dial
-	conn, err := net.Dial(dst.Network(), dst.String()) //creates a new net.Conn object
+	conn, err := lumerinconnection.Dial(s.ctx, dst) //creates a new net.Conn object
 	//gets the current index value and asssigns to connection in mapping
 	var uID ConnUniqueID = s.connectionIndex 
 	s.connectionMapping[uID] = conn
@@ -262,7 +262,7 @@ func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) {
 /*
 function to retrieve the connection mapped to a unique id
 */
-func (s *SimpleStruct) GetConnBasedOnConnUniqueID(x ConnUniqueID) (net.Conn) {
+func (s *SimpleStruct) GetConnBasedOnConnUniqueID(x ConnUniqueID) (*lumerinconnection.LumerinSocketStruct) {
 	return s.connectionMapping[x]
 }
 
