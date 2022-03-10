@@ -68,7 +68,7 @@ func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	listenaddr := contextlib.GetSrc(ctx)
-	sls, err := simple.New(ctx, listenaddr)
+	sls, err := simple.New(ctx, listenaddr, func() {})
 	if err != nil {
 		lumerinlib.PanicHere(fmt.Sprintf("Error:%s", err))
 	}
@@ -244,7 +244,12 @@ func (ps *ProtocolStruct) SetDefaultRoute(index int) (e error) {
 	}
 
 	// Set the default route to the first route
+	// e := ps.simple.SetRoute(id)
+	// if e != nil {}
+
 	ps.simple.SetRoute(id)
+
+	return nil
 }
 
 //
@@ -254,12 +259,14 @@ func (ps *ProtocolStruct) SetDefaultRoute(index int) (e error) {
 func (ps *ProtocolStruct) GetDefaultRoute() (index int, e error) {
 
 	// Set the default route to the first route
-	id, e := ps.simple.GetRoute()
-	if e != nil {
-		return -1, e
-	}
+	ps.simple.GetRoute()
+	var id int = 0
+	//id, e := ps.simple.GetRoute()
+	//if e != nil {
+	//	return -1, e
+	//}
 
-	index, e = ps.dstconn.getConnIndex(id)
+	index, e = ps.dstconn.getConnIndex(simple.ConnUniqueID(id))
 
 	return index, e
 
@@ -318,9 +325,10 @@ func (ps *ProtocolStruct) WriteDst(index int, msg []byte) (count int, e error) {
 //
 func (ps *ProtocolStruct) Pub(msgtype simple.MsgType, id simple.ID, data simple.Data) (rID int, e error) {
 
-	rID, e = ps.simple.Pub(msgtype, id, data)
+	// rID, e = ps.simple.Pub(msgtype, id, data)
+	e = ps.simple.Pub(msgtype, id, data)
 
-	return 0, nil
+	return 0, e
 }
 
 //

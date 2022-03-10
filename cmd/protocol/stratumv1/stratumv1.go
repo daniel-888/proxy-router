@@ -22,7 +22,10 @@ type StratumV1ListenStruct struct {
 }
 
 type StratumV1Struct struct {
-	protocol *protocol.ProtocolStruct
+	protocol            *protocol.ProtocolStruct
+	minerRec            *msgbus.Miner
+	srcSubscribeRequest *stratumRequest
+	srcAuthRequest      *stratumRequest
 	// Add in stratum state information here
 }
 
@@ -55,18 +58,6 @@ func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr) (s 
 	}
 
 	return s, e
-}
-
-//
-//
-//
-func (s *StratumV1Struct) goEvent() {
-
-	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" called")
-
-	for event := range s.protocol.Event() {
-		s.eventHandler(event)
-	}
 }
 
 //
@@ -125,7 +116,10 @@ func newStratumV1Func(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
 	}
 
 	svs := &StratumV1Struct{
-		protocol: pls,
+		protocol:            pls,
+		minerRec:            nil,
+		srcSubscribeRequest: nil,
+		srcAuthRequest:      nil,
 		// Fill in other state information here
 	}
 
@@ -139,6 +133,18 @@ func newStratumV1Func(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
 // ---------------------------------------------------------------------
 //  StratumV1Struct
 //
+
+//
+//
+//
+func (s *StratumV1Struct) goEvent() {
+
+	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+
+	for event := range s.protocol.Event() {
+		s.eventHandler(event)
+	}
+}
 
 //
 // returns the StratumV1Struct context pointer
