@@ -151,6 +151,66 @@ func TestDialFunctionality(t *testing.T) {
 
 }
 
+/*
+test to initialize a SimpleListenStruct and retrieve a SimpleStruct in the ProtocolLayer
+steps:
+1. create a SimpleListenStruct
+2. call the Run function on the SimpleListenStruct
+3. listen to the accept channel on the SimpleListenStruct
+4. finish test when a SimpleStruct is detected on accept channel
+*/
+func TestSimpleStructCreateOnRun(t *testing.T) {
+	simpleListenStruct := generateSimpleListenStruct()
+	simpleListenStruct.Run()
+
+
+	//go routine to listen for the simpleListenStruct accept channel
+	go func(){
+		_ = <- simpleListenStruct.accept
+		return
+	}()
+	//need a way to detect if the SimpleStruct was correctly generated
+}
+
+/*
+test to retrieve a SimpleStruct from the SimpleListenStruct and dial a connection
+steps:
+1. create a SimpleListenStruct
+2. run the SimpleListenStruct
+3. retrieve the SimpleEvent from the SimpleListenStruct accept channel
+4. call the dial function on the SimpleStruct
+5. confirm that the id counter is now 1
+*/
+func TestProtocolDialTheSimpleStruct(t *testing.T) {
+	simpleListenStruct := generateSimpleListenStruct()
+	simpleListenStruct.Run()
+	testAddr := generateTestAddr()
+
+	var simpleStruct *SimpleStruct
+
+	go func(){
+		simpleStruct = <- simpleListenStruct.accept
+		return
+	}()
+
+	uid, err := simpleStruct.Dial(testAddr)
+
+	if uid != 0 {
+		t.Error("uid is incorrect")
+	}
+
+	if err != nil {
+		t.Errorf("error creating a connection: %s", err)
+	}
+
+}
+
+
+
+
+
+
+
 
 
 
