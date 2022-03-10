@@ -84,8 +84,8 @@ type stratumRequest struct {
 // notice ID is always null
 type stratumNotice struct {
 	ID     *string     `json:"id"`
-	Params interface{} `json:"params"`
 	Method string      `json:"method"`
+	Params interface{} `json:"params"`
 }
 
 type noticeMiningSetDifficulty struct {
@@ -275,9 +275,9 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 	return ret, err
 }
 
-//------------------------------------------------------
 //
-//------------------------------------------------------
+//
+//
 func getStratumMsg(msg []byte) (ret interface{}, err error) {
 
 	// fmt.Printf(lumerinlib.FileLine()+"Stratum Msg: %s\n", msg)

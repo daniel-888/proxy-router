@@ -47,7 +47,7 @@ func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr) (s 
 
 	protocollisten, err := protocol.NewListen(ctx)
 	if err != nil {
-		lumerinlib.PanicHere("")
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" NewListen returned error:%s", e)
 	}
 
 	s = &StratumV1ListenStruct{
