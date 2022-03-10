@@ -3,7 +3,7 @@ package simple
 import (
 	"context"
 	"errors"
-	_"fmt"
+	"fmt"
 	_"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	_"gitlab.com/TitanInd/lumerin/cmd/log"
 	"net"
@@ -11,7 +11,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
 	//_ "gitlab.com/TitanInd/lumerin/cmd/config"
 	_"gitlab.com/TitanInd/lumerin/lumerinlib"
-	_"gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	lumerincontext "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 /*
@@ -37,7 +37,7 @@ type SearchString string
 
 type SimpleContextValue string
 
-const SimpleContext SimpleContextValue = "SimpleContextKey"
+const SimpleContext lumerincontext.ContextValue = "SimpleContextKey"
 
 /*
 The simple listen struct is used to establish a Listen port
@@ -125,8 +125,10 @@ func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
 //consider calling this as a gorouting from protocol layer, assuming
 //protocll layer will have a layer to communicate with a chan over
 func (s *SimpleListenStruct) Run() error {
+	//contextStructValue := s.ctx.Value(SimpleContext)
 	//create a cancel function from the context in the SimpleListenStruct
 	ctx, cancel := context.WithCancel(s.ctx)
+	fmt.Printf("%+v", ctx.Value(SimpleContext))
 	//creating a new simple struct to pass to the protocol layer
 	newSimpleStruct := &SimpleStruct {
 		ctx: ctx,
@@ -155,6 +157,7 @@ func (s *SimpleListenStruct) NewSimpleStruct(ctx context.Context) {
 			cancel:       dummyFunc,
 			eventHandler: dummyStruct{},
 			eventChan:    make(chan SimpleEvent),
+			connectionMapping:    make(map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct),
 		}
 		s.accept <- myStruct //push a SimpleStruct onto the SimpleListenStruct's accept channel
 	}()
@@ -187,6 +190,7 @@ func (s *SimpleStruct) Run(c context.Context) error {
 	if s.maxMessageSize == 0 {
 		s.maxMessageSize = 10 //setting the default max message size to 10 bytes
 	}
+
 
 	var res error
 
@@ -248,7 +252,6 @@ the resulting Conn is then added to the SimpleStructs mapping and and associated
 ConnUniqueID is returned from this function
 */
 func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) { 
-	var err error //empty error value which can be changed upon results of net dial
 	conn, err := lumerinconnection.Dial(s.ctx, dst) //creates a new net.Conn object
 	//gets the current index value and asssigns to connection in mapping
 	var uID ConnUniqueID = s.connectionIndex 
@@ -262,9 +265,9 @@ func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) {
 /*
 function to retrieve the connection mapped to a unique id
 */
-func (s *SimpleStruct) GetConnBasedOnConnUniqueID(x ConnUniqueID) (*lumerinconnection.LumerinSocketStruct) {
-	return s.connectionMapping[x]
-}
+//func (s *SimpleStruct) GetConnBasedOnConnUniqueID(x ConnUniqueID) (*lumerinconnection.LumerinSocketStruct) {
+//	return s.connectionMapping[x]
+//}
 
 // Reconnect dropped connection
 func (s *SimpleStruct) Redial(u ConnUniqueID) {} 
