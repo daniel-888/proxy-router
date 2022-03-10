@@ -3,7 +3,7 @@ package simple
 import (
 	"context"
 	"errors"
-	"fmt"
+	_"fmt"
 	_"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	_"gitlab.com/TitanInd/lumerin/cmd/log"
 	"net"
@@ -125,10 +125,8 @@ func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
 //consider calling this as a gorouting from protocol layer, assuming
 //protocll layer will have a layer to communicate with a chan over
 func (s *SimpleListenStruct) Run() error {
-	//contextStructValue := s.ctx.Value(SimpleContext)
 	//create a cancel function from the context in the SimpleListenStruct
 	ctx, cancel := context.WithCancel(s.ctx)
-	fmt.Printf("%+v", ctx.Value(SimpleContext))
 	//creating a new simple struct to pass to the protocol layer
 	newSimpleStruct := &SimpleStruct {
 		ctx: ctx,
