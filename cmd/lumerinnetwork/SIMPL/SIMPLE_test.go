@@ -26,56 +26,15 @@ can be quickly implemented
 func TestTemplate(t *testing.T) {
 }
 */
-
-type testAddr struct {
-	x string
-}
-
-func (t testAddr) Network() string {
-	return t.x
-}
-
-func (t testAddr) String() string {
-	return t.x
-}
-
 func generateTestContext() context.Context {
 	returnContext := context.TODO()
 	return returnContext
 }
 
 func generateTestAddr() net.Addr {
-	return testAddr{x: "1"}
+	conn, _ := net.Dial("tcp", "golang.org:http")
+	return conn.RemoteAddr()
 }
-
-type ConnectionLayer struct {
-	SimpleConnection *SimpleStruct
-}
-
-func NewConnLayer(s *SimpleStruct) ConnectionLayer {
-	return ConnectionLayer{
-		SimpleConnection: s,
-	}
-}
-
-func (c *ConnectionLayer) ConnToSimple() {
-	go func() {
-		c.SimpleConnection.commChan <- []byte("test message one")
-	}()
-}
-
-//function to simulate the protocol layer which will be able to listen for and
-//send events to the SIMPL layer
-//should run in a go-routine to simulate actual protocol layer
-type ProtocolLayer struct {
-	ListenStruct SimpleListenStruct
-	SimpleStruct SimpleStruct
-}
-
-type ProtocolInterface interface {
-	EventHandler(*SimpleEvent)
-}
-
 
 //generate a SimpleStruct for testing purposes
 func generateSimpleStruct() SimpleStruct {
@@ -95,18 +54,8 @@ func generateSimpleStruct() SimpleStruct {
 func generateSimpleListenStruct() SimpleListenStruct {
 	myContext := generateTestContext()
 	myAddr := generateTestAddr()
-	myStruct, _ := New(myContext, myAddr, 0)
+	myStruct, _ := New(myContext, myAddr)
 	return myStruct
-}
-
-//generate a protocol layer for testing purposes
-func generateProtocolLayer() ProtocolLayer {
-	listenStruct := generateSimpleListenStruct()
-	simpleStruct := generateSimpleStruct()
-	return ProtocolLayer{
-		ListenStruct: listenStruct,
-		SimpleStruct: simpleStruct,
-	}
 }
 
 /*
@@ -117,7 +66,7 @@ test steps
 
 */
 func TestInitializeSimpleListenStruct(t *testing.T) {
-	_, err := New(generateTestContext(), generateTestAddr(), 0)
+	_, err := New(generateTestContext(), generateTestAddr())
 	if err != nil {
 		t.Error("failed to initialize SimpleListenStruct")
 	}
@@ -144,7 +93,7 @@ test steps
 3. ensure all associated routines are closed
 */
 func TestSimpleListenStructClose(t *testing.T) {
-	listenStruct, _ := New(generateTestContext(), generateTestAddr(), 0)
+	listenStruct, _ := New(generateTestContext(), generateTestAddr())
 	listenStruct.Close()
 }
 
@@ -172,4 +121,31 @@ func TestSetMessageSizeDefault(t *testing.T) {
 	}
 
 }
+
+/*
+testing that a SimpleStruct will dial a connection and accuratley store the resulting
+connection in the mapping, and retrieve the mapping
+*/
+func TestDialFunctionality(t *testing.T) {
+	simpleStruct := generateSimpleStruct()
+	testAddr := generateTestAddr()
+
+	if simpleStruct.connectionIndex !=0 {
+		t.Error("testing index is not 0")
+	}
+
+	uID, e := simpleStruct.Dial(testAddr)
+	if uID != 0 {
+		t.Error("conn index is not 0")
+	}
+
+	if e != nil {
+		t.Errorf("%s",e)
+	}
+
+}
+
+
+
+
 

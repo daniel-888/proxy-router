@@ -3,16 +3,15 @@ package simple
 import (
 	"context"
 	"errors"
-	"fmt"
+	_"fmt"
 	_"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	_"gitlab.com/TitanInd/lumerin/cmd/log"
 	"net"
 	_"time"
-	//the below packages need to have their gitlab branches sorted out prior to being
-	//imported via go mod tidy
-	_"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
+	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
 	//_ "gitlab.com/TitanInd/lumerin/cmd/config"
 	_"gitlab.com/TitanInd/lumerin/lumerinlib"
+	_"gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 /*
@@ -63,11 +62,13 @@ type SimpleStruct struct {
 	cancel func() //it might make sense to use the WithCancel function instead
 	//the event handler portion can be removed since the
 	//EventHandler method in implemented on the SimpleStruct
-	eventHandler interface{}      //this is a SimpleEvent struct
+	eventHandler interface{}      //this is the event handler function
 	eventChan    chan SimpleEvent //channel to listen for simple events
 	protocolChan chan SimpleEvent //channel for protocol to receive simple events
 	commChan     chan []byte      //channel to listen for simple events
 	maxMessageSize uint //this value is not initially set so defaults to 0
+	connectionMapping map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct //mapping of uint to connections
+	connectionIndex ConnUniqueID //keeps track of connections in the mapping
 }
 
 
@@ -107,8 +108,11 @@ func (d *dummyStruct) dummy() {
 /*
 create and return a struct with channels to listen to
 call goroutine embedded in the struct
+//assuming that the context being passed in will contain a ContextStruct in the value
 */
-func New(ctx context.Context, listen net.Addr, newproto interface{}) (SimpleListenStruct, error) {
+func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
+	//myContext may be used in the future
+	//myContext := ctx.Value("ContextKey")
 	myStruct := SimpleListenStruct{
 		ctx:    ctx,
 		cancel: dummyFunc, //need to replace dummy func with an actual cancel function
@@ -121,12 +125,19 @@ func New(ctx context.Context, listen net.Addr, newproto interface{}) (SimpleList
 //consider calling this as a gorouting from protocol layer, assuming
 //protocll layer will have a layer to communicate with a chan over
 func (s *SimpleListenStruct) Run() error {
+	//create a cancel function from the context in the SimpleListenStruct
+	ctx, cancel := context.WithCancel(s.ctx)
+	//creating a new simple struct to pass to the protocol layer
+	newSimpleStruct := &SimpleStruct {
+		ctx: ctx,
+		cancel: cancel,
+		eventHandler: 1, //temporary value of 1 until the eventHandler layout is resolved
+	}
 	go func() {
+		s.accept <- newSimpleStruct//receive a value from the accept
 		// continuously listen for messages coming in on the accept channel
 		for {
-			//consider moving event handler login into here
-			x := <-s.accept //receive a value from the accept
-			fmt.Printf("%+v", x)
+			//for loop to listen for a close function
 		}
 	}()
 	return nil
@@ -230,8 +241,30 @@ func (s *SimpleStruct) SetEncryptionDefault() {}
 // Set Compression parameters
 func (s *SimpleStruct) SetCompressionDefault() {}
 
-// Dial the a destination address (DST)
-func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) { return 0, nil } //return of 1 to appease compiler
+/*
+Dial the a destination address (DST)
+takes in a net.Addr object and feeds into the net.Dial function
+the resulting Conn is then added to the SimpleStructs mapping and and associated
+ConnUniqueID is returned from this function
+*/
+func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) { 
+	var err error //empty error value which can be changed upon results of net dial
+	conn, err := lumerinconnection.Dial(s.ctx, dst) //creates a new net.Conn object
+	//gets the current index value and asssigns to connection in mapping
+	var uID ConnUniqueID = s.connectionIndex 
+	s.connectionMapping[uID] = conn
+	s.connectionIndex++ //increase the connectionIndex for the next time a conn is made
+	//consider a mapping of connections and UID's
+	return uID, err 
+} 
+
+
+/*
+function to retrieve the connection mapped to a unique id
+*/
+func (s *SimpleStruct) GetConnBasedOnConnUniqueID(x ConnUniqueID) (*lumerinconnection.LumerinSocketStruct) {
+	return s.connectionMapping[x]
+}
 
 // Reconnect dropped connection
 func (s *SimpleStruct) Redial(u ConnUniqueID) {} 
@@ -287,12 +320,12 @@ func (s *SimpleStruct) SearchIP(MsgType, SearchString) error   { return errors.N
 func (s *SimpleStruct) SearchMac(MsgType, SearchString) error  { return errors.New("") }
 func (s *SimpleStruct) SearchName(MsgType, SearchString) error { return errors.New("") }
 
-func (ss *SimpleStruct) Ctx() context.Context {
-	return ss.ctx
+func (s *SimpleStruct) Ctx() context.Context {
+	return s.ctx
 }
 
-func (ss *SimpleStruct) Cancel() {
-	ss.cancel()
+func (s *SimpleStruct) Cancel() {
+	s.cancel()
 }
 
 /*
