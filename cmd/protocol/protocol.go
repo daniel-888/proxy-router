@@ -25,13 +25,14 @@ type ProtocolStruct struct {
 	cancel    func()
 	simple    *simple.SimpleStruct
 	eventchan chan *simple.SimpleEvent
-	srcconn   ProtocolConnectionStruct
-	dstconn   ProtocolDstStruct
-	msgbus    ProtocolMsgBusStruct
+	srcconn   *ProtocolConnectionStruct
+	dstconn   *ProtocolDstStruct
+	msgbus    *ProtocolMsgBusStruct
 }
 
 //
 // NewListen() Create a new ProtocolListenStruct
+// Opens the default destination
 //
 func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 	var ok bool
@@ -152,21 +153,23 @@ func NewProtocol(s *simple.SimpleStruct) (pls *ProtocolStruct, e error) {
 		cancel:    cancel,
 		simple:    s,
 		eventchan: eventchan,
-		srcconn: ProtocolConnectionStruct{
+		srcconn: &ProtocolConnectionStruct{
 			Addr: src,
 			Id:   0,
 		},
-		dstconn: ProtocolDstStruct{
-			conn: make(map[int]ProtocolConnectionStruct, 0),
+		dstconn: &ProtocolDstStruct{
+			conn: make(map[int]*ProtocolConnectionStruct),
 		},
-		msgbus: ProtocolMsgBusStruct{},
+		msgbus: &ProtocolMsgBusStruct{},
 	}
 
-	index, e := ps.dstconn.openConn(dst)
+	// Open the default connection
+	index, e := ps.OpenConn(dst)
 	// First connection should be zero
 	if index != 0 {
 		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" called")
 	}
+	e = ps.SetDefaultRoute(index)
 
 	return pls, e
 }
@@ -174,8 +177,8 @@ func NewProtocol(s *simple.SimpleStruct) (pls *ProtocolStruct, e error) {
 //
 // Ctx() returns the context of the ProtocolStruct
 //
-func (p *ProtocolStruct) Ctx() context.Context {
-	return p.ctx
+func (ps *ProtocolStruct) Ctx() context.Context {
+	return ps.ctx
 }
 
 //
@@ -208,11 +211,178 @@ func (ps *ProtocolStruct) Event() chan *simple.SimpleEvent {
 }
 
 //
+// OpenConn()
+// opens a new connection to the desitnation and returns the index of it
 //
-//p
 func (ps *ProtocolStruct) OpenConn(dst net.Addr) (index int, e error) {
 
 	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
 
-	return ps.dstconn.openConn(dst)
+	//
+	// Call simple layer to dial up a connection to the dst
+	//
+	id, e := ps.simple.Dial(dst)
+	if e != nil {
+		return -1, e
+	}
+
+	//
+	// Add new connection to the ProtocolDstStruct
+	//
+	return ps.dstconn.addConn(dst, id)
+}
+
+//
+// SetDefaultRoute()
+// Set the SIMPL layer default route
+//
+func (ps *ProtocolStruct) SetDefaultRoute(index int) (e error) {
+
+	id, e := ps.dstconn.getConnID(index)
+	if e != nil {
+		return e
+	}
+
+	// Set the default route to the first route
+	ps.simple.SetRoute(id)
+}
+
+//
+// GetDefaultRoute()
+// get the  SIMPL layer default route
+//
+func (ps *ProtocolStruct) GetDefaultRoute() (index int, e error) {
+
+	// Set the default route to the first route
+	id, e := ps.simple.GetRoute()
+	if e != nil {
+		return -1, e
+	}
+
+	index, e = ps.dstconn.getConnIndex(id)
+
+	return index, e
+
+}
+
+//
+// Write()
+//
+func (ps *ProtocolStruct) Write(msg []byte) (count int, e error) {
+	count = 0
+	// l := len(msg)
+
+	index, e := ps.GetDefaultRoute()
+	if e != nil {
+		return -1, e
+	}
+
+	id, e := ps.dstconn.getConnID(index)
+	if e != nil {
+		return -1, e
+	}
+
+	ps.simple.Write(id, msg)
+
+	// count, e = ps.simple.Write(id, msg)
+	// if e != nil {
+	// 	return count, e
+	// }
+	// if l != count {
+	// 	return count, fmt.Errorf(lumerinlib.FileLine() + " full msg length was not written")
+	// }
+
+	return count, e
+}
+
+//
+// WriteSrc()
+//
+func (ps *ProtocolStruct) WriteSrc(msg []byte) (count int, e error) {
+	count = 0
+
+	return count, e
+}
+
+//
+// WriteDst()
+//
+func (ps *ProtocolStruct) WriteDst(index int, msg []byte) (count int, e error) {
+	count = 0
+
+	return count, e
+}
+
+//
+// Pub() publishes data, and stores the request ID to match the Completion Event
+//
+func (ps *ProtocolStruct) Pub(msgtype simple.MsgType, id simple.ID, data simple.Data) (rID int, e error) {
+
+	rID, e = ps.simple.Pub(msgtype, id, data)
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) Unpub(msgtype simple.MsgType, id simple.ID) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) Sub(msgtype simple.MsgType, id simple.ID, eh func()) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) Unsub(msgtype simple.MsgType, id simple.ID, eh func()) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) Get(msgtype simple.MsgType, id simple.ID, eh func()) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) Set(msgtype simple.MsgType, id simple.ID, data interface{}) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) SearchIP(msgtype simple.MsgType, search string) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) SearchMac(msgtype simple.MsgType, search string) (rID int, e error) {
+
+	return 0, nil
+}
+
+//
+//
+//
+func (ps *ProtocolStruct) SearchName(msgtype simple.MsgType, search string) (rID int, e error) {
+
+	return 0, nil
 }
