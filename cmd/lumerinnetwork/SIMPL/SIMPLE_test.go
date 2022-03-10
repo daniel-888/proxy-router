@@ -6,6 +6,8 @@ import (
 	"net"
 	_ "reflect"
 	"testing"
+	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
+	lumerincontext "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 /*
@@ -27,8 +29,11 @@ func TestTemplate(t *testing.T) {
 }
 */
 func generateTestContext() context.Context {
-	returnContext := context.TODO()
-	return returnContext
+	//create a ContextStruct and add into :tab
+	ctx := context.Background()
+	cs := &lumerincontext.ContextStruct{}
+	ctx = context.WithValue(ctx, lumerincontext.ContextKey, cs)
+	return ctx
 }
 
 func generateTestAddr() net.Addr {
@@ -46,6 +51,7 @@ func generateSimpleStruct() SimpleStruct {
 		eventChan: make(chan SimpleEvent),
 		protocolChan: make(chan SimpleEvent),
 		commChan: make(chan []byte),
+		connectionMapping:    make(map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct),
 	}
 	return mySimpleStruct
 }
