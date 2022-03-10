@@ -3,7 +3,7 @@ package simple
 import (
 	"context"
 	"errors"
-	"fmt"
+	_"fmt"
 	_"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	_"gitlab.com/TitanInd/lumerin/cmd/log"
 	"net"
@@ -11,7 +11,7 @@ import (
 	_"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
 	//_ "gitlab.com/TitanInd/lumerin/cmd/config"
 	_"gitlab.com/TitanInd/lumerin/lumerinlib"
-	"gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	_"gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 /*
@@ -67,6 +67,8 @@ type SimpleStruct struct {
 	protocolChan chan SimpleEvent //channel for protocol to receive simple events
 	commChan     chan []byte      //channel to listen for simple events
 	maxMessageSize uint //this value is not initially set so defaults to 0
+	connectionMapping map[ConnUniqueID]net.Conn //mapping of uint to connections
+	connectionIndex ConnUniqueID //keeps track of connections in the mapping
 }
 
 
@@ -239,8 +241,30 @@ func (s *SimpleStruct) SetEncryptionDefault() {}
 // Set Compression parameters
 func (s *SimpleStruct) SetCompressionDefault() {}
 
-// Dial the a destination address (DST)
-func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) { return 0, nil } //return of 1 to appease compiler
+/*
+Dial the a destination address (DST)
+takes in a net.Addr object and feeds into the net.Dial function
+the resulting Conn is then added to the SimpleStructs mapping and and associated
+ConnUniqueID is returned from this function
+*/
+func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) { 
+	var err error //empty error value which can be changed upon results of net dial
+	conn, err := net.Dial(dst.Network(), dst.String()) //creates a new net.Conn object
+	//gets the current index value and asssigns to connection in mapping
+	var uID ConnUniqueID = s.connectionIndex 
+	s.connectionMapping[uID] = conn
+	s.connectionIndex++ //increase the connectionIndex for the next time a conn is made
+	//consider a mapping of connections and UID's
+	return uID, err 
+} 
+
+
+/*
+function to retrieve the connection mapped to a unique id
+*/
+func (s *SimpleStruct) GetConnBasedOnConnUniqueID(x ConnUniqueID) (net.Conn) {
+	return s.connectionMapping[x]
+}
 
 // Reconnect dropped connection
 func (s *SimpleStruct) Redial(u ConnUniqueID) {} 
@@ -296,12 +320,12 @@ func (s *SimpleStruct) SearchIP(MsgType, SearchString) error   { return errors.N
 func (s *SimpleStruct) SearchMac(MsgType, SearchString) error  { return errors.New("") }
 func (s *SimpleStruct) SearchName(MsgType, SearchString) error { return errors.New("") }
 
-func (ss *SimpleStruct) Ctx() context.Context {
-	return ss.ctx
+func (s *SimpleStruct) Ctx() context.Context {
+	return s.ctx
 }
 
-func (ss *SimpleStruct) Cancel() {
-	ss.cancel()
+func (s *SimpleStruct) Cancel() {
+	s.cancel()
 }
 
 /*
