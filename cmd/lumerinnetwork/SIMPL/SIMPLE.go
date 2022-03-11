@@ -3,15 +3,18 @@ package simple
 import (
 	"context"
 	"errors"
-	_"fmt"
-	_"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	_"gitlab.com/TitanInd/lumerin/cmd/log"
+	_ "fmt"
 	"net"
-	_"time"
+	_ "time"
+
+	_ "gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
+	_ "gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/lumerinlib"
+
 	//_ "gitlab.com/TitanInd/lumerin/cmd/config"
-	_"gitlab.com/TitanInd/lumerin/lumerinlib"
-	lumerincontext "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	_ "gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 /*
@@ -35,9 +38,9 @@ type Data string
 type EventHandler string
 type SearchString string
 
-type SimpleContextValue string
+// type SimpleContextValue string
 
-const SimpleContext lumerincontext.ContextValue = "SimpleContextKey"
+// const SimpleContext contextlib.ContextValue = "SimpleContextKey"
 
 /*
 The simple listen struct is used to establish a Listen port
@@ -47,9 +50,10 @@ protocol layer where the connection is initialized with a new
 context, which contains a protocol structure that allows for event handling.
 */
 type SimpleListenStruct struct {
-	ctx    context.Context
-	cancel func()
-	accept chan *SimpleStruct //channel to accept simple structs and process their message
+	ctx           context.Context
+	cancel        func()
+	accept        chan *SimpleStruct //channel to accept simple structs and process their message
+	lumerinlisten *lumerinconnection.LumerinListenStruct
 }
 
 /*
@@ -62,17 +66,17 @@ type SimpleStruct struct {
 	cancel func() //it might make sense to use the WithCancel function instead
 	//the event handler portion can be removed since the
 	//EventHandler method in implemented on the SimpleStruct
-	eventHandler interface{}      //this is the event handler function
-	eventChan    chan SimpleEvent //channel to listen for simple events
-	protocolChan chan SimpleEvent //channel for protocol to receive simple events
-	commChan     chan []byte      //channel to listen for simple events
-	maxMessageSize uint //this value is not initially set so defaults to 0
+	eventHandler      interface{}                                             //this is the event handler function
+	eventChan         chan SimpleEvent                                        //channel to listen for simple events
+	protocolChan      chan SimpleEvent                                        //channel for protocol to receive simple events
+	commChan          chan []byte                                             //channel to listen for simple events
+	maxMessageSize    uint                                                    //this value is not initially set so defaults to 0
 	connectionMapping map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct //mapping of uint to connections
-	connectionIndex ConnUniqueID //keeps track of connections in the mapping
+	connectionIndex   ConnUniqueID                                            //keeps track of connections in the mapping
 }
 
-
 type EventType string
+
 const NoEvent EventType = "noevent"
 const MsgUpdateEvent EventType = "msgupdate"
 const MsgDeleteEvent EventType = "msgdelete"
@@ -113,10 +117,33 @@ call goroutine embedded in the struct
 func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
 	//myContext may be used in the future
 	//myContext := ctx.Value("ContextKey")
+
+	c := ctx.Value(contextlib.ContextKey)
+	if c == nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" called")
+	}
+
+	cs, ok := c.(*contextlib.ContextStruct)
+	if !ok {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLine()+" Context Structre not correct")
+	}
+
+	if cs.GetSrc() == nil {
+		cs.Logf(contextlib.LevelPanic, "Context Src Addr not defined")
+	}
+
+	src := cs.GetSrc()
+
+	l, e := lumerinconnection.Listen(ctx, src)
+	if e != nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Lumerin Listen() returne error:%s", e)
+	}
+
 	myStruct := SimpleListenStruct{
-		ctx:    ctx,
-		cancel: dummyFunc, //need to replace dummy func with an actual cancel function
-		accept: make(chan *SimpleStruct),
+		ctx:           ctx,
+		cancel:        dummyFunc, //need to replace dummy func with an actual cancel function
+		accept:        make(chan *SimpleStruct),
+		lumerinlisten: l,
 	}
 	// determine if a more robust error message is needed
 	return myStruct, nil
@@ -128,13 +155,13 @@ func (s *SimpleListenStruct) Run() error {
 	//create a cancel function from the context in the SimpleListenStruct
 	ctx, cancel := context.WithCancel(s.ctx)
 	//creating a new simple struct to pass to the protocol layer
-	newSimpleStruct := &SimpleStruct {
-		ctx: ctx,
-		cancel: cancel,
+	newSimpleStruct := &SimpleStruct{
+		ctx:          ctx,
+		cancel:       cancel,
 		eventHandler: 1, //temporary value of 1 until the eventHandler layout is resolved
 	}
 	go func() {
-		s.accept <- newSimpleStruct//receive a value from the accept
+		s.accept <- newSimpleStruct //receive a value from the accept
 		// continuously listen for messages coming in on the accept channel
 		for {
 			//for loop to listen for a close function
@@ -151,11 +178,11 @@ func (s *SimpleListenStruct) Accept() <-chan *SimpleStruct {
 func (s *SimpleListenStruct) NewSimpleStruct(ctx context.Context) {
 	go func() {
 		myStruct := &SimpleStruct{ //generate a new SimpleStruct
-			ctx:          ctx,
-			cancel:       dummyFunc,
-			eventHandler: dummyStruct{},
-			eventChan:    make(chan SimpleEvent),
-			connectionMapping:    make(map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct),
+			ctx:               ctx,
+			cancel:            dummyFunc,
+			eventHandler:      dummyStruct{},
+			eventChan:         make(chan SimpleEvent),
+			connectionMapping: make(map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct),
 		}
 		s.accept <- myStruct //push a SimpleStruct onto the SimpleListenStruct's accept channel
 	}()
@@ -188,7 +215,6 @@ func (s *SimpleStruct) Run(c context.Context) error {
 	if s.maxMessageSize == 0 {
 		s.maxMessageSize = 10 //setting the default max message size to 10 bytes
 	}
-
 
 	var res error
 
@@ -226,7 +252,7 @@ func (s *SimpleStruct) Close() {
 func (s *SimpleStruct) SetBuffer() {}
 
 // Set message buffering to a certain delimiter, for example a newline character: ‘\n’
-// for stage 1 this will assumed to be unconfigurable and only use '\n' as the 
+// for stage 1 this will assumed to be unconfigurable and only use '\n' as the
 // new line
 func (s *SimpleStruct) SetMessageDelimiterDefault() {}
 
@@ -249,16 +275,15 @@ takes in a net.Addr object and feeds into the net.Dial function
 the resulting Conn is then added to the SimpleStructs mapping and and associated
 ConnUniqueID is returned from this function
 */
-func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) { 
+func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) {
 	conn, err := lumerinconnection.Dial(s.ctx, dst) //creates a new net.Conn object
 	//gets the current index value and asssigns to connection in mapping
-	var uID ConnUniqueID = s.connectionIndex 
+	var uID ConnUniqueID = s.connectionIndex
 	s.connectionMapping[uID] = conn
 	s.connectionIndex++ //increase the connectionIndex for the next time a conn is made
 	//consider a mapping of connections and UID's
-	return uID, err 
-} 
-
+	return uID, err
+}
 
 /*
 function to retrieve the connection mapped to a unique id
@@ -268,10 +293,10 @@ function to retrieve the connection mapped to a unique id
 //}
 
 // Reconnect dropped connection
-func (s *SimpleStruct) Redial(u ConnUniqueID) {} 
+func (s *SimpleStruct) Redial(u ConnUniqueID) {}
 
 // Used later to direct the default route
-func (s *SimpleStruct) SetRoute(u ConnUniqueID) {} 
+func (s *SimpleStruct) SetRoute(u ConnUniqueID) {}
 
 // Used later to direct the default route
 func (s *SimpleStruct) GetRoute() {} //return of 1 to appease compiler

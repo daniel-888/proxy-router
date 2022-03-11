@@ -49,13 +49,16 @@ func TestOpenConn(t *testing.T) {
 	cs.SetDst(dst)
 	cs.SetProtocol(newProtcolFunc)
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
-	simple := &simple.SimpleStruct{
-		ctx: ctx,
+
+	pls, e := NewListen(ctx)
+	if e != nil {
+		t.Errorf("NewListen() returned error:%s", e)
 	}
 
+	pls.simplelisten.NewSimpleStruct(ctx)
+
 	proto := &ProtocolStruct{
-		ctx:    ctx,
-		simple: simple,
+		ctx: ctx,
 	}
 
 	index, e := proto.OpenConn(dst)
