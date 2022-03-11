@@ -32,6 +32,8 @@ func generateTestContext() context.Context {
 	//create a ContextStruct and add into :tab
 	ctx := context.Background()
 	cs := &lumerincontext.ContextStruct{}
+	cs.Src = generateTestAddr()
+	cs.Dst = generateTestAddr()
 	ctx = context.WithValue(ctx, lumerincontext.ContextKey, cs)
 	return ctx
 }
