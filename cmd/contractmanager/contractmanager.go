@@ -80,6 +80,7 @@ type BuyerContractManager struct {
 	account             common.Address
 	privateKey          string
 	currentNonce        nonce
+	timeThreshold		int
 	nodeOperator        msgbus.NodeOperator
 	ctx                 context.Context
 }
@@ -604,6 +605,7 @@ func (buyer *BuyerContractManager) init(ctx *context.Context, contractManagerCon
 		return err
 	}
 	contractManagerConfig := event.Data.(msgbus.ContractManagerConfig)
+	buyer.timeThreshold = contractManagerConfig.TimeThreshold
 	ethNodeAddr := contractManagerConfig.EthNodeAddr
 	mnemonic := contractManagerConfig.Mnemonic
 	accountIndex := contractManagerConfig.AccountIndex
@@ -921,7 +923,7 @@ func (buyer *BuyerContractManager) closeOutMonitor(minerCh msgbus.EventChan, con
 		case event := <-minerCh:
 			if event.EventType == msgbus.PublishEvent || event.EventType == msgbus.UpdateEvent || event.EventType == msgbus.UnpublishEvent {
 				// check hashrate is being fulfilled for all running contracts
-				time.Sleep(time.Second * 10) // give buffer time for total hashrate to adjust to multiple updates
+				time.Sleep(time.Second * time.Duration(buyer.timeThreshold)) // give buffer time for total hashrate to adjust to multiple updates
 				contractClosed := buyer.checkHashRate(contractId)
 				if contractClosed {
 					return

@@ -238,6 +238,7 @@ func main() {
 			contractManagerConfig.AccountIndex = int(contractManagerConfigFile["accountIndex"].(float64))
 			contractManagerConfig.EthNodeAddr = contractManagerConfigFile["ethNodeAddr"].(string)
 			contractManagerConfig.ClaimFunds = contractManagerConfigFile["claimFunds"].(bool)
+			contractManagerConfig.TimeThreshold = int(contractManagerConfigFile["timeThreshold"].(float64))
 			contractManagerConfig.CloneFactoryAddress = contractManagerConfigFile["cloneFactoryAddress"].(string)
 			contractManagerConfig.LumerinTokenAddress = contractManagerConfigFile["lumerinTokenAddress"].(string)
 			contractManagerConfig.ValidatorAddress = contractManagerConfigFile["validatorAddress"].(string)
@@ -268,6 +269,15 @@ func main() {
 			}
 			if claimFundsStr == "true" {
 				contractManagerConfig.ClaimFunds = true
+			}
+
+			timeThresholdStr, err := config.ConfigGetVal(config.ConfigContractTimeThreshold)
+			if err != nil {
+				l.Logf(log.LevelPanic, "Getting time threshold val failed: %v", err)
+			}
+			contractManagerConfig.TimeThreshold, err = strconv.Atoi(timeThresholdStr)
+			if err != nil {
+				l.Logf(log.LevelPanic, "Converting time threshold string to int failed: %v", err)
 			}
 		}
 

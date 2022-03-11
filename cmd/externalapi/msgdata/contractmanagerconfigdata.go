@@ -15,6 +15,7 @@ type ContractManagerConfigJSON struct {
 	AccountIndex        int    `json:"accountIndex"`
 	EthNodeAddr         string `json:"ethNodeAddr"`
 	ClaimFunds          bool   `json:"claimFunds"`
+	TimeThreshold		int	   `json:"timeThreshold"`
 	CloneFactoryAddress string `json:"cloneFactoryAddress"`
 	LumerinTokenAddress string `json:"lumerinTokenAddress"`
 	ValidatorAddress    string `json:"validatorAddress"`
@@ -64,6 +65,7 @@ func (r *ContractManagerConfigRepo) AddContractManagerConfigFromMsgBus(contractC
 	contractConfJSON.AccountIndex = int(contractConf.AccountIndex)
 	contractConfJSON.EthNodeAddr = string(contractConf.EthNodeAddr)
 	contractConfJSON.ClaimFunds = bool(contractConf.ClaimFunds)
+	contractConfJSON.TimeThreshold = int(contractConf.TimeThreshold)
 	contractConfJSON.CloneFactoryAddress = string(contractConf.CloneFactoryAddress)
 	contractConfJSON.LumerinTokenAddress = string(contractConf.LumerinTokenAddress)
 	contractConfJSON.ValidatorAddress = string(contractConf.ValidatorAddress)
@@ -84,6 +86,7 @@ func (r *ContractManagerConfigRepo) UpdateContractManagerConfig(id string, newCo
 				r.ContractManagerConfigJSONs[i].EthNodeAddr = newContractManagerConfig.EthNodeAddr
 			}
 			r.ContractManagerConfigJSONs[i].ClaimFunds = newContractManagerConfig.ClaimFunds
+			r.ContractManagerConfigJSONs[i].TimeThreshold = newContractManagerConfig.TimeThreshold
 			if newContractManagerConfig.CloneFactoryAddress != "" {
 				r.ContractManagerConfigJSONs[i].CloneFactoryAddress = newContractManagerConfig.CloneFactoryAddress
 			}
@@ -206,6 +209,7 @@ func ConvertContractManagerConfigJSONtoContractManagerConfigMSG(contractConf Con
 	msg.AccountIndex = contractConf.AccountIndex
 	msg.EthNodeAddr = contractConf.EthNodeAddr
 	msg.ClaimFunds = contractConf.ClaimFunds
+	msg.TimeThreshold = contractConf.TimeThreshold
 	msg.CloneFactoryAddress = contractConf.CloneFactoryAddress
 	msg.LumerinTokenAddress = contractConf.LumerinTokenAddress
 	msg.ValidatorAddress = contractConf.ValidatorAddress
@@ -220,6 +224,7 @@ func ConvertContractManagerConfigMSGtoContractManagerConfigJSON(msg msgbus.Contr
 	contractConf.AccountIndex = msg.AccountIndex
 	contractConf.EthNodeAddr = msg.EthNodeAddr
 	contractConf.ClaimFunds = msg.ClaimFunds
+	contractConf.TimeThreshold = msg.TimeThreshold
 	contractConf.CloneFactoryAddress = msg.CloneFactoryAddress
 	contractConf.LumerinTokenAddress = msg.LumerinTokenAddress
 	contractConf.ValidatorAddress = msg.ValidatorAddress

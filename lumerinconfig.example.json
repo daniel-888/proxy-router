@@ -31,6 +31,7 @@
         "accountIndex": 0,
         "ethNodeAddr": "ws://127.1.0.1:8545",
         "claimFunds": true,
+        "timeThreshold": 10,
         "cloneFactoryAddress": "0x951e3Dd7e7AB5e158cFB5203fd43CE3e063ADFf4",
         "lumerinTokenAddress": "0x88caF36aA63cf4eD5d34106994571ba18FD178ae",
         "validatorAddress": "0x508CD3988E2b4B8f1d243b961a855347349f6F63",

@@ -59,6 +59,7 @@ func TestBuyerRoutine(t *testing.T) {
 
 	contractManagerConfig.Mnemonic = contractManagerConfigFile["mnemonic"].(string)
 	contractManagerConfig.AccountIndex = int(contractManagerConfigFile["accountIndex"].(float64))
+	contractManagerConfig.TimeThreshold = int(contractManagerConfigFile["timeThreshold"].(float64))
 	contractManagerConfig.EthNodeAddr = contractManagerConfigFile["ethNodeAddr"].(string)
 	contractManagerConfig.CloneFactoryAddress = ts.cloneFactoryAddress.Hex()
 
@@ -138,8 +139,8 @@ func TestBuyerRoutine(t *testing.T) {
 	//
 	// test startup with 1 running contract and 1 availabe contract
 	//
-	CreateHashrateContract(cman.ethClient, sellerAddress, sellerPrivateKey, ts.cloneFactoryAddress, int(0), int(0), int(31), int(contractLength), cman.account)
-	CreateHashrateContract(cman.ethClient, sellerAddress, sellerPrivateKey, ts.cloneFactoryAddress, int(0), int(0), int(41), int(contractLength), cman.account)
+	CreateHashrateContract(cman.ethClient, sellerAddress, sellerPrivateKey, ts.cloneFactoryAddress, int(0), int(10), int(31), int(contractLength), cman.account)
+	CreateHashrateContract(cman.ethClient, sellerAddress, sellerPrivateKey, ts.cloneFactoryAddress, int(0), int(10), int(41), int(contractLength), cman.account)
 
 	// wait until created hashrate contract was found before continuing
 loop1:
@@ -267,7 +268,7 @@ loop4:
 	//
 	// Test contract creation, purchasing, and target dest being updated while node is running
 	//
-	CreateHashrateContract(cman.ethClient, sellerAddress, sellerPrivateKey, ts.cloneFactoryAddress, int(0), int(0), int(100), int(contractLength), cman.account)
+	CreateHashrateContract(cman.ethClient, sellerAddress, sellerPrivateKey, ts.cloneFactoryAddress, int(0), int(10), int(100), int(contractLength), cman.account)
 
 loop5:
 	for {

@@ -145,8 +145,8 @@ func TestSellerRoutine(t *testing.T) {
 	//
 	// test startup with 1 running contract and 1 availabe contract
 	//
-	CreateHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, int(0), int(0), int(20), int(contractLength), buyerAddress)
-	CreateHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, int(0), int(0), int(10), int(contractLength), buyerAddress)
+	CreateHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, int(0), int(10), int(20), int(contractLength), buyerAddress)
+	CreateHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, int(0), int(10), int(10), int(contractLength), buyerAddress)
 
 	// wait until created hashrate contract was found before continuing
 loop1:
@@ -283,7 +283,7 @@ loop4:
 	// test early closeout from buyer
 	//
 	fmt.Print("\n\n/// Early Closeout Frome Buyer ///\n\n\n")
-	CreateHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, int(0), int(0), int(30), int(contractLength*10), buyerAddress)
+	CreateHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, int(0), int(10), int(30), int(contractLength*10), buyerAddress)
 	// publish new miner for sellers new contract
 	miner3 := msgbus.Miner{
 		ID:              msgbus.MinerID("MinerID03"),
@@ -348,7 +348,7 @@ loop6:
 	// test contract creation and going through full length with update made to target dest info from buyer while node is running
 	//
 	fmt.Print("\n\n/// Update Made To Target Dest By Buyer While Contract Is Running ///\n\n\n")
-	CreateHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, int(0), int(0), int(15), int(contractLength), buyerAddress)
+	CreateHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, int(0), int(10), int(15), int(contractLength), buyerAddress)
 	// publish new miner for sellers new contract
 	miner4 := msgbus.Miner{
 		ID:              msgbus.MinerID("MinerID04"),

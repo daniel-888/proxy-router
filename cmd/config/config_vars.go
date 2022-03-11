@@ -14,6 +14,7 @@ const (
 	ConfigContractEthereumNodeAddress ConfigConst = "ConfigContractEthereumNodeAddress"
 	ConfigContractClaimFunds          ConfigConst = "ConfigContractClaimFunds"
 	ConfigContractAccountIndex        ConfigConst = "ConfigContractAccountIndex"
+	ConfigContractTimeThreshold		  ConfigConst = "ConfigContractTimeThreshold"
 	ConfigConnectionListenIP          ConfigConst = "ConfigConnectionListenIP"
 	ConfigConnectionListenPort        ConfigConst = "ConfigConnectionListenPort"
 	ConfigConfigFilePath              ConfigConst = "ConfigConfigFilePath"
@@ -131,6 +132,16 @@ var ConfigMap = map[ConfigConst]configitem{
 		envname:    "ACCOUNTINDEX",
 		configname: "contract.accountindex",
 		defval:     "0",
+		configval:  nil,
+		envval:     nil,
+		flagval:    nil,
+	},
+	ConfigContractTimeThreshold: {
+		flagname:   "timethreshold",
+		flagusage:  "Time in seconds buyer contract manager's closeout monitor waits for miner hashrate to update before checking for closeout",
+		envname:    "TIMETHRESHOLD",
+		configname: "contract.timethreshold",
+		defval:     "10",
 		configval:  nil,
 		envval:     nil,
 		flagval:    nil,

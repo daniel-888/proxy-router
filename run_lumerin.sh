@@ -7,6 +7,7 @@ lumerin \
 	--ethnodeaddress="" \
 	--claimfunds="false" \
 	--accountindex="0" \
+	--timethreshold="10" \
 	--listenip="127.0.0.1" \
 	--listenport=3334 \
 	--configfile="./ganacheconfig.json" \

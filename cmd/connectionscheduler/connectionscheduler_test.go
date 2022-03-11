@@ -67,7 +67,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 		ID:       msgbus.ContractID("ContractID01"),
 		State:    msgbus.ContAvailableState,
 		Price:    0,
-		Limit:    0,
+		Limit:    10,
 		Speed:    miner1Hashrate,
 	}
 	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract1.ID), contract1)
@@ -280,8 +280,8 @@ func TestSellerConnectionScheduler(t *testing.T) {
 		t.Errorf("Scheduler did not update miner 6 with default dest and empty contract param")
 	}
 
-	fmt.Println("Ready Miners: ", cs.ReadyMiners.M)
-	fmt.Println("Busy Miners: ", cs.BusyMiners.M)
+	//fmt.Println("Ready Miners: ", cs.ReadyMiners.M)
+	//fmt.Println("Busy Miners: ", cs.BusyMiners.M)
 	time.Sleep(time.Second * 2)
 
 	//
@@ -292,7 +292,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 		ID:       msgbus.ContractID("ContractID02"),
 		State:    msgbus.ContAvailableState,
 		Price:    0,
-		Limit:    0,
+		Limit:    10,
 		Speed:    52,
 	}
 	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract2.ID), contract2)
@@ -322,8 +322,8 @@ func TestSellerConnectionScheduler(t *testing.T) {
 		}
 	}
 
-	fmt.Println("Ready Miners: ", cs.ReadyMiners.M)
-	fmt.Println("Busy Miners: ", cs.BusyMiners.M)
+	//fmt.Println("Ready Miners: ", cs.ReadyMiners.M)
+	//fmt.Println("Busy Miners: ", cs.BusyMiners.M)
 	time.Sleep(time.Second * 2)
 }
 
@@ -418,7 +418,7 @@ func TestBuyerConnectionScheduler(t *testing.T) {
 		ID:       msgbus.ContractID("ContractID01"),
 		State:    msgbus.ContRunningState,
 		Price:    0,
-		Limit:    0,
+		Limit:    10,
 		Speed:    100,
 	}
 	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract1.ID), contract1)
@@ -430,7 +430,7 @@ func TestBuyerConnectionScheduler(t *testing.T) {
 		ID:       msgbus.ContractID("ContractID02"),
 		State:    msgbus.ContRunningState,
 		Price:    0,
-		Limit:    0,
+		Limit:    10,
 		Speed:    100,
 	}
 	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract2.ID), contract2)
