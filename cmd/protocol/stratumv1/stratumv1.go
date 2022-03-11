@@ -36,7 +36,7 @@ func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr) (s 
 
 	// Validate src and dst here
 
-	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	cs := &contextlib.ContextStruct{}
 	cs.SetMsgBus(mb)

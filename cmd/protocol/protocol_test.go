@@ -36,6 +36,36 @@ func TestNewProto(t *testing.T) {
 
 }
 
+func TestOpenConn(t *testing.T) {
+
+	ps := msgbus.New(1, nil)
+	src := lumerinlib.NewNetAddr(lumerinlib.TCP, "127.0.0.1:12345")
+	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, "127.0.0.1:12345")
+
+	ctx := context.Background()
+	cs := &contextlib.ContextStruct{}
+	cs.SetMsgBus(ps)
+	cs.SetSrc(src)
+	cs.SetDst(dst)
+	cs.SetProtocol(newProtcolFunc)
+	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
+	simple := &simple.SimpleStruct{
+		ctx: ctx,
+	}
+
+	proto := &ProtocolStruct{
+		ctx:    ctx,
+		simple: simple,
+	}
+
+	index, e := proto.OpenConn(dst)
+	if e != nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, fmt.Sprintf("New() problem:%s", e))
+	}
+	_ = index
+
+}
+
 //
 //
 //

@@ -216,7 +216,7 @@ func (ps *ProtocolStruct) Event() chan *simple.SimpleEvent {
 //
 func (ps *ProtocolStruct) OpenConn(dst net.Addr) (index int, e error) {
 
-	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	//
 	// Call simple layer to dial up a connection to the dst

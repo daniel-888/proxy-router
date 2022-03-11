@@ -230,7 +230,7 @@ func (svs *StratumV1Struct) handleMsgRemovedEvent(event msgbus.Event) {
 //
 func (svs *StratumV1Struct) handleConnReadEvent(event *simple.SimpleEvent) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	// Need a SimpleEventStruct to indicate the connectionID of the incoming read event
 
@@ -246,13 +246,13 @@ func (svs *StratumV1Struct) handleConnReadEvent(event *simple.SimpleEvent) {
 	if e != nil {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Called")
 	}
-	switch ret.(type) {
+	switch ret := ret.(type) {
 	case *stratumRequest:
-		svs.handleRequest(index, ret.(*stratumRequest))
+		svs.handleRequest(index, ret)
 	case *stratumResponse:
-		svs.handleResponse(index, ret.(*stratumResponse))
+		svs.handleResponse(index, ret)
 	case *stratumNotice:
-		svs.handleNotice(index, ret.(*stratumNotice))
+		svs.handleNotice(index, ret)
 	default:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Called")
 	}
