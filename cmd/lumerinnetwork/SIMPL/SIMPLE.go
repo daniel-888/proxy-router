@@ -75,6 +75,24 @@ type SimpleStruct struct {
 	connectionIndex   ConnUniqueID                                            //keeps track of connections in the mapping
 }
 
+/*
+a struct that contains the data and the event type being passed into the SimpleStruct
+*/
+type SimpleEvent struct {
+	EventType EventType
+	Data      interface{}
+}
+
+/*
+struct that tells the SimpleStruct which connection to provide
+the encoded data to
+*/
+type SimpleConn struct {
+	id ConnUniqueID
+	data []byte
+}
+
+
 type EventType string
 
 const NoEvent EventType = "noevent"
@@ -365,11 +383,6 @@ event handler related functionality
 // type EventType string
 
 var eventOne EventType = "eventOne"
-
-type SimpleEvent struct {
-	EventType EventType
-	Data      interface{}
-}
 
 //event handler function for the SimpleStruct which is viewable from the protocol layer
 func (s *SimpleStruct) EventHandler(e SimpleEvent) {
