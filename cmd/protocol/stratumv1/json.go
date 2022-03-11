@@ -240,7 +240,7 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 				//		}
 				//		r.Params = append(r.Params, z)
 				//	default:
-				//		panic(fmt.Sprintf(lumerinlib.FileLine()+" Error bad type:%T\n", v))
+				//		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Error bad type:%T\n", v))
 				//	}
 				//}
 
@@ -254,7 +254,7 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 					case float64:
 						r.Params = append(r.Params, fmt.Sprintf("%f", v.(float64)))
 					default:
-						panic(fmt.Sprintf(lumerinlib.FileLine()+" Error bad type:%T\n", v))
+						panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Error bad type:%T\n", v))
 					}
 				}
 
@@ -269,7 +269,7 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 		}
 
 	} else {
-		fmt.Printf(lumerinlib.FileLine()+"Error unmarshaling msg:%s\n", err)
+		fmt.Printf(lumerinlib.FileLineFunc()+"Error unmarshaling msg:%s\n", err)
 	}
 
 	return ret, err
@@ -304,7 +304,7 @@ func (r *stratumRequest) getID() (id int, err error) {
 	case string(CLIENT_MINING_SUGGEST_DIFFICULTY):
 	case string(CLIENT_MINING_SUGGEST_TARGET):
 	default:
-		return 0, fmt.Errorf(lumerinlib.FileLine()+" wrong method, got: %s", r.Method)
+		return 0, fmt.Errorf(lumerinlib.FileLineFunc()+" wrong method, got: %s", r.Method)
 	}
 
 	id = r.ID
@@ -319,7 +319,7 @@ func (r *stratumRequest) getID() (id int, err error) {
 func (r *stratumRequest) getAuthName() (name string, err error) {
 
 	if r.Method != string(CLIENT_MINING_AUTHORIZE) {
-		return "", fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.authorize, got: %s", r.Method)
+		return "", fmt.Errorf(lumerinlib.FileLineFunc()+" wrong method, expetecting mining.authorize, got: %s", r.Method)
 	}
 
 	// fmt.Printf(" type:%T", r.Params)
@@ -339,7 +339,7 @@ func (r *stratumRequest) getSetDifficulty() (difficulty float64, err error) {
 	difficulty = 0.0
 
 	if r.Method != string(SERVER_MINING_SET_DIFFICULTY) {
-		err = fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.set_difficulty, got: %s", r.Method)
+		err = fmt.Errorf(lumerinlib.FileLineFunc()+" wrong method, expetecting mining.set_difficulty, got: %s", r.Method)
 	} else {
 
 		switch t := r.Params[0].(type) {
@@ -352,7 +352,7 @@ func (r *stratumRequest) getSetDifficulty() (difficulty float64, err error) {
 		case float64:
 			difficulty = r.Params[0].(float64)
 		default:
-			err = fmt.Errorf(lumerinlib.FileLine()+" Error bad type:%T\n", t)
+			err = fmt.Errorf(lumerinlib.FileLineFunc()+" Error bad type:%T\n", t)
 		}
 	}
 
@@ -380,7 +380,7 @@ func (r *stratumRequest) getSetDifficulty() (difficulty float64, err error) {
 func (r *stratumRequest) getMiningNotifyJobID() (jobid string, err error) {
 
 	if r.Method != string(SERVER_MINING_NOTIFY) {
-		err = fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.notify, got: %s", r.Method)
+		err = fmt.Errorf(lumerinlib.FileLineFunc()+" wrong method, expetecting mining.notify, got: %s", r.Method)
 	} else {
 		jobid = r.Params[0].(string)
 	}
@@ -399,7 +399,7 @@ func (r *stratumRequest) createRequestMsg() (msg []byte, err error) {
 
 	msg, err = json.Marshal(r)
 	if err != nil {
-		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Request Err:%s\n", err)
+		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Request Err:%s\n", err)
 		return nil, err
 	}
 
@@ -421,7 +421,7 @@ func (r *stratumRequest) createNoticeMiningNotifyStruct() (nsd noticeMiningNotif
 	params := r.Params
 
 	if len(params) != 9 {
-		panic(fmt.Sprintf(lumerinlib.FileLine() + " Not enough parameter for Notify\n"))
+		panic(fmt.Sprintf(lumerinlib.FileLineFunc() + " Not enough parameter for Notify\n"))
 	}
 
 	for i, v := range params {
@@ -471,7 +471,7 @@ func (n *stratumNotice) getSetDifficulty() (difficulty float64, err error) {
 	difficulty = 0.0
 
 	if n.Method != string(SERVER_MINING_SET_DIFFICULTY) {
-		err = fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.set_difficulty, got: %s", n.Method)
+		err = fmt.Errorf(lumerinlib.FileLineFunc()+" wrong method, expetecting mining.set_difficulty, got: %s", n.Method)
 	} else {
 
 		switch t := n.Params.(type) {
@@ -491,7 +491,7 @@ func (n *stratumNotice) getSetDifficulty() (difficulty float64, err error) {
 			arr := v.([]interface{})
 			difficulty = arr[0].(float64)
 		default:
-			err = fmt.Errorf(lumerinlib.FileLine()+" Error bad type:%T\n", t)
+			err = fmt.Errorf(lumerinlib.FileLineFunc()+" Error bad type:%T\n", t)
 		}
 	}
 
@@ -519,7 +519,7 @@ func (n *stratumNotice) getSetDifficulty() (difficulty float64, err error) {
 func (n *stratumNotice) getMiningNotifyJobID() (jobid string, err error) {
 
 	if n.Method != string(SERVER_MINING_NOTIFY) {
-		err = fmt.Errorf(lumerinlib.FileLine()+" wrong method, expetecting mining.notify, got: %s", n.Method)
+		err = fmt.Errorf(lumerinlib.FileLineFunc()+" wrong method, expetecting mining.notify, got: %s", n.Method)
 	} else {
 
 		switch t := n.Params.(type) {
@@ -530,7 +530,7 @@ func (n *stratumNotice) getMiningNotifyJobID() (jobid string, err error) {
 			arr := v.([]interface{})
 			jobid = arr[0].(string)
 		default:
-			err = fmt.Errorf(lumerinlib.FileLine()+" Error bad type:%T\n", t)
+			err = fmt.Errorf(lumerinlib.FileLineFunc()+" Error bad type:%T\n", t)
 		}
 	}
 
@@ -556,7 +556,7 @@ func (n *stratumNotice) createNoticeMsg() (msg []byte, err error) {
 	}
 
 	if err != nil {
-		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Request Err:%s\n", err)
+		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Request Err:%s\n", err)
 		return nil, err
 	}
 
@@ -587,7 +587,7 @@ func (n *stratumNotice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
 
 	msg, err = json.Marshal(nsd)
 	if err != nil {
-		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Request Err:%s\n", err)
+		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Request Err:%s\n", err)
 		return nil, err
 	}
 
@@ -675,7 +675,7 @@ func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 
 	msg, err = json.Marshal(nsd)
 	if err != nil {
-		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Request Err:%s\n", err)
+		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Request Err:%s\n", err)
 		return nil, err
 	}
 
@@ -696,7 +696,7 @@ func (n *stratumNotice) createNoticeMiningNotifyStruct() (nsd noticeMiningNotify
 	params := n.Params.([]interface{})
 
 	if len(params) != 9 {
-		panic(fmt.Sprintf(lumerinlib.FileLine() + " Not enough parameter for Notify\n"))
+		panic(fmt.Sprintf(lumerinlib.FileLineFunc() + " Not enough parameter for Notify\n"))
 	}
 
 	for i, v := range params {
@@ -744,7 +744,7 @@ func (r *stratumResponse) getAuthResult() (ret bool, err error) {
 
 	_, ok := r.Result.(bool)
 	if !ok {
-		err = fmt.Errorf(lumerinlib.FileLine()+" result is wrong type:%T", r.Result)
+		err = fmt.Errorf(lumerinlib.FileLineFunc()+" result is wrong type:%T", r.Result)
 	} else {
 		ret = r.Result.(bool)
 	}
@@ -762,7 +762,7 @@ func (r *stratumResponse) createResponseMsg() (msg []byte, err error) {
 
 	msg, err = json.Marshal(r)
 	if err != nil {
-		fmt.Printf(lumerinlib.FileLine()+"Error Marshaling Response Err:%s\n", err)
+		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Response Err:%s\n", err)
 		return nil, err
 	}
 

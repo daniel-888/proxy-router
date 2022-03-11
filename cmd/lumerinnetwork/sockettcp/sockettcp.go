@@ -92,7 +92,7 @@ func (r *readStruct) Buf() []byte {
 //
 func Listen(ctx context.Context, network string, addr string) (l *ListenTCPStruct, e error) {
 
-	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	//
 	// network can be tcp, tcp4 or tcp6
@@ -147,7 +147,7 @@ func Listen(ctx context.Context, network string, addr string) (l *ListenTCPStruc
 //
 func (l *ListenTCPStruct) goWaitOnCancel() {
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	<-l.ctx.Done()
 	e := l.Close()
@@ -161,7 +161,7 @@ func (l *ListenTCPStruct) goWaitOnCancel() {
 //
 func (l *ListenTCPStruct) goAccept() {
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	defer close(l.accept)
 
@@ -195,7 +195,7 @@ func (l *ListenTCPStruct) goAccept() {
 //
 func (l *ListenTCPStruct) Accept() (s *SocketTCPStruct, e error) {
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	select {
 	case s := <-l.accept:
@@ -212,7 +212,7 @@ func (l *ListenTCPStruct) Accept() (s *SocketTCPStruct, e error) {
 //
 func (l *ListenTCPStruct) closed() bool {
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	select {
 	case <-l.ctx.Done():
@@ -227,7 +227,7 @@ func (l *ListenTCPStruct) closed() bool {
 //
 func (l *ListenTCPStruct) Close() error {
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	return l.listener.Close()
 }
@@ -237,7 +237,7 @@ func (l *ListenTCPStruct) Close() error {
 //
 func (l *ListenTCPStruct) Cancel() {
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	l.cancel()
 }
@@ -247,7 +247,7 @@ func (l *ListenTCPStruct) Cancel() {
 //
 func (l *ListenTCPStruct) Addr() (addr net.Addr, e error) {
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	addr = l.listener.Addr()
 
@@ -259,7 +259,7 @@ func (l *ListenTCPStruct) Addr() (addr net.Addr, e error) {
 //
 func (l *ListenTCPStruct) Status() (ltss ListenerStatusStruct, e error) {
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	ltss = l.status
 
@@ -272,7 +272,7 @@ func (l *ListenTCPStruct) Status() (ltss ListenerStatusStruct, e error) {
 //
 func Dial(ctx context.Context, network string, addr string) (s *SocketTCPStruct, e error) {
 
-	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	//
 	// network can be tcp, tcp4 or tcp6
@@ -304,7 +304,7 @@ func Dial(ctx context.Context, network string, addr string) (s *SocketTCPStruct,
 		s = createNewSocket(ctx, conn)
 	}
 
-	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" Complete")
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Complete")
 
 	return s, e
 }
@@ -314,7 +314,7 @@ func Dial(ctx context.Context, network string, addr string) (s *SocketTCPStruct,
 //
 func createNewSocket(ctx context.Context, conn net.Conn) (soc *SocketTCPStruct) {
 
-	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	rc := make(chan readStruct, TCPReadChannelLen)
 	ctx, cancel := contextlib.CreateNewContext(ctx)
@@ -343,13 +343,13 @@ func createNewSocket(ctx context.Context, conn net.Conn) (soc *SocketTCPStruct) 
 //
 func (s *SocketTCPStruct) goWaitOnCancel() {
 
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	<-s.ctx.Done()
 	log.Println("... shutting down socket")
 	e := s.Close()
 	if e != nil {
-		fmt.Printf(lumerinlib.FileLine()+" Close() returned error %s\n", e)
+		fmt.Printf(lumerinlib.FileLineFunc()+" Close() returned error %s\n", e)
 	}
 
 	fmt.Printf(lumerinlib.Funcname() + " exit func\n")
@@ -360,7 +360,7 @@ func (s *SocketTCPStruct) goWaitOnCancel() {
 //
 func (s *SocketTCPStruct) closed() bool {
 
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	select {
 	case <-s.ctx.Done():
@@ -375,7 +375,7 @@ func (s *SocketTCPStruct) closed() bool {
 //
 func (s *SocketTCPStruct) goRead() {
 
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	defer close(s.readchan)
 
@@ -383,13 +383,13 @@ func (s *SocketTCPStruct) goRead() {
 
 	for !s.closed() {
 
-		fmt.Printf(lumerinlib.Funcname() + " enter for loop\n")
+		contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" enter for loop")
 
 		var e error
 		buf := make([]byte, TCPReadBufferSize)
 		readcount, e := s.socket.Read(buf)
 
-		fmt.Printf(lumerinlib.Funcname()+" Read() count:%d\n", readcount)
+		contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" count:%d\n", readcount)
 
 		if e != nil {
 			var err error = nil
@@ -401,7 +401,7 @@ func (s *SocketTCPStruct) goRead() {
 				case <-s.ctx.Done():
 					err = ErrSocTCPClosed
 				default:
-					err = fmt.Errorf("soc.goRead() returned error: %s", e)
+					contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Read() returned error: %s", e)
 				}
 			}
 
@@ -433,7 +433,7 @@ func (s *SocketTCPStruct) goRead() {
 //
 func (s *SocketTCPStruct) ReadReady() (ready bool) {
 
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	if s.closed() {
 		return false
@@ -454,10 +454,10 @@ func (s *SocketTCPStruct) ReadReady() (ready bool) {
 //
 func (s *SocketTCPStruct) Read(buf []byte) (count int, e error) {
 
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	if cap(buf) == 0 {
-		panic(fmt.Errorf(lumerinlib.FileLine() + " Read() buffer capacity is zero"))
+		panic(fmt.Errorf(lumerinlib.FileLineFunc() + " Read() buffer capacity is zero"))
 	}
 
 	if s.closed() {
@@ -530,10 +530,10 @@ FORLOOP:
 //
 func (s *SocketTCPStruct) Write(buf []byte) (count int, e error) {
 
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	if len(buf) == 0 {
-		panic(fmt.Errorf(lumerinlib.FileLine() + " Write() buffer lenth is zero"))
+		panic(fmt.Errorf(lumerinlib.FileLineFunc() + " Write() buffer lenth is zero"))
 	}
 
 	if s.closed() {
@@ -555,7 +555,7 @@ func (s *SocketTCPStruct) Write(buf []byte) (count int, e error) {
 //
 func (s *SocketTCPStruct) Status() (ss SocketStatusStruct, e error) {
 
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	if s.closed() {
 		e = ErrSocTCPClosed
@@ -570,7 +570,7 @@ func (s *SocketTCPStruct) Status() (ss SocketStatusStruct, e error) {
 //
 func (s *SocketTCPStruct) Close() error {
 
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	s.cancel() // For good measure
 
@@ -582,7 +582,7 @@ func (s *SocketTCPStruct) Close() error {
 //
 func (s *SocketTCPStruct) LocalAddrString() string {
 
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	return s.socket.LocalAddr().String()
 }
@@ -592,7 +592,7 @@ func (s *SocketTCPStruct) LocalAddrString() string {
 //
 func (s *SocketTCPStruct) RemoteAddrString() string {
 
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	return s.socket.RemoteAddr().String()
 }

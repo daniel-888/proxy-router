@@ -23,7 +23,7 @@ import (
 //
 func (svs *StratumV1Struct) handleMsgUpdateEvent(event msgbus.Event) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	// Parse Event Msg
 
@@ -33,10 +33,10 @@ func (svs *StratumV1Struct) handleMsgUpdateEvent(event msgbus.Event) {
 		// Check that we have the correct miner ID
 		currentRec, ok := event.Data.(msgbus.Miner)
 		if !ok {
-			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" event.Data is not a msgbus.Miner struct")
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" event.Data is not a msgbus.Miner struct")
 		}
 		if svs.minerRec.ID != currentRec.ID {
-			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" event.Data records do not match up")
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" event.Data records do not match up")
 		}
 
 		// Compare what has changed
@@ -50,7 +50,7 @@ func (svs *StratumV1Struct) handleMsgUpdateEvent(event msgbus.Event) {
 
 	// Ignore all others
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -63,11 +63,11 @@ func (svs *StratumV1Struct) handleMsgUpdateEvent(event msgbus.Event) {
 //
 func (svs *StratumV1Struct) handleMsgDeleteEvent(event msgbus.Event) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -79,11 +79,11 @@ func (svs *StratumV1Struct) handleMsgDeleteEvent(event msgbus.Event) {
 //
 func (svs *StratumV1Struct) handleMsgGetEvent(event msgbus.Event) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -95,11 +95,11 @@ func (svs *StratumV1Struct) handleMsgGetEvent(event msgbus.Event) {
 //
 func (svs *StratumV1Struct) handleMsgIndexEvent(event msgbus.Event) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -111,11 +111,11 @@ func (svs *StratumV1Struct) handleMsgIndexEvent(event msgbus.Event) {
 //
 func (svs *StratumV1Struct) handleMsgSearchEvent(event msgbus.Event) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -127,11 +127,11 @@ func (svs *StratumV1Struct) handleMsgSearchEvent(event msgbus.Event) {
 //
 func (svs *StratumV1Struct) handleMsgSearchIndexEvent(event msgbus.Event) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -144,11 +144,11 @@ func (svs *StratumV1Struct) handleMsgSearchIndexEvent(event msgbus.Event) {
 //
 func (svs *StratumV1Struct) handleMsgPublishEvent(event msgbus.Event) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -161,11 +161,11 @@ func (svs *StratumV1Struct) handleMsgPublishEvent(event msgbus.Event) {
 //
 func (svs *StratumV1Struct) handleMsgUnpublishEvent(event msgbus.Event) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -178,11 +178,11 @@ func (svs *StratumV1Struct) handleMsgUnpublishEvent(event msgbus.Event) {
 //
 func (svs *StratumV1Struct) handleMsgSubscribedEvent(event msgbus.Event) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -195,11 +195,11 @@ func (svs *StratumV1Struct) handleMsgSubscribedEvent(event msgbus.Event) {
 //
 func (svs *StratumV1Struct) handleMsgUnsubscribedEvent(event msgbus.Event) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -213,11 +213,11 @@ func (svs *StratumV1Struct) handleMsgUnsubscribedEvent(event msgbus.Event) {
 //
 func (svs *StratumV1Struct) handleMsgRemovedEvent(event msgbus.Event) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -244,7 +244,7 @@ func (svs *StratumV1Struct) handleConnReadEvent(event *simple.SimpleEvent) {
 
 	ret, e := unmarshalMsg([]byte(event.Data.(string)))
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Called")
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Called")
 	}
 	switch ret := ret.(type) {
 	case *stratumRequest:
@@ -254,7 +254,7 @@ func (svs *StratumV1Struct) handleConnReadEvent(event *simple.SimpleEvent) {
 	case *stratumNotice:
 		svs.handleNotice(index, ret)
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Called")
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Called")
 	}
 }
 
@@ -265,9 +265,9 @@ func (svs *StratumV1Struct) handleConnReadEvent(event *simple.SimpleEvent) {
 //
 func (svs *StratumV1Struct) handleConnEOFEvent(event *simple.SimpleEvent) {
 
-	// contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	// contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Not Handled Yet!")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Not Handled Yet!")
 
 }
 
@@ -277,9 +277,9 @@ func (svs *StratumV1Struct) handleConnEOFEvent(event *simple.SimpleEvent) {
 //
 func (svs *StratumV1Struct) handleConnErrorEvent(event *simple.SimpleEvent) {
 
-	// contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	// contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Not Handled Yet!")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Not Handled Yet!")
 }
 
 //
@@ -288,9 +288,9 @@ func (svs *StratumV1Struct) handleConnErrorEvent(event *simple.SimpleEvent) {
 //
 func (svs *StratumV1Struct) handleErrorEvent(event *simple.SimpleEvent) {
 
-	// contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	// contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Not Handled Yet!")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Not Handled Yet!")
 }
 
 //
@@ -299,7 +299,7 @@ func (svs *StratumV1Struct) handleErrorEvent(event *simple.SimpleEvent) {
 //
 func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	// Recieved Src message
 	if index < 0 {
@@ -319,7 +319,7 @@ func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) {
 		case string(CLIENT_MINING_SUGGEST_TARGET):
 			svs.handleSrcSuggestTarget(request)
 		default:
-			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Bad Destination Message Type Recieved")
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Bad Destination Message Type Recieved")
 		}
 
 		// Received Dst message
@@ -338,7 +338,7 @@ func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) {
 		case string(SERVER_MINING_SET_GOAL):
 			svs.handleDstSetGoal(index, request)
 		default:
-			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Bad Destination Message Type Recieved")
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Bad Destination Message Type Recieved")
 		}
 
 	}
@@ -351,7 +351,7 @@ func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) {
 //
 func (svs *StratumV1Struct) handleResponse(index int, request *stratumResponse) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 }
 
@@ -368,17 +368,17 @@ func (svs *StratumV1Struct) handleNotice(index int, notice *stratumNotice) {
 		case string(SERVER_MINING_SET_DIFFICULTY):
 			svs.handleDstSetDifficulty(index, notice)
 		default:
-			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Bad Destination Message Type Recieved")
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Bad Destination Message Type Recieved")
 		}
 	} else {
 
 		switch notice.Method {
 		default:
-			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Bad Destination Message Type Recieved")
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Bad Destination Message Type Recieved")
 		}
 	}
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 }
 
@@ -401,7 +401,7 @@ func (svs *StratumV1Struct) handleSrcAuthorize(request *stratumRequest) {
 
 	msg, e := request.createRequestMsg()
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" createAuthorizeRequest() returned error:%s", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createAuthorizeRequest() returned error:%s", e)
 	}
 
 	svs.protocol.Write(msg)
@@ -412,7 +412,7 @@ func (svs *StratumV1Struct) handleSrcAuthorize(request *stratumRequest) {
 //
 func (svs *StratumV1Struct) handleSrcCapabilities(request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
 }
 
@@ -421,7 +421,7 @@ func (svs *StratumV1Struct) handleSrcCapabilities(request *stratumRequest) {
 //
 func (svs *StratumV1Struct) handleSrcDifficulty(request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
 }
 
@@ -430,7 +430,7 @@ func (svs *StratumV1Struct) handleSrcDifficulty(request *stratumRequest) {
 //
 func (svs *StratumV1Struct) handleSrcExtranonce(request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
 }
 
@@ -455,7 +455,7 @@ func (svs *StratumV1Struct) handleSrcSubscribe(request *stratumRequest) {
 //
 func (svs *StratumV1Struct) handleSrcSubmit(request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
 	// Forward the request to the default destination pool
 
@@ -466,7 +466,7 @@ func (svs *StratumV1Struct) handleSrcSubmit(request *stratumRequest) {
 //
 func (svs *StratumV1Struct) handleSrcSuggestTarget(request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
 }
 
@@ -475,7 +475,7 @@ func (svs *StratumV1Struct) handleSrcSuggestTarget(request *stratumRequest) {
 //
 func (svs *StratumV1Struct) handleDstGetVersion(index int, request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
 }
 
@@ -484,7 +484,7 @@ func (svs *StratumV1Struct) handleDstGetVersion(index int, request *stratumReque
 //
 func (svs *StratumV1Struct) handleDstPing(index int, request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
 }
 
@@ -493,7 +493,7 @@ func (svs *StratumV1Struct) handleDstPing(index int, request *stratumRequest) {
 //
 func (svs *StratumV1Struct) handleDstReconnect(index int, request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
 }
 
@@ -502,7 +502,7 @@ func (svs *StratumV1Struct) handleDstReconnect(index int, request *stratumReques
 //
 func (svs *StratumV1Struct) handleDstShowMessage(index int, request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
 }
 
@@ -511,7 +511,7 @@ func (svs *StratumV1Struct) handleDstShowMessage(index int, request *stratumRequ
 //
 func (svs *StratumV1Struct) handleDstSetExtranonce(index int, request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
 }
 
@@ -520,7 +520,7 @@ func (svs *StratumV1Struct) handleDstSetExtranonce(index int, request *stratumRe
 //
 func (svs *StratumV1Struct) handleDstSetGoal(index int, request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
 }
 
@@ -540,18 +540,18 @@ func (svs *StratumV1Struct) handleDstNotify(index int, request *stratumNotice) {
 
 	defroutidx, e := svs.protocol.GetDefaultRoute()
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" GetDefaultRouter returned error:%s", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDefaultRouter returned error:%s", e)
 	}
 
 	// This is the default route
 	if defroutidx == index {
 		msg, e := request.createNoticeMiningNotify()
 		if e != nil {
-			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" createNoticeMiningNotify() returned error:%s", e)
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createNoticeMiningNotify() returned error:%s", e)
 		}
 		svs.protocol.WriteSrc(msg)
 	} else {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 	}
 
 	// Ok, what do we do now?
@@ -570,18 +570,18 @@ func (svs *StratumV1Struct) handleDstSetDifficulty(index int, request *stratumNo
 
 	defroutidx, e := svs.protocol.GetDefaultRoute()
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" GetDefaultRouter returned error:%s", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDefaultRouter returned error:%s", e)
 	}
 
 	// This is the default route
 	if defroutidx == index {
 		msg, e := request.createNoticeSetDifficultyMsg()
 		if e != nil {
-			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" createNoticeSetDifficultyMsg() returned error:%s", e)
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createNoticeSetDifficultyMsg() returned error:%s", e)
 		}
 		svs.protocol.WriteSrc(msg)
 	} else {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" index is not the default dst, this is not handled yet")
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 	}
 
 }

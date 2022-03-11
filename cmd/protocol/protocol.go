@@ -37,7 +37,7 @@ type ProtocolStruct struct {
 func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 	var ok bool
 
-	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	//
 	// Basic error checking, make sure that the ContextStruct is
@@ -45,12 +45,12 @@ func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 	//
 	c := ctx.Value(contextlib.ContextKey)
 	if c == nil {
-		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLine()+" called")
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" called")
 	}
 
 	cs, ok := c.(*contextlib.ContextStruct)
 	if !ok {
-		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLine()+" Context Structre not correct")
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Structre not correct")
 	}
 	if cs.GetProtocol() == nil {
 		cs.Logf(contextlib.LevelPanic, "Context Protocol not defined")
@@ -94,7 +94,7 @@ func (p *ProtocolListenStruct) Ctx() context.Context {
 //
 func (pls *ProtocolListenStruct) Cancel() {
 
-	contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	pls.cancel()
 }
@@ -104,7 +104,7 @@ func (pls *ProtocolListenStruct) Cancel() {
 //
 func (pls *ProtocolListenStruct) Run() {
 
-	contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	go pls.goAccept()
 }
@@ -114,7 +114,7 @@ func (pls *ProtocolListenStruct) Run() {
 //
 func (pls *ProtocolListenStruct) goAccept() {
 
-	contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	go func() {
 		for {
@@ -122,7 +122,13 @@ func (pls *ProtocolListenStruct) goAccept() {
 			case <-pls.ctx.Done():
 				return
 			case newSimpleStruct := <-pls.simplelisten.Accept():
-				newSimpleStruct.Run(pls.ctx)
+				contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" simplelisten.Accept() recieved")
+
+				ps, e := NewProtocol(newSimpleStruct)
+				if e != nil {
+					contextlib.Logf(pls.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" NewProtocol() returned error:%s", e)
+					ps.Run()
+				}
 			}
 		}
 	}()
@@ -140,7 +146,7 @@ func (pls *ProtocolListenStruct) goAccept() {
 //
 func NewProtocol(s *simple.SimpleStruct) (pls *ProtocolStruct, e error) {
 
-	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	ctx, cancel := context.WithCancel(s.Ctx())
 	eventchan := make(chan *simple.SimpleEvent)
@@ -167,7 +173,7 @@ func NewProtocol(s *simple.SimpleStruct) (pls *ProtocolStruct, e error) {
 	index, e := ps.OpenConn(dst)
 	// First connection should be zero
 	if index != 0 {
-		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" called")
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" called")
 	}
 	e = ps.SetDefaultRoute(index)
 
@@ -186,7 +192,7 @@ func (ps *ProtocolStruct) Ctx() context.Context {
 //
 func (ps *ProtocolStruct) Cancel() {
 
-	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	ps.cancel()
 }
@@ -196,7 +202,8 @@ func (ps *ProtocolStruct) Cancel() {
 //
 func (ps *ProtocolStruct) Run() {
 
-	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	ps.simple.Run(ps.Ctx())
 	// go ps.goAccept()
 }
 
@@ -205,7 +212,7 @@ func (ps *ProtocolStruct) Run() {
 //
 func (ps *ProtocolStruct) Event() chan *simple.SimpleEvent {
 
-	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	return ps.eventchan
 }
@@ -296,7 +303,7 @@ func (ps *ProtocolStruct) Write(msg []byte) (count int, e error) {
 	// 	return count, e
 	// }
 	// if l != count {
-	// 	return count, fmt.Errorf(lumerinlib.FileLine() + " full msg length was not written")
+	// 	return count, fmt.Errorf(lumerinlib.FileLineFunc() + " full msg length was not written")
 	// }
 
 	return count, e
