@@ -444,6 +444,32 @@ func (svs *StratumV1Struct) handleSrcSubscribe(request *stratumRequest) {
 		svs.srcSubscribeRequest = request
 	}
 
+	id, e := request.getID()
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" getID() returned error:%s ", e)
+	}
+
+	var errval *string = nil
+	response := &stratumResponse{
+		ID:     id,
+		Error:  errval,
+		Result: nil,
+	}
+
+	// msg, e := response.createSubscribeResponseMsg()
+	msg, e := response.createResponseMsg()
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() returned error:%s ", e)
+	}
+
+	count, e := svs.protocol.WriteSrc(msg)
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() returned error:%s ", e)
+	}
+	if len(msg) != count {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Write() did not send all of the message msg len:%d, sent len:%d ", len(msg), count)
+	}
+
 	// Break down parameters into user and password
 	// store these in the StratumV1Struct
 

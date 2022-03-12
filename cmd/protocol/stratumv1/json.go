@@ -303,6 +303,7 @@ func (r *stratumRequest) getID() (id int, err error) {
 	case string(CLIENT_MINING_SUBSCRIBE):
 	case string(CLIENT_MINING_SUGGEST_DIFFICULTY):
 	case string(CLIENT_MINING_SUGGEST_TARGET):
+	case string(SERVER_MINING_SET_DIFFICULTY):
 	default:
 		return 0, fmt.Errorf(lumerinlib.FileLineFunc()+" wrong method, got: %s", r.Method)
 	}
@@ -756,6 +757,30 @@ func (r *stratumResponse) getAuthResult() (ret bool, err error) {
 //
 //------------------------------------------------------
 func (r *stratumResponse) createResponseMsg() (msg []byte, err error) {
+
+	err = nil
+	// fmt.Printf("Create Stratum Response: %v\n", r)
+
+	msg, err = json.Marshal(r)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Response Err:%s\n", err)
+		return nil, err
+	}
+
+	return msg, err
+}
+
+//------------------------------------------------------
+// createSubscribeResponseMsg
+//
+// type stratumResponse struct {
+// 	ID     int         `json:"id"`
+// 	Error  *string     `json:"error"`
+// 	Result interface{} `json:"result"`
+// 	Reject interface{} `json:"reject-reason,omitempty"`
+// }
+//------------------------------------------------------
+func (r *stratumResponse) createSubscribeResponseMsg() (msg []byte, err error) {
 
 	err = nil
 	// fmt.Printf("Create Stratum Response: %v\n", r)

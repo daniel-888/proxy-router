@@ -15,6 +15,7 @@ import (
 
 var port int = 3334
 var ip string = "127.0.0.1"
+var testString = "This is a test string\n"
 
 //
 //
@@ -22,15 +23,12 @@ var ip string = "127.0.0.1"
 func TestNewProto(t *testing.T) {
 
 	sls := newConnection(t)
-
 	sls.Run()
 	sls.Cancel()
 
 }
 
 func TestNewConnection(t *testing.T) {
-
-	var testString = "This is a test string\n"
 
 	sls := newConnection(t)
 	sls.Run()
@@ -70,7 +68,7 @@ func newConnection(t *testing.T) (sls *StratumV1ListenStruct) {
 
 	sls, err := New(ctx, ps, src, dst, StratumV1Func)
 	if err != nil {
-		t.Errorf("New() problem:%s", err)
+		t.Errorf("New() returne error:%s", err)
 	}
 
 	return sls
@@ -80,9 +78,13 @@ func newConnection(t *testing.T) (sls *StratumV1ListenStruct) {
 //
 //
 //
-func connect(t *testing.T, ctx context.Context) (*sockettcp.SocketTCPStruct, error) {
-	_ = t
-	return sockettcp.Dial(ctx, "tcp", fmt.Sprintf("%s:%d", ip, port))
+func connect(t *testing.T, ctx context.Context) (s *sockettcp.SocketTCPStruct, e error) {
+	s, e = sockettcp.Dial(ctx, "tcp", fmt.Sprintf("%s:%d", ip, port))
+	if e != nil {
+		t.Errorf("Dial() returned error:%s", e)
+	}
+
+	return s, e
 }
 
 //
