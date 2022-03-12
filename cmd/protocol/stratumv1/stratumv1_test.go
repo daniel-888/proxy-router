@@ -3,6 +3,7 @@ package stratumv1
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
 
 	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
@@ -13,7 +14,7 @@ import (
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
-var port int = 3334
+var basePort int = 50000
 var ip string = "127.0.0.1"
 var testString = "This is a test string\n"
 
@@ -22,7 +23,10 @@ var testString = "This is a test string\n"
 //
 func TestNewProto(t *testing.T) {
 
-	sls := newConnection(t)
+	localport := getRandPort()
+	addr := fmt.Sprintf("%s:%d", ip, localport)
+
+	sls := newConnection(t, addr)
 	sls.Run()
 	sls.Cancel()
 
@@ -30,10 +34,13 @@ func TestNewProto(t *testing.T) {
 
 func TestNewConnection(t *testing.T) {
 
-	sls := newConnection(t)
+	localport := getRandPort()
+	addr := fmt.Sprintf("%s:%d", ip, localport)
+
+	sls := newConnection(t, addr)
 	sls.Run()
 
-	s, e := connect(t, sls.Ctx())
+	s, e := connect(t, sls.Ctx(), addr)
 	if e != nil {
 		t.Errorf("connect() error:%s", e)
 	}
@@ -57,9 +64,8 @@ func TestNewConnection(t *testing.T) {
 //
 // newConnection()
 //
-func newConnection(t *testing.T) (sls *StratumV1ListenStruct) {
+func newConnection(t *testing.T, addr string) (sls *StratumV1ListenStruct) {
 
-	addr := fmt.Sprintf("%s:%d", ip, port)
 	ps := msgbus.New(1, nil)
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
@@ -78,8 +84,8 @@ func newConnection(t *testing.T) (sls *StratumV1ListenStruct) {
 //
 //
 //
-func connect(t *testing.T, ctx context.Context) (s *sockettcp.SocketTCPStruct, e error) {
-	s, e = sockettcp.Dial(ctx, "tcp", fmt.Sprintf("%s:%d", ip, port))
+func connect(t *testing.T, ctx context.Context, addr string) (s *sockettcp.SocketTCPStruct, e error) {
+	s, e = sockettcp.Dial(ctx, "tcp", addr)
 	if e != nil {
 		t.Errorf("Dial() returned error:%s", e)
 	}
@@ -124,4 +130,12 @@ func StratumV1Func(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
 
 	// return the event handler channel to the caller (the simple layer accept() function )
 	return svs.protocol.Event()
+}
+
+//
+//
+//
+func getRandPort() (port int) {
+	port = rand.Intn(10000) + basePort
+	return port
 }

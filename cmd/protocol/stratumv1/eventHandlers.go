@@ -396,16 +396,41 @@ func (svs *StratumV1Struct) handleSrcAuthorize(request *stratumRequest) {
 		svs.srcAuthRequest = request
 	}
 
+	id, e := request.getID()
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" getID() returned error:%s ", e)
+	}
+
+	var errval *string = nil
+	response := &stratumResponse{
+		ID:     id,
+		Error:  errval,
+		Result: nil,
+	}
+
+	msg, e := response.createResponseMsg()
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() returned error:%s ", e)
+	}
+
+	count, e := svs.protocol.WriteSrc(msg)
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() returned error:%s ", e)
+	}
+	if len(msg) != count {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Write() did not send all of the message msg len:%d, sent len:%d ", len(msg), count)
+	}
+
 	//
 	//  Need to check if the dest has alternate credentials and substitute them
 	//
 
-	msg, e := request.createRequestMsg()
-	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createAuthorizeRequest() returned error:%s", e)
-	}
+	// msg, e := request.createRequestMsg()
+	// if e != nil {
+	// 	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createAuthorizeRequest() returned error:%s", e)
+	// }
+	// svs.protocol.Write(msg)
 
-	svs.protocol.Write(msg)
 }
 
 //
@@ -436,7 +461,8 @@ func (svs *StratumV1Struct) handleSrcExtranonce(request *stratumRequest) {
 }
 
 //
-//
+// handleSrcSubscribe()
+// takes a parsed message from the source
 //
 func (svs *StratumV1Struct) handleSrcSubscribe(request *stratumRequest) {
 

@@ -26,8 +26,8 @@ type StratumV1ListenStruct struct {
 type StratumV1Struct struct {
 	protocol            *protocol.ProtocolStruct
 	minerRec            *msgbus.Miner
-	srcSubscribeRequest *stratumRequest
-	srcAuthRequest      *stratumRequest
+	srcSubscribeRequest *stratumRequest // Copy of recieved Subscribe Request from Source
+	srcAuthRequest      *stratumRequest // Copy of recieved Authorize Request from Source
 	// Add in stratum state information here
 }
 
