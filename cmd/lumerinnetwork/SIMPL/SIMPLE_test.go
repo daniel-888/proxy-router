@@ -2,7 +2,7 @@ package simple
 
 import (
 	"context"
-	_ "fmt"
+	_"fmt"
 	"net"
 	_ "reflect"
 	"testing"
@@ -163,15 +163,22 @@ steps:
 */
 func TestSimpleStructCreateOnRun(t *testing.T) {
 	simpleListenStruct := generateSimpleListenStruct()
-	simpleListenStruct.Run()
+	go simpleListenStruct.Run()
 
+	var simpleStruct *SimpleStruct
 
 	//go routine to listen for the simpleListenStruct accept channel
-	go func(){
-		_ = <- simpleListenStruct.accept
-		return
-	}()
+	go func() {
+		simpleStruct = <- simpleListenStruct.accept
+		t.Log("\n\n\nmeow\n\n\n")
+		t.Logf("%+v", simpleStruct)
+		if simpleStruct.eventHandler != 1 {
+			t.Error("did not create an accurate SimpleStruct")
+		}
 	//need a way to detect if the SimpleStruct was correctly generated
+	}()
+
+
 }
 
 /*
@@ -192,28 +199,29 @@ func TestProtocolDialTheSimpleStruct(t *testing.T) {
 
 	go func(){
 		simpleStruct = <- simpleListenStruct.accept
-		return
+		//initial dial 
+		uid, err := simpleStruct.Dial(testAddr)
+
+		if uid != 0 {
+			t.Error("uid is incorrect")
+		}
+
+		if err != nil {
+			t.Errorf("error creating a connection: %s", err)
+		}
+
+		//second dial to ensure that the uid increases as expected
+		uid2, err := simpleStruct.Dial(testAddr)
+		if uid2 != 1 {
+			t.Error("uid is incorrect")
+		}
+
+		if err != nil {
+			t.Errorf("error creating a connection: %s", err)
+		}
+
 	}()
-
-	uid, err := simpleStruct.Dial(testAddr)
-
-	if uid != 0 {
-		t.Error("uid is incorrect")
-	}
-
-	if err != nil {
-		t.Errorf("error creating a connection: %s", err)
-	}
-
 }
-
-
-
-
-
-
-
-
 
 
 
