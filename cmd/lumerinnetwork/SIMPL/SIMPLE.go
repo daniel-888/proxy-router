@@ -3,7 +3,7 @@ package simple
 import (
 	"context"
 	"errors"
-	_ "fmt"
+	_"fmt"
 	"net"
 	_ "time"
 
@@ -174,7 +174,7 @@ func (s *SimpleListenStruct) Run() error {
 	ctx, cancel := context.WithCancel(s.ctx)
 	//creating a new simple struct to pass to the protocol layer
 	newSimpleStruct := &SimpleStruct{
-		ctx:          ctx,
+		ctx:          ctx, //provided from the SimpleListenStruct
 		cancel:       cancel,
 		eventHandler: 1, //temporary value of 1 until the eventHandler layout is resolved
 	}
@@ -226,10 +226,6 @@ It is assumed that Run() can only be called once
 TODO pass context to SimpleListenStruct's designated connection layer
 */
 func (s *SimpleStruct) Run(c context.Context) error {
-	// loop to continuously listen for messages coming in
-	// on the channels assigned to the connection layer
-	// and the msgbus
-
 	if s.maxMessageSize == 0 {
 		s.maxMessageSize = 10 //setting the default max message size to 10 bytes
 	}
@@ -306,9 +302,10 @@ func (s *SimpleStruct) Dial(dst net.Addr) (ConnUniqueID, error) {
 /*
 function to retrieve the connection mapped to a unique id
 */
-//func (s *SimpleStruct) GetConnBasedOnConnUniqueID(x ConnUniqueID) (*lumerinconnection.LumerinSocketStruct) {
-//	return s.connectionMapping[x]
-//}
+func (s *SimpleStruct) GetConnBasedOnConnUniqueID(x ConnUniqueID) (*lumerinconnection.LumerinSocketStruct) {
+	return s.connectionMapping[x]
+}
+
 
 // Reconnect dropped connection
 func (s *SimpleStruct) Redial(u ConnUniqueID) {}
