@@ -3,7 +3,6 @@ package lumerinconnection
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/sockettcp"
@@ -131,14 +130,18 @@ func (ll *LumerinListenStruct) Accept() (lci *LumerinSocketStruct, e error) {
 		tcp := ll.listener.(*sockettcp.ListenTCPStruct)
 		var soc *sockettcp.SocketTCPStruct
 		soc, e = tcp.Accept()
-		if e == nil {
-			lci = &LumerinSocketStruct{
-				ctx:    ll.ctx,
-				socket: soc,
-			}
+		if e != nil {
+			contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Accept() error returned: %s", e)
+			return nil, e
 		}
+
+		lci = &LumerinSocketStruct{
+			ctx:    ll.ctx,
+			socket: soc,
+		}
+
 	default:
-		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Type:'%T' not supported\n", ll.listener))
+		contextlib.Logf(ll.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", ll.listener)
 	}
 	return lci, e
 }
@@ -155,7 +158,7 @@ func (ll *LumerinListenStruct) Cancel() {
 		tcp := ll.listener.(*sockettcp.ListenTCPStruct)
 		tcp.Cancel()
 	default:
-		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Type:'%T' not supported\n", ll.listener))
+		contextlib.Logf(ll.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", ll.listener)
 	}
 }
 
@@ -170,8 +173,11 @@ func (ll *LumerinListenStruct) Close() (e error) {
 	case *sockettcp.ListenTCPStruct:
 		tcp := ll.listener.(*sockettcp.ListenTCPStruct)
 		e = tcp.Close()
+		if e != nil {
+			contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Close() error returned: %s", e)
+		}
 	default:
-		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Type:'%T' not supported\n", ll.listener))
+		contextlib.Logf(ll.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", ll.listener)
 	}
 	return e
 }
@@ -199,11 +205,13 @@ func Dial(ctx context.Context, addr net.Addr) (lci *LumerinSocketStruct, e error
 	case TCP6:
 		var tcp *sockettcp.SocketTCPStruct
 		tcp, e = sockettcp.Dial(ctx, string(lumproto), ipaddr)
-		if e == nil {
-			lci = &LumerinSocketStruct{
-				ctx:    ctx,
-				socket: tcp,
-			}
+		if e != nil {
+			contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Dial() error returned: %s", e)
+			return nil, e
+		}
+		lci = &LumerinSocketStruct{
+			ctx:    ctx,
+			socket: tcp,
 		}
 
 	case UDP:
@@ -219,10 +227,10 @@ func Dial(ctx context.Context, addr net.Addr) (lci *LumerinSocketStruct, e error
 	case UDPTRUNK:
 		fallthrough
 	case ANYAVAILABLE:
-		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Protocol not implemented:%s", string(lumproto)))
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Protocol not implemented yet: %s", lumproto)
 
 	default:
-		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Proto:'%s' not supported\n", lumproto))
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, lumproto: %s", lumproto)
 	}
 
 	return lci, e
@@ -239,7 +247,7 @@ func (l *LumerinSocketStruct) ReadReady() (ready bool) {
 	case *sockettcp.SocketTCPStruct:
 		ready = l.socket.(*sockettcp.SocketTCPStruct).ReadReady()
 	default:
-		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Type:'%T' not supported\n", l.socket))
+		contextlib.Logf(l.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", l.socket)
 	}
 
 	return ready
@@ -248,16 +256,21 @@ func (l *LumerinSocketStruct) ReadReady() (ready bool) {
 //
 //
 //
-func (l *LumerinSocketStruct) Read(buf []byte) (int, error) {
+func (l *LumerinSocketStruct) Read(buf []byte) (count int, e error) {
 
 	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:
-		return l.socket.(*sockettcp.SocketTCPStruct).Read(buf)
+		count, e = l.socket.(*sockettcp.SocketTCPStruct).Read(buf)
+		if e != nil {
+			contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Read() returned error: %s", e)
+		}
 	default:
-		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Type:'%T' not supported\n", l.socket))
+		contextlib.Logf(l.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", l.socket)
 	}
+
+	return count, e
 }
 
 //
@@ -270,8 +283,11 @@ func (l *LumerinSocketStruct) Write(buf []byte) (count int, e error) {
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:
 		count, e = l.socket.(*sockettcp.SocketTCPStruct).Write(buf)
+		if e != nil {
+			contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Write() returned error: %s", e)
+		}
 	default:
-		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Type:'%T' not supported\n", l.socket))
+		contextlib.Logf(l.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", l.socket)
 	}
 
 	return count, e
@@ -288,11 +304,14 @@ func (l *LumerinSocketStruct) Status() (stat LumerinConnectionStatusStruct, e er
 	case *sockettcp.SocketTCPStruct:
 		_, e = l.socket.(*sockettcp.SocketTCPStruct).Status()
 
+		if e != nil {
+			contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Status() returned error: %s", e)
+		}
 		// Fill in here
 		stat = LumerinConnectionStatusStruct{}
 
 	default:
-		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Type:'%T' not supported\n", l.socket))
+		contextlib.Logf(l.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", l.socket)
 	}
 
 	return stat, e
@@ -308,8 +327,11 @@ func (l *LumerinSocketStruct) Close() (e error) {
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:
 		e = l.socket.(*sockettcp.SocketTCPStruct).Close()
+		if e != nil {
+			contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Close() returned error: %s", e)
+		}
 	default:
-		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Type:'%T' not supported\n", l.socket))
+		contextlib.Logf(l.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", l.socket)
 	}
 
 	return e

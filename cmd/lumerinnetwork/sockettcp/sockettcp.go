@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"time"
 
@@ -152,7 +151,7 @@ func (l *ListenTCPStruct) goWaitOnCancel() {
 	<-l.ctx.Done()
 	e := l.Close()
 	if e != nil {
-		fmt.Printf(lumerinlib.Funcname()+"Close() returned error %s\n", e)
+		contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" close returned error")
 	}
 }
 
@@ -171,15 +170,15 @@ func (l *ListenTCPStruct) goAccept() {
 		if e != nil {
 			select {
 			case <-l.ctx.Done():
-				fmt.Printf("soc.Accpet() Closed\n")
+				contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" closed")
 			default:
-				fmt.Printf("soc.Accpet() returned error: %s\n", e)
+				contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Accept() returned error:%s", e)
 			}
 			return
 		}
 
 		if conn == nil {
-			fmt.Printf("soc.Accpet() returned empty connection\n")
+			contextlib.Logf(l.ctx, contextlib.LevelWarn, lumerinlib.FileLineFunc()+" Accept() returned empty connection")
 			return
 		}
 
@@ -346,13 +345,13 @@ func (s *SocketTCPStruct) goWaitOnCancel() {
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	<-s.ctx.Done()
-	log.Println("... shutting down socket")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" shutting down socket")
 	e := s.Close()
 	if e != nil {
-		fmt.Printf(lumerinlib.FileLineFunc()+" Close() returned error %s\n", e)
+		contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Close() returned Error:%s", e)
 	}
 
-	fmt.Printf(lumerinlib.Funcname() + " exit func\n")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" exiting")
 }
 
 //
@@ -379,8 +378,6 @@ func (s *SocketTCPStruct) goRead() {
 
 	defer close(s.readchan)
 
-	fmt.Printf(lumerinlib.Funcname() + " enter func\n")
-
 	for !s.closed() {
 
 		contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" enter for loop")
@@ -389,7 +386,7 @@ func (s *SocketTCPStruct) goRead() {
 		buf := make([]byte, TCPReadBufferSize)
 		readcount, e := s.socket.Read(buf)
 
-		contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" count:%d\n", readcount)
+		contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+"Read buf count:%d", readcount)
 
 		if e != nil {
 			var err error = nil
@@ -424,7 +421,7 @@ func (s *SocketTCPStruct) goRead() {
 		s.readchan <- r
 	}
 
-	fmt.Printf(lumerinlib.Funcname() + " exit func\n")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" exiting")
 
 }
 

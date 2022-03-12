@@ -42,6 +42,7 @@ func (svs *StratumV1Struct) handleMsgUpdateEvent(event msgbus.Event) {
 		// Compare what has changed
 
 		if svs.minerRec.Dest != currentRec.Dest {
+			contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" Miner:%s Dest changed to: %s from %s", currentRec.ID, currentRec.Dest, svs.minerRec.Dest)
 			// Destination has changed...
 
 			// Start the process of transitioning to a new Dest
@@ -50,7 +51,7 @@ func (svs *StratumV1Struct) handleMsgUpdateEvent(event msgbus.Event) {
 
 	// Ignore all others
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
 	}
 
 }

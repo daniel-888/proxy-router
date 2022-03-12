@@ -13,7 +13,7 @@ import (
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
-var port int = 12345
+var port int = 3334
 var ip string = "127.0.0.1"
 
 //
