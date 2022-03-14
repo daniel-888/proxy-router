@@ -8,12 +8,15 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi/handlers"
-	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus/msgdata"
 )
 
-type APIRepos struct {
+// api holds dependencies for an external API.
+type api struct {
+	*gin.Engine
+
 	Config                *msgdata.ConfigInfoRepo
 	ContractManagerConfig *msgdata.ContractManagerConfigRepo
 	Connection            *msgdata.ConnectionRepo
@@ -23,33 +26,33 @@ type APIRepos struct {
 	NodeOperator          *msgdata.NodeOperatorRepo
 }
 
-func (api *APIRepos) InitializeJSONRepos(ps *msgbus.PubSub) {
-	api.Config = msgdata.NewConfigInfo(ps)
-	go api.Config.SubscribeToConfigInfoMsgBus()
+// New sets up a new API to access the given message bus data.
+func New(ps *msgbus.PubSub) *api {
+	api := &api{
+		Engine:                gin.Default(),
+		Config:                msgdata.NewConfigInfo(ps),
+		ContractManagerConfig: msgdata.NewContractManagerConfig(ps),
+		Connection:            msgdata.NewConnection(ps),
+		Contract:              msgdata.NewContract(ps),
+		Dest:                  msgdata.NewDest(ps),
+		Miner:                 msgdata.NewMiner(ps),
+		NodeOperator:          msgdata.NewNodeOperator(ps),
+	}
 
-	api.ContractManagerConfig = msgdata.NewContractManagerConfig(ps)
-	go api.ContractManagerConfig.SubscribeToContractManagerConfigMsgBus()
-
-	api.Connection = msgdata.NewConnection(ps)
-	go api.Connection.SubscribeToConnectionMsgBus()
-
-	api.Contract = msgdata.NewContract(ps)
-	go api.Contract.SubscribeToContractMsgBus()
-
-	api.Dest = msgdata.NewDest(ps)
-	go api.Dest.SubscribeToDestMsgBus()
-
-	api.Miner = msgdata.NewMiner(ps)
-	go api.Miner.SubscribeToMinerMsgBus()
-
-	api.NodeOperator = msgdata.NewNodeOperator(ps)
-	go api.NodeOperator.SubscribeToNodeOperatorMsgBus()
+	return api
 }
 
-func (api *APIRepos) RunAPI(port string, l *log.Logger) {
-	r := gin.Default()
+// Run will start up the API on the given port, with a given logger.
+func (api *api) Run(port string, l *log.Logger) {
+	go api.Config.SubscribeToConfigInfoMsgBus()
+	go api.ContractManagerConfig.SubscribeToContractManagerConfigMsgBus()
+	go api.Connection.SubscribeToConnectionMsgBus()
+	go api.Contract.SubscribeToContractMsgBus()
+	go api.Dest.SubscribeToDestMsgBus()
+	go api.Miner.SubscribeToMinerMsgBus()
+	go api.NodeOperator.SubscribeToNodeOperatorMsgBus()
 
-	configRoutes := r.Group("/config")
+	configRoutes := api.Group("/config")
 	{
 		configRoutes.GET("/", handlers.ConfigsGET(api.Config))
 		configRoutes.GET("/:id", handlers.ConfigGET(api.Config))
@@ -58,7 +61,7 @@ func (api *APIRepos) RunAPI(port string, l *log.Logger) {
 		configRoutes.DELETE("/:id", handlers.ConfigDELETE(api.Config))
 	}
 
-	contractManagerConfigRoutes := r.Group("/contractmanagerconfig")
+	contractManagerConfigRoutes := api.Group("/contractmanagerconfig")
 	{
 		contractManagerConfigRoutes.GET("/", handlers.ContractManagerConfigsGET(api.ContractManagerConfig))
 		contractManagerConfigRoutes.GET("/:id", handlers.ContractManagerConfigGET(api.ContractManagerConfig))
@@ -67,7 +70,7 @@ func (api *APIRepos) RunAPI(port string, l *log.Logger) {
 		contractManagerConfigRoutes.DELETE("/:id", handlers.ContractManagerConfigDELETE(api.ContractManagerConfig))
 	}
 
-	connectionRoutes := r.Group("/connection")
+	connectionRoutes := api.Group("/connection")
 	{
 		connectionRoutes.GET("/", handlers.ConnectionsGET(api.Connection))
 		connectionRoutes.GET("/:id", handlers.ConnectionGET(api.Connection))
@@ -76,12 +79,12 @@ func (api *APIRepos) RunAPI(port string, l *log.Logger) {
 		connectionRoutes.DELETE("/:id", handlers.ConnectionDELETE(api.Connection))
 	}
 
-	streamRoute := r.Group("/ws")
+	streamRoute := api.Group("/ws")
 	{
 		streamRoute.GET("/", handlers.ConnectionSTREAM(api.Connection))
 	}
 
-	contractRoutes := r.Group("/contract")
+	contractRoutes := api.Group("/contract")
 	{
 		contractRoutes.GET("/", handlers.ContractsGET(api.Contract))
 		contractRoutes.GET("/:id", handlers.ContractGET(api.Contract))
@@ -90,7 +93,7 @@ func (api *APIRepos) RunAPI(port string, l *log.Logger) {
 		contractRoutes.DELETE("/:id", handlers.ContractDELETE(api.Contract))
 	}
 
-	destRoutes := r.Group("/dest")
+	destRoutes := api.Group("/dest")
 	{
 		destRoutes.GET("/", handlers.DestsGET(api.Dest))
 		destRoutes.GET("/:id", handlers.DestGET(api.Dest))
@@ -99,7 +102,7 @@ func (api *APIRepos) RunAPI(port string, l *log.Logger) {
 		destRoutes.DELETE("/:id", handlers.DestDELETE(api.Dest))
 	}
 
-	minerRoutes := r.Group("/miner")
+	minerRoutes := api.Group("/miner")
 	{
 		minerRoutes.GET("/", handlers.MinersGET(api.Miner))
 		minerRoutes.GET("/:id", handlers.MinerGET(api.Miner))
@@ -108,7 +111,7 @@ func (api *APIRepos) RunAPI(port string, l *log.Logger) {
 		minerRoutes.DELETE("/:id", handlers.MinerDELETE(api.Miner))
 	}
 
-	nodeOperatorRoutes := r.Group("/nodeoperator")
+	nodeOperatorRoutes := api.Group("/nodeoperator")
 	{
 		nodeOperatorRoutes.GET("/", handlers.NodeOperatorsGET(api.NodeOperator))
 		nodeOperatorRoutes.GET("/:id", handlers.NodeOperatorGET(api.NodeOperator))
@@ -119,7 +122,7 @@ func (api *APIRepos) RunAPI(port string, l *log.Logger) {
 
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%s", port),
-		Handler:           r,
+		Handler:           api,
 		IdleTimeout:       20 * time.Second,
 		WriteTimeout:      60 * time.Second,
 		ReadHeaderTimeout: 20 * time.Second,

@@ -76,13 +76,12 @@ test steps
 2. checks the error message, test fails if the error message is anything but nil
 
 */
-func TestInitializeSimpleListenStruct(t *testing.T) {
-	_, err := New(generateTestContext(), generateTestAddr())
-	if err != nil {
-		t.Error("failed to initialize SimpleListenStruct")
-	}
-
-}
+// func TestInitializeSimpleListenStruct(t *testing.T) {
+// 	_, err := New(generateTestContext(), generateTestAddr())
+// 	if err != nil {
+// 		t.Error("failed to initialize SimpleListenStruct")
+// 	}
+// }
 
 /*
 test steps
@@ -91,11 +90,11 @@ test steps
 3. call the run function and pass in a standard context
 4. check the dummy communication layer to see if the context inforation has been passed fown
 */
-func TestSimpleStructRun(t *testing.T) {
-	simpleStruct := generateSimpleStruct()
-	// context := generateTestContext() //this needs to be replaced to accept a context from the protocol
-	simpleStruct.Run() //run is working but needs to do "something" with the context
-}
+// func TestSimpleStructRun(t *testing.T) {
+// 	simpleStruct := generateSimpleStruct()
+// 	// context := generateTestContext() //this needs to be replaced to accept a context from the protocol
+// 	simpleStruct.Run() //run is working but needs to do "something" with the context
+// }
 
 /*
 test steps
@@ -121,40 +120,40 @@ func TestSimpleStructClose(t *testing.T) {
 	simpleStruct.Close()
 }
 
-func TestSetMessageSizeDefault(t *testing.T) {
-	simpleStruct := generateSimpleStruct()
-	if simpleStruct.maxMessageSize != 0 {
-		t.Errorf("message expected to be 0, actually is: %d", simpleStruct.maxMessageSize)
-	}
-	simpleStruct.SetMessageSizeDefault(100)
-	if simpleStruct.maxMessageSize != 100 {
-		t.Errorf("message expected to be 100, actually is: %d", simpleStruct.maxMessageSize)
-	}
+// func TestSetMessageSizeDefault(t *testing.T) {
+// 	simpleStruct := generateSimpleStruct()
+// 	if simpleStruct.maxMessageSize != 0 {
+// 		t.Errorf("message expected to be 0, actually is: %d", simpleStruct.maxMessageSize)
+// 	}
+// 	simpleStruct.SetMessageSizeDefault(100)
+// 	if simpleStruct.maxMessageSize != 100 {
+// 		t.Errorf("message expected to be 100, actually is: %d", simpleStruct.maxMessageSize)
+// 	}
 
-}
+// }
 
 /*
 testing that a SimpleStruct will dial a connection and accuratley store the resulting
 connection in the mapping, and retrieve the mapping
 */
-func TestDialFunctionality(t *testing.T) {
-	simpleStruct := generateSimpleStruct()
-	testAddr := generateTestAddr()
+// func TestDialFunctionality(t *testing.T) {
+// 	simpleStruct := generateSimpleStruct()
+// 	testAddr := generateTestAddr()
 
-	if simpleStruct.connectionIndex != 0 {
-		t.Error("testing index is not 0")
-	}
+// 	if simpleStruct.connectionIndex != 0 {
+// 		t.Error("testing index is not 0")
+// 	}
 
-	uID, e := simpleStruct.Dial(testAddr)
-	if uID != 0 {
-		t.Error("conn index is not 0")
-	}
+// 	uID, e := simpleStruct.Dial(testAddr)
+// 	if uID != 0 {
+// 		t.Error("conn index is not 0")
+// 	}
 
-	if e != nil {
-		t.Errorf("%s", e)
-	}
+// 	if e != nil {
+// 		t.Errorf("%s", e)
+// 	}
 
-}
+// }
 
 /*
 test to initialize a SimpleListenStruct and retrieve a SimpleStruct in the ProtocolLayer
@@ -164,24 +163,24 @@ steps:
 3. listen to the accept channel on the SimpleListenStruct
 4. finish test when a SimpleStruct is detected on accept channel
 */
-func TestSimpleStructCreateOnRun(t *testing.T) {
-	simpleListenStruct := generateSimpleListenStruct()
-	go simpleListenStruct.Run()
+// func TestSimpleStructCreateOnRun(t *testing.T) {
+// 	simpleListenStruct := generateSimpleListenStruct()
+// 	go simpleListenStruct.Run()
 
-	var simpleStruct *SimpleStruct
+// 	var simpleStruct *SimpleStruct
 
-	//go routine to listen for the simpleListenStruct accept channel
-	go func() {
-		simpleStruct = <-simpleListenStruct.accept
-		t.Log("\n\n\nmeow\n\n\n")
-		t.Logf("%+v", simpleStruct)
-		if simpleStruct.eventHandler != 1 {
-			t.Error("did not create an accurate SimpleStruct")
-		}
-		//need a way to detect if the SimpleStruct was correctly generated
-	}()
+// 	//go routine to listen for the simpleListenStruct accept channel
+// 	go func() {
+// 		simpleStruct = <-simpleListenStruct.accept
+// 		t.Log("\n\n\nmeow\n\n\n")
+// 		t.Logf("%+v", simpleStruct)
+// 		if simpleStruct.eventHandler != 1 {
+// 			t.Error("did not create an accurate SimpleStruct")
+// 		}
+// 		//need a way to detect if the SimpleStruct was correctly generated
+// 	}()
 
-}
+// }
 
 /*
 test to retrieve a SimpleStruct from the SimpleListenStruct and dial a connection
@@ -192,35 +191,35 @@ steps:
 4. call the dial function on the SimpleStruct
 5. confirm that the id counter is now 1
 */
-func TestProtocolDialTheSimpleStruct(t *testing.T) {
-	simpleListenStruct := generateSimpleListenStruct()
-	simpleListenStruct.Run()
-	testAddr := generateTestAddr()
+// func TestProtocolDialTheSimpleStruct(t *testing.T) {
+// 	simpleListenStruct := generateSimpleListenStruct()
+// 	simpleListenStruct.Run()
+// 	testAddr := generateTestAddr()
 
-	var simpleStruct *SimpleStruct
+// 	var simpleStruct *SimpleStruct
 
-	go func() {
-		simpleStruct = <-simpleListenStruct.accept
-		//initial dial
-		uid, err := simpleStruct.Dial(testAddr)
+// 	go func() {
+// 		simpleStruct = <-simpleListenStruct.accept
+// 		//initial dial
+// 		uid, err := simpleStruct.Dial(testAddr)
 
-		if uid != 0 {
-			t.Error("uid is incorrect")
-		}
+// 		if uid != 0 {
+// 			t.Error("uid is incorrect")
+// 		}
 
-		if err != nil {
-			t.Errorf("error creating a connection: %s", err)
-		}
+// 		if err != nil {
+// 			t.Errorf("error creating a connection: %s", err)
+// 		}
 
-		//second dial to ensure that the uid increases as expected
-		uid2, err := simpleStruct.Dial(testAddr)
-		if uid2 != 1 {
-			t.Error("uid is incorrect")
-		}
+// 		//second dial to ensure that the uid increases as expected
+// 		uid2, err := simpleStruct.Dial(testAddr)
+// 		if uid2 != 1 {
+// 			t.Error("uid is incorrect")
+// 		}
 
-		if err != nil {
-			t.Errorf("error creating a connection: %s", err)
-		}
+// 		if err != nil {
+// 			t.Errorf("error creating a connection: %s", err)
+// 		}
 
-	}()
-}
+// 	}()
+// }
