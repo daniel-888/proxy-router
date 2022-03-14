@@ -300,11 +300,9 @@ func main() {
 	//Fire up external api
 	//
 	if disableapi == "false" {
-		var api externalapi.APIRepos
-		api.InitializeJSONRepos(ps)
-		time.Sleep(time.Millisecond * 2000)
+		api := externalapi.New(ps)
 		port := config.MustGet(config.ConfigRESTPort)
-		go api.RunAPI(port, l)
+		go api.Run(port, l)
 	}
 
 	select {

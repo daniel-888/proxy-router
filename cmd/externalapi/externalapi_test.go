@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/TitanInd/lumerin/cmd/externalapi/msgdata"
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus/msgdata"
 )
 
 func TestMsgBusDataAddedToApiRepos(t *testing.T) {
@@ -59,11 +59,10 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 		StartDate: time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC),
 	}
 
-	var api APIRepos
-	api.InitializeJSONRepos(ps)
+	api := New(ps)
 	time.Sleep(time.Millisecond * 1000)
 	l := log.New()
-	go api.RunAPI("8080", l)
+	go api.Run("8080", l)
 
 	fmt.Print("\n/// Publish Msgbus Msgs //\n\n")
 	ps.PubWait(msgbus.DestMsg, msgbus.IDString(dest.ID), msgbus.Dest{})

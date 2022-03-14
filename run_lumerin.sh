@@ -1,5 +1,9 @@
 #!/bin/sh
 
+echo "Building binary..."
+cd cmd && go build -o $GOPATH/bin/lumerin && cd ..
+
+echo "Executing..."
 lumerin \
 	--buyer="false" \
 	--network="custom" \
@@ -19,5 +23,3 @@ lumerin \
 	--disablecontract="false" \
 	--disableschedule="false" \
 	--disableapi="false"
-
-
