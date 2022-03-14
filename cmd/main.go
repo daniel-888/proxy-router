@@ -301,7 +301,6 @@ func main() {
 	//
 	if disableapi == "false" {
 		api := externalapi.New(ps)
-		time.Sleep(time.Millisecond * 2000)
 		port := config.MustGet(config.ConfigRESTPort)
 		go api.Run(port, l)
 	}

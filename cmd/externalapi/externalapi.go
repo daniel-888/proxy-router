@@ -52,6 +52,8 @@ func (api *api) Run(port string, l *log.Logger) {
 	go api.Miner.SubscribeToMinerMsgBus()
 	go api.NodeOperator.SubscribeToNodeOperatorMsgBus()
 
+	time.Sleep(time.Millisecond * 2000)
+
 	configRoutes := api.Group("/config")
 	{
 		configRoutes.GET("/", handlers.ConfigsGET(api.Config))
