@@ -6,6 +6,10 @@ import (
 	"net"
 	_ "reflect"
 	"testing"
+
+	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	lumerincontext "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 /*
@@ -26,57 +30,38 @@ can be quickly implemented
 func TestTemplate(t *testing.T) {
 }
 */
-
-type testAddr struct {
-	x string
-}
-
-func (t testAddr) Network() string {
-	return t.x
-}
-
-func (t testAddr) String() string {
-	return t.x
-}
-
 func generateTestContext() context.Context {
-	returnContext := context.TODO()
-	return returnContext
+	//create a ContextStruct and add into :tab
+	ctx := context.Background()
+	cs := &lumerincontext.ContextStruct{}
+	cs.Src = generateTestAddr()
+	cs.Dst = generateTestAddr()
+	ctx = context.WithValue(ctx, lumerincontext.ContextKey, cs)
+	return ctx
 }
 
 func generateTestAddr() net.Addr {
-	return testAddr{x: "1"}
+	conn, _ := net.Dial("tcp", "golang.org:http")
+	return conn.RemoteAddr()
 }
 
-type ConnectionLayer struct {
-	SimpleConnection *SimpleStruct
-}
-
-func NewConnLayer(s *SimpleStruct) ConnectionLayer {
-	return ConnectionLayer{
-		SimpleConnection: s,
+//generate a SimpleStruct for testing purposes
+func generateSimpleStruct() SimpleStruct {
+	myContext := generateTestContext()
+	mySimpleStruct := SimpleStruct{
+		ctx:    myContext,
+		cancel: dummyFunc,
+		// eventHandler:      0,
+		eventChan:  make(chan *SimpleEvent),
+		msgbusChan: make(chan *msgbus.Event),
+		// protocolChan:      make(chan *SimpleEvent),
+		// commChan:          make(chan []byte),
+		connectionMapping: make(map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct),
 	}
+	return mySimpleStruct
 }
 
-func (c *ConnectionLayer) ConnToSimple() {
-	go func() {
-		c.SimpleConnection.commChan <- []byte("test message one")
-	}()
-}
-
-//function to simulate the protocol layer which will be able to listen for and
-//send events to the SIMPL layer
-//should run in a go-routine to simulate actual protocol layer
-type ProtocolLayer struct {
-	ListenStruct SimpleListenStruct
-	SimpleStruct SimpleStruct
-}
-
-type ProtocolInterface interface {
-	EventHandler(*SimpleEvent)
-}
-
-//generate a simplestruct for testing purposes
+//generate a SimpleListenStruct for testing purposes
 func generateSimpleListenStruct() SimpleListenStruct {
 	myContext := generateTestContext()
 	myAddr := generateTestAddr()
@@ -84,148 +69,158 @@ func generateSimpleListenStruct() SimpleListenStruct {
 	return myStruct
 }
 
-//generate a protocol layer for testing purposes
-func generateProtocolLayer() ProtocolLayer {
-	listenStruct := generateSimpleListenStruct()
-	simpleStruct, _ := NewSimpleStruct(generateTestContext())
-	return ProtocolLayer{
-		ListenStruct: listenStruct,
-		SimpleStruct: simpleStruct,
-	}
-}
-
-// this is a basic test to create a SimpleListenEvent
-// then have the connection layer request a SimpleStruct
-// then have the SimpleStruct initialize a ProtocolStruct
-// success will be determined by ensuring the communication layer
-// simple struct, and protocol layer know about eachother
 /*
 test steps
-1. protocol layer will initialize a SimpleListenStruct
-2. protocol layer calls the New function in the SIMPLE package
+1. protocol layer calls the New function in the SIMPLE package
 	a context and an Addr are passed into New
-3. protocol layer calls run method on SimpleListenStruct
+2. checks the error message, test fails if the error message is anything but nil
 
 */
 func TestInitializeSimpleListenStruct(t *testing.T) {
-	listenStruct, _ := New(generateTestContext(), generateTestAddr())
-	listenStruct.Run()
-
-}
-
-//send a message from the protocol layer to the simple layer
-func TestSendMessageFromProtocolToConnectionLayer(t *testing.T) {
-	/*
-		test steps
-		1. create simulated protocol layer
-		2. call function on listening struct to create a new simple struct
-		3. listen for simple struct on listen structs accept channel
-		4. initialize the event handler on the simple struct
-		5. create a dummy SimpleEvent (this could be extentiated outside of the test)
-		6. pass the SimpleEvent into the eventChan channel
-		7. close both structs
-
-		TODO check to see value of SimpleEvent within connection layer
-	*/
-	pc := generateProtocolLayer()
-	listenStruct := pc.ListenStruct
-	listenStruct.NewSimpleStruct(generateTestContext())
-	simpleStruct := <-listenStruct.accept
-	event := SimpleEvent{ //create a simpleEvent to pass into event chan
-		EventType: eventOne,
-		Data:      []byte{},
+	_, err := New(generateTestContext(), generateTestAddr())
+	if err != nil {
+		t.Error("failed to initialize SimpleListenStruct")
 	}
-	simpleStruct.EventHandler(event)
-	simpleStruct.Close()
+
+}
+
+/*
+test steps
+1. create a dummy communication layer to listen for information from a context
+2. create a new simple struct routine
+3. call the run function and pass in a standard context
+4. check the dummy communication layer to see if the context inforation has been passed fown
+*/
+func TestSimpleStructRun(t *testing.T) {
+	simpleStruct := generateSimpleStruct()
+	// context := generateTestContext() //this needs to be replaced to accept a context from the protocol
+	simpleStruct.Run() //run is working but needs to do "something" with the context
+}
+
+/*
+test steps
+1. create a new SimpleListenStruct
+2. call the close function on the SimpleListenStruct
+3. ensure all associated routines are closed
+*/
+func TestSimpleListenStructClose(t *testing.T) {
+	listenStruct, _ := New(generateTestContext(), generateTestAddr())
 	listenStruct.Close()
+}
+
+/*
+test steps
+1. create a new SimpleListenStruct
+2. call the close function on the SimpleListenStruct
+3. ensure all associated routines are closed
+*/
+func TestSimpleStructClose(t *testing.T) {
+	simpleStruct := generateSimpleStruct()
+	//context := generateTestContext() //this needs to be replaced to accept a context from the protocol
+	simpleStruct.Run() //run is working but needs to do "something" with the context
+	simpleStruct.Close()
+}
+
+func TestSetMessageSizeDefault(t *testing.T) {
+	simpleStruct := generateSimpleStruct()
+	if simpleStruct.maxMessageSize != 0 {
+		t.Errorf("message expected to be 0, actually is: %d", simpleStruct.maxMessageSize)
+	}
+	simpleStruct.SetMessageSizeDefault(100)
+	if simpleStruct.maxMessageSize != 100 {
+		t.Errorf("message expected to be 100, actually is: %d", simpleStruct.maxMessageSize)
+	}
 
 }
 
-//test to initialize a simple layer and protocol layer
-//connection layer will send byte information to the
-//SimpleStruct and the SimpleStruct will pass that information upwards
-//to the protocol layer
-//message will be byte array of string "test sentence one"
-func TestSendMessageFromConnectionLayer(t *testing.T) {
-	pc := generateProtocolLayer()
-	listenStruct := pc.ListenStruct
-	listenStruct.NewSimpleStruct(generateTestContext())
-	simpleStruct := <-listenStruct.accept
-	go simpleStruct.Run(listenStruct.ctx)
+/*
+testing that a SimpleStruct will dial a connection and accuratley store the resulting
+connection in the mapping, and retrieve the mapping
+*/
+func TestDialFunctionality(t *testing.T) {
+	simpleStruct := generateSimpleStruct()
+	testAddr := generateTestAddr()
 
-	connLayer := NewConnLayer(simpleStruct)
-	connLayer.ConnToSimple()
+	if simpleStruct.connectionIndex != 0 {
+		t.Error("testing index is not 0")
+	}
 
-	// connMsg := <- simpleStruct.protocolChan
-	// fmt.Printf("Event Type: %s", connMsg.EventType)
-	//getting an issue where Data is being considered an Interface instead of a byetstring
-	// if "test sentence one" != string(connMsg.Data) {
-	//	t.Error("msg came out wrong",err)
-	//}
+	uID, e := simpleStruct.Dial(testAddr)
+	if uID != 0 {
+		t.Error("conn index is not 0")
+	}
+
+	if e != nil {
+		t.Errorf("%s", e)
+	}
+
 }
 
-func TestReceiveMessageFromMSGBus(t *testing.T) {
+/*
+test to initialize a SimpleListenStruct and retrieve a SimpleStruct in the ProtocolLayer
+steps:
+1. create a SimpleListenStruct
+2. call the Run function on the SimpleListenStruct
+3. listen to the accept channel on the SimpleListenStruct
+4. finish test when a SimpleStruct is detected on accept channel
+*/
+func TestSimpleStructCreateOnRun(t *testing.T) {
+	simpleListenStruct := generateSimpleListenStruct()
+	go simpleListenStruct.Run()
+
+	var simpleStruct *SimpleStruct
+
+	//go routine to listen for the simpleListenStruct accept channel
+	go func() {
+		simpleStruct = <-simpleListenStruct.accept
+		t.Log("\n\n\nmeow\n\n\n")
+		t.Logf("%+v", simpleStruct)
+		if simpleStruct.eventHandler != 1 {
+			t.Error("did not create an accurate SimpleStruct")
+		}
+		//need a way to detect if the SimpleStruct was correctly generated
+	}()
+
 }
 
-// function to route a message from the connection layer to the protocol layer
-// this function creates a ConnectionMessage and specifies that it wants to push
-// it to the protocol layer
-// will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
-func TestPushMessageToProtocol(t *testing.T) {
-}
+/*
+test to retrieve a SimpleStruct from the SimpleListenStruct and dial a connection
+steps:
+1. create a SimpleListenStruct
+2. run the SimpleListenStruct
+3. retrieve the SimpleEvent from the SimpleListenStruct accept channel
+4. call the dial function on the SimpleStruct
+5. confirm that the id counter is now 1
+*/
+func TestProtocolDialTheSimpleStruct(t *testing.T) {
+	simpleListenStruct := generateSimpleListenStruct()
+	simpleListenStruct.Run()
+	testAddr := generateTestAddr()
 
-// function to route a message from the protocol layer to the msgbus
-// this function creates a ConnectionMessage and specifies that it wants to push
-// it to the protocol layer
-// will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
-func TestPushMessageToMSGBus(t *testing.T) {
-}
+	var simpleStruct *SimpleStruct
 
-// function to route a message from the protocol layer to the connection layer
-// this function creates a ConnectionMessage and specifies that it wants to push
-// it to the protocol layer
-// will be successful is message provided in ConnectionMessage is detected in the ProtocolChan
-func TestPushMessageToConnectionLayer(t *testing.T) {
-}
+	go func() {
+		simpleStruct = <-simpleListenStruct.accept
+		//initial dial
+		uid, err := simpleStruct.Dial(testAddr)
 
-func TestHashrateCountMessage(t *testing.T) {
-}
+		if uid != 0 {
+			t.Error("uid is incorrect")
+		}
 
-func TestValidationRequestMessage(t *testing.T) {
-}
+		if err != nil {
+			t.Errorf("error creating a connection: %s", err)
+		}
 
-//send the following messages
-// 1. message from connection layer to protocol layer
-// 2. message from msg.bus to protocol layer
-// 3. message from protocol layer to msgbus
-// this test will be considered successful if the messages
-// are processed in order and also make it to their final destination
-func TestMessageFrom3Sources(t *testing.T) {
-}
+		//second dial to ensure that the uid increases as expected
+		uid2, err := simpleStruct.Dial(testAddr)
+		if uid2 != 1 {
+			t.Error("uid is incorrect")
+		}
 
-//send the following messages
-// 1. message from protocol to connection layer
-// 2. message from protocol to msgbus
-// this test will be considered successful if the messages are processed in order
-// and make it to their intended destinations
-func TestMultipleMessagesFromProtocol(t *testing.T) {
-}
+		if err != nil {
+			t.Errorf("error creating a connection: %s", err)
+		}
 
-//send the following messages
-// 1. message from protocol to connection layer
-// 2. message from protocol to msgbus
-// this test will be considered successful if the messages are processed in order
-// and make it to their intended destinations
-func TestMultipleMessagesFromConnectionLayer(t *testing.T) {
-}
-
-// test to send a corrupted message through the SIMPLE layer
-// the corrputed message should go through as expected since
-// the simple layer doesn't check for message integrity
-func TestCorruptMessage(t *testing.T) {
-}
-
-//send a message from the connection channel with an option of 100
-//this will not be picked up by any cases in the processIncomingMessage function
-func TestMessageWithInvalidActions(t *testing.T) {
+	}()
 }

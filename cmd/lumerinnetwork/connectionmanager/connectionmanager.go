@@ -12,10 +12,12 @@ import (
 )
 
 const DefaultDstSlots int = 8
+const MaxDstSlots int = 16
 
 var ErrConnMgrNoDefIndex = errors.New("CM: no default index")
 var ErrConnMgrBadDefDest = errors.New("CM: bad default destination")
 var ErrConnMgrIDXOutOfRange = errors.New("CM: index out of range")
+var ErrConnReadNotReady = errors.New("CM: there is nothing to read")
 
 //
 // Listen Struct for new SRC connections coming in
@@ -31,11 +33,28 @@ type ConnectionListenStruct struct {
 //
 // Struct for existing SRC connections and the associated outgoing DST connections
 type ConnectionStruct struct {
-	src    *lumerinconnection.LumerinSocketStruct
-	dst    []*lumerinconnection.LumerinSocketStruct
-	defidx int
-	ctx    context.Context
-	cancel func()
+	src      *lumerinconnection.LumerinSocketStruct
+	dst      []*lumerinconnection.LumerinSocketStruct
+	defidx   int
+	ctx      context.Context
+	cancel   func()
+	readChan chan *ConnectionReadEvent
+}
+
+type ConnectionSrcDataStruct struct {
+	data  []byte
+	count int
+	err   error
+}
+
+type ConnectionDstDataStruct struct {
+	index int
+	data  []byte
+	count int
+	err   error
+}
+
+type ConnectionReadEvent struct {
 }
 
 //
@@ -43,7 +62,7 @@ type ConnectionStruct struct {
 //
 func Listen(ctx context.Context) (cls *ConnectionListenStruct, e error) {
 
-	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel
@@ -67,7 +86,7 @@ func Listen(ctx context.Context) (cls *ConnectionListenStruct, e error) {
 //
 //
 func (cls *ConnectionListenStruct) getPort() (port int) {
-	contextlib.Logf(cls.ctx, contextlib.LevelPanic, fmt.Sprint(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cls.ctx, contextlib.LevelPanic, fmt.Sprint(lumerinlib.FileLineFunc()+" called"))
 	return 0
 }
 
@@ -83,7 +102,7 @@ func (cls *ConnectionListenStruct) getIp() net.Addr {
 //
 func (cls *ConnectionListenStruct) Accept() (cs *ConnectionStruct, e error) {
 
-	contextlib.Logf(cls.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cls.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" called"))
 
 	lci, e := cls.listen.Accept()
 	if e != nil {
@@ -98,7 +117,7 @@ func (cls *ConnectionListenStruct) Accept() (cs *ConnectionStruct, e error) {
 //
 //
 func (cls *ConnectionListenStruct) Close() (e error) {
-	contextlib.Logf(cls.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cls.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" called"))
 	return cls.listen.Close()
 }
 
@@ -106,7 +125,7 @@ func (cls *ConnectionListenStruct) Close() (e error) {
 //
 //
 func (cls *ConnectionListenStruct) Cancel() {
-	contextlib.Logf(cls.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cls.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" called"))
 	cls.cancel()
 }
 
@@ -115,17 +134,18 @@ func (cls *ConnectionListenStruct) Cancel() {
 //
 func (cls *ConnectionListenStruct) newConnectionStruct(srclss *lumerinconnection.LumerinSocketStruct) (cs *ConnectionStruct) {
 
-	contextlib.Logf(cls.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cls.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" called"))
 
 	ctx, cancel := context.WithCancel(cls.ctx)
 	dstarrlss := make([]*lumerinconnection.LumerinSocketStruct, 0, DefaultDstSlots)
 
 	cs = &ConnectionStruct{
-		src:    srclss,
-		dst:    dstarrlss,
-		defidx: -1,
-		ctx:    ctx,
-		cancel: cancel,
+		src:      srclss,
+		dst:      dstarrlss,
+		defidx:   -1,
+		ctx:      ctx,
+		cancel:   cancel,
+		readChan: make(chan *ConnectionReadEvent),
 	}
 
 	return cs
@@ -138,7 +158,7 @@ func (cls *ConnectionListenStruct) newConnectionStruct(srclss *lumerinconnection
 // func (cs *ConnectionStruct) Dial(ctx context.Context, port int, ip net.IPAddr) (idx int, e error) {
 func (cs *ConnectionStruct) Dial(ctx context.Context, addr net.Addr) (idx int, e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" called"))
 
 	idx = -1
 
@@ -174,7 +194,7 @@ func (cs *ConnectionStruct) Dial(ctx context.Context, addr net.Addr) (idx int, e
 //
 func (cs *ConnectionStruct) ReDialIdx(idx int) (e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelPanic, fmt.Sprintf(lumerinlib.FileLine()+" Function Not Implemented Yet.."))
+	contextlib.Logf(cs.ctx, contextlib.LevelPanic, fmt.Sprintf(lumerinlib.FileLineFunc()+" Function Not Implemented Yet.."))
 
 	return nil
 }
@@ -184,7 +204,7 @@ func (cs *ConnectionStruct) ReDialIdx(idx int) (e error) {
 //
 func (cs *ConnectionStruct) Close() (e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	cs.cancel() // This should close all open src and dst connections
 
@@ -194,9 +214,17 @@ func (cs *ConnectionStruct) Close() (e error) {
 //
 //
 //
+func (cs *ConnectionStruct) ReadReady() <-chan *ConnectionReadEvent {
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
+	return cs.readChan
+}
+
+//
+//
+//
 func (cs *ConnectionStruct) SetRoute(idx int) (e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	if idx < 0 || idx >= len(cs.dst) {
 		e = ErrConnMgrIDXOutOfRange
@@ -215,11 +243,11 @@ func (cs *ConnectionStruct) SetRoute(idx int) (e error) {
 }
 
 //
-// ReadReady() checks all open connections to see if any are ready to read
+// AnyReadReady() checks all open connections to see if any are ready to read
 //
-func (cs *ConnectionStruct) ReadReady() (r bool) {
+func (cs *ConnectionStruct) AnyReadReady() (r bool) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	if cs.src != nil && cs.src.ReadReady() {
 		return true
@@ -239,7 +267,7 @@ func (cs *ConnectionStruct) ReadReady() (r bool) {
 //
 func (cs *ConnectionStruct) SrcGetSocket() (s *lumerinconnection.LumerinSocketStruct, e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	return cs.src, nil
 }
@@ -249,7 +277,7 @@ func (cs *ConnectionStruct) SrcGetSocket() (s *lumerinconnection.LumerinSocketSt
 //
 func (cs *ConnectionStruct) SrcReadReady() (r bool) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	return cs.src.ReadReady()
 }
@@ -257,9 +285,31 @@ func (cs *ConnectionStruct) SrcReadReady() (r bool) {
 //
 //
 //
+func (cs *ConnectionStruct) SrcReadStruct() (c *ConnectionSrcDataStruct, e error) {
+
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
+
+	if !cs.SrcReadReady() {
+		return nil, ErrConnReadNotReady
+	}
+
+	c = &ConnectionSrcDataStruct{
+		data: []byte{},
+	}
+
+	count, e := cs.SrcRead(c.data)
+	c.count = count
+	c.err = e
+
+	return c, nil
+}
+
+//
+//
+//
 func (cs *ConnectionStruct) SrcRead(buf []byte) (count int, e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	return cs.src.Read(buf)
 }
@@ -269,7 +319,7 @@ func (cs *ConnectionStruct) SrcRead(buf []byte) (count int, e error) {
 //
 func (cs *ConnectionStruct) SrcWrite(buf []byte) (count int, e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	return cs.src.Write(buf)
 
@@ -280,7 +330,7 @@ func (cs *ConnectionStruct) SrcWrite(buf []byte) (count int, e error) {
 //
 func (cs *ConnectionStruct) SrcClose() (e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	return cs.Close()
 }
@@ -290,7 +340,7 @@ func (cs *ConnectionStruct) SrcClose() (e error) {
 //
 func (cs *ConnectionStruct) DstGetSocket() (s *lumerinconnection.LumerinSocketStruct, e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	if cs.defidx < 0 {
 		e = ErrConnMgrNoDefIndex
@@ -310,7 +360,7 @@ func (cs *ConnectionStruct) DstGetSocket() (s *lumerinconnection.LumerinSocketSt
 //
 func (cs *ConnectionStruct) DstReadReady() (r bool) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	if cs.defidx >= 0 && cs.dst[cs.defidx] != nil && cs.dst[cs.defidx].ReadReady() {
 		return true
@@ -319,11 +369,36 @@ func (cs *ConnectionStruct) DstReadReady() (r bool) {
 }
 
 //
+// Read the default Destination
+//
+func (cs *ConnectionStruct) DstReadStruct() (d *ConnectionDstDataStruct, e error) {
+
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
+
+	if !cs.DstReadReady() {
+		return nil, ErrConnReadNotReady
+	}
+
+	d = &ConnectionDstDataStruct{
+		index: cs.defidx,
+		data:  []byte{},
+		count: 0,
+		err:   nil,
+	}
+
+	count, e := cs.DstRead(d.data)
+	d.count = count
+	d.err = e
+
+	return d, nil
+}
+
+//
 //
 //
 func (cs *ConnectionStruct) DstRead(buf []byte) (count int, e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	if cs.defidx < 0 {
 		e = ErrConnMgrNoDefIndex
@@ -345,7 +420,7 @@ func (cs *ConnectionStruct) DstRead(buf []byte) (count int, e error) {
 //
 func (cs *ConnectionStruct) DstWrite(buf []byte) (count int, e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	if cs.defidx < 0 {
 		e = ErrConnMgrNoDefIndex
@@ -367,7 +442,7 @@ func (cs *ConnectionStruct) DstWrite(buf []byte) (count int, e error) {
 //
 func (cs *ConnectionStruct) DstClose() (e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	if cs.defidx < 0 {
 		e = ErrConnMgrNoDefIndex
@@ -389,7 +464,7 @@ func (cs *ConnectionStruct) DstClose() (e error) {
 //
 func (cs *ConnectionStruct) IdxGetSocket(idx int) (s *lumerinconnection.LumerinSocketStruct, e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	if cs.defidx < 0 {
 		e = ErrConnMgrNoDefIndex
@@ -407,9 +482,25 @@ func (cs *ConnectionStruct) IdxGetSocket(idx int) (s *lumerinconnection.LumerinS
 //
 //
 //
+func (cs *ConnectionStruct) AnyIdxReadReady() (idx int, r bool) {
+
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
+
+	for idx = 0; idx < len(cs.dst); idx++ {
+		if cs.dst[idx] != nil && cs.dst[idx].ReadReady() {
+			return idx, true
+		}
+	}
+	return -1, false
+
+}
+
+//
+//
+//
 func (cs *ConnectionStruct) IdxReadReady(idx int) (r bool) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	if idx >= 0 &&
 		idx < len(cs.dst) &&
@@ -422,11 +513,36 @@ func (cs *ConnectionStruct) IdxReadReady(idx int) (r bool) {
 }
 
 //
+// Read the default Destination
+//
+func (cs *ConnectionStruct) IdxReadStruct(idx int) (d *ConnectionDstDataStruct, e error) {
+
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
+
+	if !cs.IdxReadReady(idx) {
+		return nil, ErrConnReadNotReady
+	}
+
+	d = &ConnectionDstDataStruct{
+		index: idx,
+		data:  []byte{},
+		count: 0,
+		err:   nil,
+	}
+
+	count, e := cs.IdxRead(idx, d.data)
+	d.count = count
+	d.err = e
+
+	return d, nil
+}
+
+//
 //
 //
 func (cs *ConnectionStruct) IdxRead(idx int, buf []byte) (count int, e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	if idx < 0 {
 		e = ErrConnMgrNoDefIndex
@@ -453,7 +569,7 @@ func (cs *ConnectionStruct) IdxRead(idx int, buf []byte) (count int, e error) {
 //
 func (cs *ConnectionStruct) IdxWrite(idx int, buf []byte) (count int, e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	if idx < 0 {
 		e = ErrConnMgrNoDefIndex
@@ -480,7 +596,7 @@ func (cs *ConnectionStruct) IdxWrite(idx int, buf []byte) (count int, e error) {
 //
 func (cs *ConnectionStruct) IdxClose(idx int) (e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLine()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
 	if idx < 0 {
 		e = ErrConnMgrNoDefIndex

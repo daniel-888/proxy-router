@@ -57,6 +57,45 @@ func BoilerPlateLibFunc(msg string) string {
 //
 //
 //
+func FileLineFunc(a ...int) string {
+	var depth int = 1
+
+	if len(a) != 0 {
+		if depth < 1 && depth > 10 {
+			panic(FileLine() + " depth out of bounds")
+		}
+	}
+
+	pc, file, line, ok := runtime.Caller(depth)
+	if !ok {
+		return "FileLine() failed"
+	}
+
+	lineno := strconv.Itoa(line)
+
+	fileArr := strings.Split(file, "/")
+	fileName := fileArr[len(fileArr)-1]
+
+	funcPtr := runtime.FuncForPC(pc)
+
+	var funcName string
+
+	if funcPtr == nil {
+		funcName = "TheUNKNOWNFunction()"
+	} else {
+		f := strings.Split(funcPtr.Name(), "/")
+		funcName = f[len(f)-1]
+		g := strings.Split(funcName, ".")
+		funcName = g[len(g)-1]
+	}
+
+	ret := "[" + fileName + ":" + lineno + ":" + funcName + "()]:"
+	return ret
+}
+
+//
+//
+//
 func FileLine() string {
 	_, file, line, ok := runtime.Caller(1)
 	if !ok {

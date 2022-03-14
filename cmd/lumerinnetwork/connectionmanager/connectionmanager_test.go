@@ -29,7 +29,7 @@ func TestSetupListenCancel(t *testing.T) {
 
 	l, e := testListen(ctx)
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Listen() Failed: %s\n", e))
 	}
 
 	l.Cancel()
@@ -38,12 +38,12 @@ func TestSetupListenCancel(t *testing.T) {
 	if e != nil {
 		select {
 		case <-ctx.Done():
-			fmt.Printf(lumerinlib.FileLine()+" CTX Done(): %s\n", ctx.Err())
+			fmt.Printf(lumerinlib.FileLineFunc()+" CTX Done(): %s\n", ctx.Err())
 		default:
-			fmt.Printf(lumerinlib.FileLine()+"Accept() OK: returned error: %s\n", e)
+			fmt.Printf(lumerinlib.FileLineFunc()+"Accept() OK: returned error: %s\n", e)
 		}
 	} else {
-		t.Fatalf(fmt.Sprintf(lumerinlib.FileLine() + "Accept() Test Failed no error returned"))
+		t.Fatalf(fmt.Sprintf(lumerinlib.FileLineFunc() + "Accept() Test Failed no error returned"))
 	}
 
 }
@@ -66,7 +66,7 @@ func TestSrcDial(t *testing.T) {
 
 	l, e := testListen(ctx)
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Listen() Failed: %s\n", e))
 	}
 	defer l.Cancel()
 
@@ -77,32 +77,32 @@ func TestSrcDial(t *testing.T) {
 	//
 	s, e := lumerinconnection.Dial(ctx, testaddr)
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial() Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Dial() Failed: %s\n", e))
 	}
 
 	defer s.Close()
 
-	fmt.Printf(lumerinlib.FileLine() + " Dial completed\n")
+	fmt.Printf(lumerinlib.FileLineFunc() + " Dial completed\n")
 
 	writeb := []byte(TestString)
 	writecount, e := s.Write(writeb)
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Write() Test Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Write() Test Failed: %s\n", e))
 	}
 	if writecount != len(writeb) {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Write() Test Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Write() Test Failed: %s\n", e))
 	}
 
-	fmt.Printf(lumerinlib.FileLine() + " Write() completed\n")
+	fmt.Printf(lumerinlib.FileLineFunc() + " Write() completed\n")
 
 	reader := bufio.NewReader(s)
 	readbuf, e := reader.ReadBytes('\n')
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" ReadBytes() Test Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" ReadBytes() Test Failed: %s\n", e))
 	}
 	readcount := len(readbuf)
 	if readcount != writecount {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+"Count Test Failed read: %d, write: %d\n", readcount, writecount))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+"Count Test Failed read: %d, write: %d\n", readcount, writecount))
 	}
 
 }
@@ -125,7 +125,7 @@ func TestSrcDefDstDial(t *testing.T) {
 
 	l, e := testListen(ctx)
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Listen() Failed: %s\n", e))
 	}
 
 	defer l.Close()
@@ -137,26 +137,26 @@ func TestSrcDefDstDial(t *testing.T) {
 	writeb := []byte(TestString)
 	writecount, e := s.DstWrite(writeb)
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" DstWrite() Test Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" DstWrite() Test Failed: %s\n", e))
 	}
 	if writecount != len(writeb) {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" DstWrite() Test Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" DstWrite() Test Failed: %s\n", e))
 	}
 
-	fmt.Printf(lumerinlib.FileLine() + " DstWrite() completed\n")
+	fmt.Printf(lumerinlib.FileLineFunc() + " DstWrite() completed\n")
 
 	soc, e := s.DstGetSocket()
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" DstGetSocket() Test Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" DstGetSocket() Test Failed: %s\n", e))
 	}
 	reader := bufio.NewReader(soc)
 	readbuf, e := reader.ReadBytes('\n')
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" ReadBytes() Test Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" ReadBytes() Test Failed: %s\n", e))
 	}
 	readcount := len(readbuf)
 	if readcount != writecount {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+"Count Test Failed read: %d, write: %d\n", readcount, writecount))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+"Count Test Failed read: %d, write: %d\n", readcount, writecount))
 	}
 
 }
@@ -179,7 +179,7 @@ func TestSrcIdxDstDial(t *testing.T) {
 
 	l, e := testListen(ctx)
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Listen() Failed: %s\n", e))
 	}
 
 	defer l.Close()
@@ -191,27 +191,27 @@ func TestSrcIdxDstDial(t *testing.T) {
 	writeb := []byte(TestString)
 	writecount, e := s.IdxWrite(0, writeb)
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" IdxWrite() Test Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" IdxWrite() Test Failed: %s\n", e))
 	}
 	if writecount != len(writeb) {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" IdxWrite() Test Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" IdxWrite() Test Failed: %s\n", e))
 	}
 
-	fmt.Printf(lumerinlib.FileLine() + " IdxWrite() completed\n")
+	fmt.Printf(lumerinlib.FileLineFunc() + " IdxWrite() completed\n")
 
 	soc, e := s.IdxGetSocket(0)
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" DstGetSocket() Test Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" DstGetSocket() Test Failed: %s\n", e))
 	}
 	defer soc.Close()
 	reader := bufio.NewReader(soc)
 	readbuf, e := reader.ReadBytes('\n')
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" ReadBytes() Test Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" ReadBytes() Test Failed: %s\n", e))
 	}
 	readcount := len(readbuf)
 	if readcount != writecount {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+"Count Test Failed read: %d, write: %d\n", readcount, writecount))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+"Count Test Failed read: %d, write: %d\n", readcount, writecount))
 	}
 
 }
@@ -230,12 +230,12 @@ func testListen(ctx context.Context) (l *ConnectionListenStruct, e error) {
 //
 func testAcceptChannelEcho(l *ConnectionListenStruct) (s *ConnectionStruct) {
 
-	fmt.Printf(lumerinlib.FileLine() + " Waiting on Connection\n")
+	fmt.Printf(lumerinlib.FileLineFunc() + " Waiting on Connection\n")
 
 	s, e := l.Accept()
 
 	if e != nil {
-		fmt.Printf(lumerinlib.FileLine()+" Socket Accept() Failed: %s\n", e)
+		fmt.Printf(lumerinlib.FileLineFunc()+" Socket Accept() Failed: %s\n", e)
 		l.Close()
 		return
 	}
@@ -248,20 +248,20 @@ func testAcceptChannelEcho(l *ConnectionListenStruct) (s *ConnectionStruct) {
 //
 func testSetupEchoConnection(t *testing.T, l *ConnectionListenStruct) (cs *ConnectionStruct) {
 
-	fmt.Printf(lumerinlib.FileLine() + " Waiting on Connection\n")
+	fmt.Printf(lumerinlib.FileLineFunc() + " Waiting on Connection\n")
 
 	lss, e := lumerinconnection.Dial(l.ctx, l.addr)
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial() Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Dial() Failed: %s\n", e))
 	}
 
 	cs, e = l.Accept()
 
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Accept() Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Accept() Failed: %s\n", e))
 	}
 
-	fmt.Printf(lumerinlib.FileLine() + " Connection Accepted\n")
+	fmt.Printf(lumerinlib.FileLineFunc() + " Connection Accepted\n")
 
 	cs.dst = append(cs.dst, lss)
 	cs.defidx = 0
@@ -276,17 +276,17 @@ func testSetupEchoConnection(t *testing.T, l *ConnectionListenStruct) (cs *Conne
 //
 func goTestAcceptChannelEcho(l *ConnectionListenStruct) {
 
-	fmt.Printf(lumerinlib.FileLine() + " Waiting on Connection\n")
+	fmt.Printf(lumerinlib.FileLineFunc() + " Waiting on Connection\n")
 
 	s, e := l.Accept()
 
 	if e != nil {
-		fmt.Printf(lumerinlib.FileLine()+" Socket Accept() Failed: %s\n", e)
+		fmt.Printf(lumerinlib.FileLineFunc()+" Socket Accept() Failed: %s\n", e)
 		l.Close()
 		return
 	}
 
-	fmt.Printf(lumerinlib.FileLine() + " Connection Accepted\n")
+	fmt.Printf(lumerinlib.FileLineFunc() + " Connection Accepted\n")
 
 	s.goSrcChannelEcho()
 }
@@ -296,14 +296,14 @@ func goTestAcceptChannelEcho(l *ConnectionListenStruct) {
 //
 func (s *ConnectionStruct) goSrcChannelEcho() {
 
-	fmt.Printf(lumerinlib.FileLine() + " SRC Echo\n")
+	fmt.Printf(lumerinlib.FileLineFunc() + " SRC Echo\n")
 
 	for {
 		buf := make([]byte, 2)
-		fmt.Printf(lumerinlib.FileLine() + " Read()ing\n")
+		fmt.Printf(lumerinlib.FileLineFunc() + " Read()ing\n")
 		readcount, e := s.SrcRead(buf)
 		if e == io.EOF {
-			fmt.Printf(lumerinlib.FileLine()+" Read() EOF count:%d\n", readcount)
+			fmt.Printf(lumerinlib.FileLineFunc()+" Read() EOF count:%d\n", readcount)
 			return
 		}
 		if e != nil {
@@ -311,7 +311,7 @@ func (s *ConnectionStruct) goSrcChannelEcho() {
 			case <-s.ctx.Done():
 				return
 			default:
-				panic(fmt.Sprintf(lumerinlib.FileLine()+" Read Failed: %s\n", e))
+				panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Read Failed: %s\n", e))
 			}
 		}
 
@@ -323,7 +323,7 @@ func (s *ConnectionStruct) goSrcChannelEcho() {
 				case <-s.ctx.Done():
 					return
 				default:
-					panic(fmt.Sprintf(lumerinlib.FileLine()+" write Failed: %s\n", e))
+					panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" write Failed: %s\n", e))
 				}
 			}
 			if writecount == 0 {
@@ -331,7 +331,7 @@ func (s *ConnectionStruct) goSrcChannelEcho() {
 				case <-s.ctx.Done():
 					return
 				default:
-					panic(fmt.Sprintf(lumerinlib.FileLine() + " write Failed: Zero bytes written\n"))
+					panic(fmt.Sprintf(lumerinlib.FileLineFunc() + " write Failed: Zero bytes written\n"))
 				}
 			}
 		}

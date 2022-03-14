@@ -17,23 +17,33 @@ import (
 //
 //
 
+// type newStratumV1Func func(*simple.SimpleStruct) chan *simple.SimpleEvent
+type newStratumV1Func func(*simple.SimpleStruct)
+
+type newStratumV1Struct struct {
+	funcptr newStratumV1Func
+}
+
 type StratumV1ListenStruct struct {
 	protocollisten *protocol.ProtocolListenStruct
 }
 
 type StratumV1Struct struct {
-	protocol *protocol.ProtocolStruct
+	protocol            *protocol.ProtocolStruct
+	minerRec            *msgbus.Miner
+	srcSubscribeRequest *stratumRequest // Copy of recieved Subscribe Request from Source
+	srcAuthRequest      *stratumRequest // Copy of recieved Authorize Request from Source
 	// Add in stratum state information here
 }
 
 //
 //
 //
-func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr) (s *StratumV1ListenStruct, e error) {
+func NewListener(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr, proto ...*newStratumV1Struct) (s *StratumV1ListenStruct, e error) {
 
 	// Validate src and dst here
 
-	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	cs := &contextlib.ContextStruct{}
 	cs.SetMsgBus(mb)
@@ -41,13 +51,21 @@ func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr) (s 
 	cs.SetDst(dst)
 	//
 	// This is the only place that SetProtocol is called
-	cs.SetProtocol(newStratumV1Func)
 
-	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
+	if len(proto) > 0 {
+		cs.SetProtocol(proto[0])
+	} else {
+		var new = &newStratumV1Struct{
+			funcptr: NewStratumV1,
+		}
+		cs.SetProtocol(new)
+	}
+
+	ctx = contextlib.SetContextStruct(ctx, cs)
 
 	protocollisten, err := protocol.NewListen(ctx)
 	if err != nil {
-		lumerinlib.PanicHere("")
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" NewListen returned error:%s", e)
 	}
 
 	s = &StratumV1ListenStruct{
@@ -60,21 +78,9 @@ func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr) (s 
 //
 //
 //
-func (s *StratumV1Struct) goEvent() {
-
-	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" called")
-
-	for event := range s.protocol.Event() {
-		s.eventHandler(event)
-	}
-}
-
-//
-//
-//
 func (s *StratumV1ListenStruct) Run() {
 
-	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	s.protocollisten.Run()
 }
@@ -91,7 +97,7 @@ func (s *StratumV1ListenStruct) Ctx() context.Context {
 //
 func (s *StratumV1ListenStruct) Cancel() {
 
-	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	s.protocollisten.Cancel()
 }
@@ -102,47 +108,67 @@ func (s *StratumV1ListenStruct) Cancel() {
 //
 // SIMPL defined this function as passing in a SimpeStruct abd retuning a chan for SimpleEvents
 //
-func newStratumV1Func(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
+func (n *newStratumV1Struct) NewProtocol(ss *simple.SimpleStruct) {
+	n.funcptr(ss)
+}
 
-	contextlib.Logf(ss.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+//
+// NewStratumV1()
+// The SimpleStruct should already have the SRC connection open
+//
+func NewStratumV1(ss *simple.SimpleStruct) {
+
+	contextlib.Logf(ss.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	i := ss.Ctx().Value(contextlib.ContextKey)
 	cs, ok := i.(contextlib.ContextStruct)
 	if !ok {
-		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Context Struct not in CTX")
+		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct not in CTX")
 	}
 
 	dst := cs.GetDst()
 	if dst == nil {
-		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Context Struct DST not defined")
+		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct DST not defined")
 	}
 
 	// inialize a new ProtocolStruct to gain access to the standard protocol functions
+	// The default Dst should be opened when this returns
 	pls, err := protocol.NewProtocol(ss)
 	if err != nil {
-		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Create NewProtocol() failed: %s", err)
+		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Create NewProtocol() failed: %s", err)
 	}
 
 	svs := &StratumV1Struct{
-		protocol: pls,
+		protocol:            pls,
+		minerRec:            nil,
+		srcSubscribeRequest: nil,
+		srcAuthRequest:      nil,
 		// Fill in other state information here
-	}
-
-	_, err = pls.OpenConn(dst)
-	if err != nil {
-		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Create OpenConn() failed: %s", err)
 	}
 
 	// Launch the event handler
 	go svs.goEvent()
 
+	ss.Run()
+
 	// return the event handler channel to the caller (the simple layer accept() function )
-	return svs.protocol.Event()
 }
 
 // ---------------------------------------------------------------------
 //  StratumV1Struct
 //
+
+//
+//
+//
+func (s *StratumV1Struct) goEvent() {
+
+	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	for event := range s.protocol.GetSimpleEvent() {
+		s.eventHandler(event)
+	}
+}
 
 //
 // returns the StratumV1Struct context pointer
@@ -156,7 +182,7 @@ func (s *StratumV1Struct) Ctx() context.Context {
 //
 func (s *StratumV1Struct) Cancel() {
 
-	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	s.protocol.Cancel()
 }
@@ -170,36 +196,16 @@ func (s *StratumV1Struct) Cancel() {
 // Event Handler
 func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	switch event.EventType {
 	case simple.NoEvent:
 		return
 
-	case simple.MsgUpdateEvent:
-		fallthrough
-	case simple.MsgDeleteEvent:
-		fallthrough
-	case simple.MsgGetEvent:
-		fallthrough
-	case simple.MsgGetIndexEvent:
-		fallthrough
-	case simple.MsgSearchEvent:
-		fallthrough
-	case simple.MsgSearchIndexEvent:
-		fallthrough
-	case simple.MsgPublishEvent:
-		fallthrough
-	case simple.MsgUnpublishEvent:
-		fallthrough
-	case simple.MsgSubscribedEvent:
-		fallthrough
-	case simple.MsgUnsubscribedEvent:
-		fallthrough
-	case simple.MsgRemovedEvent:
+	case simple.MsgBusEvent:
 		msg, ok := event.Data.(msgbus.Event)
 		if !ok {
-			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Event Data wrong Type:%t", event.Data)
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Event Data wrong Type:%t", event.Data)
 		}
 		// Error checking here  ev == megbus.Event
 		svs.decodeMsgBusEvent(msg)
@@ -226,7 +232,7 @@ func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) {
 		return
 
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLine()+" Default Reached: Event Type:%s", string(event.EventType))
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default Reached: Event Type:%s", string(event.EventType))
 	}
 
 }
@@ -236,7 +242,7 @@ func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) {
 //
 func (svs *StratumV1Struct) decodeMsgBusEvent(event msgbus.Event) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLine()+" called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	switch event.EventType {
 	case msgbus.NoEvent:
@@ -277,6 +283,6 @@ func (svs *StratumV1Struct) decodeMsgBusEvent(event msgbus.Event) {
 		return
 
 	default:
-		lumerinlib.PanicHere(fmt.Sprintf(lumerinlib.FileLine()+" Default Reached: Event Type:%s", string(event.EventType)))
+		lumerinlib.PanicHere(fmt.Sprintf(lumerinlib.FileLineFunc()+" Default Reached: Event Type:%s", string(event.EventType)))
 	}
 }
