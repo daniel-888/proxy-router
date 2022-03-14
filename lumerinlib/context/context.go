@@ -153,6 +153,13 @@ func GetContextStruct(ctx context.Context) (s *ContextStruct) {
 //
 //
 //
+func SetContextStruct(ctx context.Context, cs *ContextStruct) (newctx context.Context) {
+	return context.WithValue(ctx, ContextKey, cs)
+}
+
+//
+//
+//
 func Logf(ctx context.Context, level log.Level, format string, args ...interface{}) {
 	val := ctx.Value(ContextKey)
 	_, ok := val.(*ContextStruct)

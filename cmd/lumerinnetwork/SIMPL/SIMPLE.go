@@ -206,7 +206,6 @@ func (s *SimpleListenStruct) goListenAccept() {
 	// This needs error checking....
 	proto := cs.GetProtocol()
 	cs.Logf(contextlib.LevelTrace, lumerinlib.FileLineFunc()+" GetProtocol func type:%t", proto)
-	// var np NewProtocolInterface = proto.(NewProtocolInterface)
 
 	for {
 		select {
@@ -223,20 +222,22 @@ func (s *SimpleListenStruct) goListenAccept() {
 
 		//create a cancel function from the context in the SimpleListenStruct
 		newctx, cancel := context.WithCancel(s.ctx)
-		//newctx = context.WithValue(newctx, contextlib.ContextKey, cs)
 
 		//creating a new simple struct to pass to the protocol layer
 		newSimpleStruct := &SimpleStruct{
-			ctx:              newctx, //provided from the SimpleListenStruct
-			cancel:           cancel,
-			connectionStruct: connectionStruct,
-			msgbusChan:       make(chan *msgbus.Event),
+			ctx:               newctx,
+			cancel:            cancel,
+			eventChan:         make(chan *SimpleEvent),
+			msgbusChan:        make(chan *msgbus.Event),
+			maxMessageSize:    0,
+			connectionMapping: map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct{},
+			connectionStruct:  connectionStruct,
 		}
 
 		// var np NewProtocolInterface = proto.(NewProtocolInterface)
 		var np NewProtocolInterface
 		np = proto.(NewProtocolInterface)
-		np.NewProtocol(newSimpleStruct)
+		np.NewProtocol(newSimpleStruct) // Call the supplied "new" protocol function here
 
 		s.accept <- newSimpleStruct
 	}

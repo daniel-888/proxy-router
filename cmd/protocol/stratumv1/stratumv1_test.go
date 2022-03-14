@@ -23,10 +23,12 @@ var testString = "This is a test string\n"
 //
 func TestNewProto(t *testing.T) {
 
+	ctx := context.Background()
+
 	localport := getRandPort()
 	addr := fmt.Sprintf("%s:%d", ip, localport)
 
-	sls := newConnection(t, addr)
+	sls := newConnection(t, ctx, addr, addr)
 	sls.Run()
 	sls.Cancel()
 
@@ -34,17 +36,37 @@ func TestNewProto(t *testing.T) {
 
 func TestNewConnection(t *testing.T) {
 
-	localport := getRandPort()
-	addr := fmt.Sprintf("%s:%d", ip, localport)
+	ctx := context.Background()
 
-	sls := newConnection(t, addr)
+	// Local Node Listener
+	localport := getRandPort()
+	srcaddr := fmt.Sprintf("%s:%d", ip, localport)
+
+	// OPEN Default destination address
+	fl, dstport := fakeListener(ctx)
+	dstaddr := fmt.Sprintf("%s:%d", ip, dstport)
+
+	// Open the actual stratumV1 test connection
+	sls := newConnection(t, ctx, srcaddr, dstaddr)
 	sls.Run()
 
-	s, e := connect(t, sls.Ctx(), addr)
+	// Run a incoming test connection to Stratum
+	cs := contextlib.GetContextStruct(sls.Ctx())
+	ctx = contextlib.SetContextStruct(ctx, cs)
+	s, e := connect(t, ctx, srcaddr)
 	if e != nil {
 		t.Errorf("connect() error:%s", e)
 	}
 
+	// Accept the expected dest connection (BLOCKING)
+	// should happen after the connect to the node
+	// FIX HERE
+	dstsoc, e := fl.Accept()
+	if e != nil {
+		t.Errorf("Accept() error:%s", e)
+	}
+
+	// Push data into the Stratum connection
 	count, e := s.Write([]byte(testString))
 	if e != nil {
 		t.Errorf("Write() error:%s", e)
@@ -53,8 +75,21 @@ func TestNewConnection(t *testing.T) {
 		t.Errorf("Write() error:%s", e)
 	}
 
-	<-sls.Ctx().Done()
+	// Need Read Relay here  stratum.Read -> default dest Write, should be event handler
+
+	// Loof for the data on the  default dst connection
+	// rr := dstsoc.ReadReady()
+	var dstbuf []byte
+	dstmsgcount, e := dstsoc.Read(dstbuf)
+	if e != nil {
+		t.Errorf("bad dest message error:%s", e)
+	}
+	if dstmsgcount != len(testString) {
+		t.Errorf("bad dest message lenth() error")
+	}
+
 	sls.Cancel()
+	<-sls.Ctx().Done()
 
 }
 
@@ -65,13 +100,11 @@ func TestNewConnection(t *testing.T) {
 //
 // newConnection()
 //
-func newConnection(t *testing.T, addr string) (sls *StratumV1ListenStruct) {
+func newConnection(t *testing.T, ctx context.Context, srcstr string, dststr string) (sls *StratumV1ListenStruct) {
 
 	ps := msgbus.New(1, nil)
-	src := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
-	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
-
-	ctx := context.Background()
+	src := lumerinlib.NewNetAddr(lumerinlib.TCP, srcstr)
+	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, dststr)
 
 	var new = &newStratumV1Struct{
 		funcptr: testStratumV1,
@@ -79,13 +112,11 @@ func newConnection(t *testing.T, addr string) (sls *StratumV1ListenStruct) {
 
 	sls, err := NewListener(ctx, ps, src, dst, new)
 
-	// sls, err := NewListener(ctx, ps, src, dst, StratumV1Func)
 	if err != nil {
 		t.Errorf("NewListner() returned error:%s", err)
 	}
 
 	return sls
-
 }
 
 //
@@ -147,4 +178,24 @@ func testStratumV1(ss *simple.SimpleStruct) {
 func getRandPort() (port int) {
 	port = rand.Intn(10000) + basePort
 	return port
+}
+
+//
+//
+//
+func fakeListener(ctx context.Context) (l *sockettcp.ListenTCPStruct, port int) {
+
+	lport := getRandPort()
+	addr := fmt.Sprintf("0.0.0.0:%d", lport)
+	l, e := sockettcp.Listen(ctx, "tcp", addr)
+	if e != nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Create sockettcp.Listen() errored:%s", e)
+	}
+
+	_, port, e = l.LocalAddr()
+	if e != nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Create sockettcp.Listen() errored:%s", e)
+	}
+
+	return l, port
 }

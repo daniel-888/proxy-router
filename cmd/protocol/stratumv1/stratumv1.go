@@ -61,7 +61,7 @@ func NewListener(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.A
 		cs.SetProtocol(new)
 	}
 
-	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
+	ctx = contextlib.SetContextStruct(ctx, cs)
 
 	protocollisten, err := protocol.NewListen(ctx)
 	if err != nil {

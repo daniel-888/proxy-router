@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
+	"strings"
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
@@ -592,4 +594,54 @@ func (s *SocketTCPStruct) RemoteAddrString() string {
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	return s.socket.RemoteAddr().String()
+}
+
+//
+// Returns the local address of the socket
+//
+func (l *ListenTCPStruct) LocalAddr() (host string, port int, e error) {
+
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	return getAddr(l.ctx, l.listener.Addr().String())
+}
+
+//
+// Returns the local address of the socket
+//
+func (s *SocketTCPStruct) LocalAddr() (host string, port int, e error) {
+
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	return getAddr(s.ctx, s.socket.LocalAddr().String())
+}
+
+//
+// Returns the local address of the socket
+//
+func (s *SocketTCPStruct) RemoteAddr() (host string, port int, e error) {
+
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	return getAddr(s.ctx, s.socket.RemoteAddr().String())
+}
+
+//
+// Returns the local address of the socket
+//
+func getAddr(ctx context.Context, addr string) (host string, port int, e error) {
+
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	var values []string
+
+	values = strings.Split(addr, ":")
+	host = values[0]
+	if host == "" {
+		host = "0.0.0.0"
+	}
+
+	port, e = strconv.Atoi(values[1])
+
+	return host, port, e
 }
