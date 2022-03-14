@@ -69,6 +69,8 @@ func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 
 	listenaddr := contextlib.GetSrc(ctx)
 	sls, err := simple.New(ctx, listenaddr)
+	sls.Run()
+
 	if err != nil {
 		lumerinlib.PanicHere(fmt.Sprintf("Error:%s", err))
 	}
@@ -144,17 +146,20 @@ func (pls *ProtocolListenStruct) goAccept() {
 // This function is called from the layer above to initalize the common protocol functions, and enable
 // access to the standard functions provided by this layer.
 //
-func NewProtocol(s *simple.SimpleStruct) (pls *ProtocolStruct, e error) {
+func NewProtocol(s *simple.SimpleStruct) (ps *ProtocolStruct, e error) {
 
 	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	ctx, cancel := context.WithCancel(s.Ctx())
-	eventchan := make(chan *simple.SimpleEvent)
-	cs := s.Ctx().Value(contextlib.ContextKey).(contextlib.ContextStruct)
+	cs := contextlib.GetContextStruct(s.Ctx())
 	src := cs.GetSrc()
 	dst := cs.GetDst()
 
-	ps := &ProtocolStruct{
+	ctx, cancel := context.WithCancel(s.Ctx())
+	eventchan := make(chan *simple.SimpleEvent)
+
+	s.SetEventChan(eventchan)
+
+	ps = &ProtocolStruct{
 		ctx:       ctx,
 		cancel:    cancel,
 		simple:    s,
@@ -170,20 +175,35 @@ func NewProtocol(s *simple.SimpleStruct) (pls *ProtocolStruct, e error) {
 	}
 
 	// Open the default connection
+	// What happens if the Default Destination does not take the connection?
+	//
 	index, e := ps.OpenConn(dst)
 	// First connection should be zero
-	if index != 0 {
-		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" called")
+	if e != nil {
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" openConn(dst) returned error:%s", e)
 	}
-	e = ps.SetDefaultRoute(index)
+	if index != 0 {
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" wrong index returned")
+	}
 
-	return pls, e
+	s.Run()
+
+	e = ps.SetDefaultRoute(index)
+	if e != nil {
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" SetDefaultRoute(index) returned error:%s", e)
+
+	}
+
+	return ps, e
 }
 
 //
 // Ctx() returns the context of the ProtocolStruct
 //
 func (ps *ProtocolStruct) Ctx() context.Context {
+	if ps == nil {
+		panic(lumerinlib.FileLineFunc() + " nil ProtocolStruct pointer")
+	}
 	return ps.ctx
 }
 
@@ -203,19 +223,29 @@ func (ps *ProtocolStruct) Cancel() {
 func (ps *ProtocolStruct) Run() {
 
 	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-	ps.simple.Run(ps.Ctx())
-	// go ps.goAccept()
+	ps.simple.Run()
+}
+
+//
+// Run() calls the simple layer Run function on the SimpleListenStruct
+//
+func (ps *ProtocolStruct) GetSimpleEvent() <-chan *simple.SimpleEvent {
+	return ps.simple.GetEvent()
 }
 
 //
 //
 //
-func (ps *ProtocolStruct) Event() chan *simple.SimpleEvent {
-
-	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-
-	return ps.eventchan
-}
+//func (ps *ProtocolStruct) Event() chan *simple.SimpleEvent {
+//
+//	if ps == nil {
+//		panic(lumerinlib.FileLineFunc() + " empty pointer")
+//	}
+//
+//	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+//
+//	return ps.eventchan
+//}
 
 //
 // OpenConn()
@@ -273,7 +303,7 @@ func (ps *ProtocolStruct) GetDefaultRoute() (index int, e error) {
 	//	return -1, e
 	//}
 
-	index, e = ps.dstconn.getConnIndex(simple.ConnUniqueID(id))
+	index, e = ps.dstconn.getConnIndex(id)
 
 	return index, e
 

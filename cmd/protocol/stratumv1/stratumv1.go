@@ -17,7 +17,12 @@ import (
 //
 //
 
-type newStratumV1Prototype func(*simple.SimpleStruct) chan *simple.SimpleEvent
+// type newStratumV1Func func(*simple.SimpleStruct) chan *simple.SimpleEvent
+type newStratumV1Func func(*simple.SimpleStruct)
+
+type newStratumV1Struct struct {
+	funcptr newStratumV1Func
+}
 
 type StratumV1ListenStruct struct {
 	protocollisten *protocol.ProtocolListenStruct
@@ -34,7 +39,7 @@ type StratumV1Struct struct {
 //
 //
 //
-func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr, proto ...newStratumV1Prototype) (s *StratumV1ListenStruct, e error) {
+func NewListener(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr, proto ...*newStratumV1Struct) (s *StratumV1ListenStruct, e error) {
 
 	// Validate src and dst here
 
@@ -46,10 +51,14 @@ func New(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr, pro
 	cs.SetDst(dst)
 	//
 	// This is the only place that SetProtocol is called
+
 	if len(proto) > 0 {
 		cs.SetProtocol(proto[0])
 	} else {
-		cs.SetProtocol(newStratumV1Func)
+		var new = &newStratumV1Struct{
+			funcptr: NewStratumV1,
+		}
+		cs.SetProtocol(new)
 	}
 
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
@@ -99,7 +108,15 @@ func (s *StratumV1ListenStruct) Cancel() {
 //
 // SIMPL defined this function as passing in a SimpeStruct abd retuning a chan for SimpleEvents
 //
-func newStratumV1Func(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
+func (n *newStratumV1Struct) NewProtocol(ss *simple.SimpleStruct) {
+	n.funcptr(ss)
+}
+
+//
+// NewStratumV1()
+// The SimpleStruct should already have the SRC connection open
+//
+func NewStratumV1(ss *simple.SimpleStruct) {
 
 	contextlib.Logf(ss.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -132,8 +149,9 @@ func newStratumV1Func(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
 	// Launch the event handler
 	go svs.goEvent()
 
+	ss.Run()
+
 	// return the event handler channel to the caller (the simple layer accept() function )
-	return svs.protocol.Event()
 }
 
 // ---------------------------------------------------------------------
@@ -147,7 +165,7 @@ func (s *StratumV1Struct) goEvent() {
 
 	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	for event := range s.protocol.Event() {
+	for event := range s.protocol.GetSimpleEvent() {
 		s.eventHandler(event)
 	}
 }
@@ -184,27 +202,7 @@ func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) {
 	case simple.NoEvent:
 		return
 
-	case simple.MsgUpdateEvent:
-		fallthrough
-	case simple.MsgDeleteEvent:
-		fallthrough
-	case simple.MsgGetEvent:
-		fallthrough
-	case simple.MsgGetIndexEvent:
-		fallthrough
-	case simple.MsgSearchEvent:
-		fallthrough
-	case simple.MsgSearchIndexEvent:
-		fallthrough
-	case simple.MsgPublishEvent:
-		fallthrough
-	case simple.MsgUnpublishEvent:
-		fallthrough
-	case simple.MsgSubscribedEvent:
-		fallthrough
-	case simple.MsgUnsubscribedEvent:
-		fallthrough
-	case simple.MsgRemovedEvent:
+	case simple.MsgBusEvent:
 		msg, ok := event.Data.(msgbus.Event)
 		if !ok {
 			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Event Data wrong Type:%t", event.Data)

@@ -12,17 +12,18 @@ import (
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
+type newProtocolFunc func(*simple.SimpleStruct) chan *simple.SimpleEvent
+type newProtocolStruct struct {
+	funcptr newProtocolFunc
+}
+
 var port int = 12345
 var ip string = "127.0.0.1"
 
 func TestNewProto(t *testing.T) {
-
 	pls := newListen(t)
-
 	pls.Run()
-
 	pls.Cancel()
-
 	select {
 	case <-pls.ctx.Done():
 	}
@@ -57,11 +58,11 @@ func TestNewConnection(t *testing.T) {
 	// Need to read the data from the event handler here
 
 	pls.Cancel()
-
 	select {
 	case <-pls.Ctx().Done():
 		return
 	}
+
 }
 
 //
@@ -78,7 +79,7 @@ func TestConnectionDial(t *testing.T) {
 // This function provides a window into creating a new ProtocolStruct instances
 // it creates the instance, and sends back an event channel to send events to
 //
-func newProtcolConnection(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
+func newProtcolConnection(ss *simple.SimpleStruct) {
 
 	contextlib.Logf(ss.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -105,7 +106,7 @@ func newProtcolConnection(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
 	go pls.goEvent()
 
 	// return the event handler channel to the caller (the simple layer accept() function )
-	return pls.Event()
+	// return pls.Event()
 
 }
 
@@ -113,11 +114,13 @@ func (p *ProtocolStruct) goEvent() {
 
 	contextlib.Logf(p.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	for event := range p.Event() {
+	for event := range p.GetSimpleEvent() {
 		contextlib.Logf(p.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Got Event %v", event)
 	}
 }
 
+//
+//
 //
 func newListen(t *testing.T) (pls *ProtocolListenStruct) {
 
@@ -126,12 +129,16 @@ func newListen(t *testing.T) (pls *ProtocolListenStruct) {
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
 
+	var new = &newProtocolStruct{
+		funcptr: NewProtocolFunc,
+	}
+
 	ctx := context.Background()
 	cs := &contextlib.ContextStruct{}
 	cs.SetMsgBus(ps)
 	cs.SetSrc(src)
 	cs.SetDst(dst)
-	cs.SetProtocol(newProtcolConnection)
+	cs.SetProtocol(new)
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
 	pls, e := NewListen(ctx)
@@ -148,4 +155,52 @@ func newListen(t *testing.T) (pls *ProtocolListenStruct) {
 func connect(t *testing.T, ctx context.Context) (*sockettcp.SocketTCPStruct, error) {
 	_ = t
 	return sockettcp.Dial(ctx, "tcp", fmt.Sprintf("%s:%d", ip, port))
+}
+
+//
+//
+//
+func (n *newProtocolStruct) NewProtocol(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
+	return n.funcptr(ss)
+}
+
+//
+//
+//
+func NewProtocolFunc(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
+
+	contextlib.Logf(ss.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	return make(chan *simple.SimpleEvent)
+
+	//	i := ss.Ctx().Value(contextlib.ContextKey)
+	//	cs, ok := i.(contextlib.ContextStruct)
+	//	if !ok {
+	//		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct not in CTX")
+	//	}
+	//
+	//	dst := cs.GetDst()
+	//	if dst == nil {
+	//		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct DST not defined")
+	//	}
+	//
+	//	// inialize a new ProtocolStruct to gain access to the standard protocol functions
+	//	// The default Dst should be opened when this returns
+	//	pls, err := protocol.NewProtocol(ss)
+	//	if err != nil {
+	//		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Create NewProtocol() failed: %s", err)
+	//	}
+	//
+	//	svs := &StratumV1Struct{
+	//		protocol:            pls,
+	//		minerRec:            nil,
+	//		srcSubscribeRequest: nil,
+	//		srcAuthRequest:      nil,
+	//		// Fill in other state information here
+	//	}
+	//
+	//	// Launch the event handler
+	//	go svs.goEvent()
+	//
+	//	// return the event handler channel to the caller (the simple layer accept() function )
+	//	return svs.protocol.Event()
 }

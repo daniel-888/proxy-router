@@ -3,8 +3,6 @@ package protocol
 import (
 	"errors"
 	"net"
-
-	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
 )
 
 var ErrProtoConnNoDstIndex = errors.New("DST index not found")
@@ -22,7 +20,7 @@ var ErrProtoConnNoID = errors.New("Connection ID not found")
 
 type ProtocolConnectionStruct struct {
 	Addr net.Addr
-	Id   simple.ConnUniqueID
+	Id   int
 }
 
 type ProtocolDstStruct struct {
@@ -32,7 +30,7 @@ type ProtocolDstStruct struct {
 //
 // addConn() Finds and existing instance index or returnes a new index to a new entry
 //
-func (p *ProtocolDstStruct) addConn(dst net.Addr, id simple.ConnUniqueID) (index int, e error) {
+func (p *ProtocolDstStruct) addConn(dst net.Addr, id int) (index int, e error) {
 
 	l := len(p.conn)
 
@@ -60,7 +58,7 @@ func (p *ProtocolDstStruct) addConn(dst net.Addr, id simple.ConnUniqueID) (index
 //
 //
 //
-func (p *ProtocolDstStruct) getConnIndex(id simple.ConnUniqueID) (index int, e error) {
+func (p *ProtocolDstStruct) getConnIndex(id int) (index int, e error) {
 
 	l := len(p.conn)
 
@@ -77,7 +75,7 @@ func (p *ProtocolDstStruct) getConnIndex(id simple.ConnUniqueID) (index int, e e
 //
 //
 //
-func (p *ProtocolDstStruct) getConnID(index int) (id simple.ConnUniqueID, e error) {
+func (p *ProtocolDstStruct) getConnID(index int) (id int, e error) {
 	var ok bool
 	if _, ok = p.conn[index]; !ok {
 		e = ErrProtoConnNoDstIndex

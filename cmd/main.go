@@ -170,7 +170,7 @@ func main() {
 			lumerinlib.PanicHere("")
 		}
 
-		stratum, err := stratumv1.New(mainContext, ps, src, dst)
+		stratum, err := stratumv1.NewListener(mainContext, ps, src, dst)
 		if err != nil {
 			panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
 		}

@@ -2,11 +2,13 @@ package simple
 
 import (
 	"context"
-	_"fmt"
+	_ "fmt"
 	"net"
 	_ "reflect"
 	"testing"
+
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	lumerincontext "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
@@ -47,13 +49,14 @@ func generateTestAddr() net.Addr {
 func generateSimpleStruct() SimpleStruct {
 	myContext := generateTestContext()
 	mySimpleStruct := SimpleStruct{
-		ctx: myContext,
+		ctx:    myContext,
 		cancel: dummyFunc,
-		eventHandler: 0,
-		eventChan: make(chan SimpleEvent),
-		protocolChan: make(chan SimpleEvent),
-		commChan: make(chan []byte),
-		connectionMapping:    make(map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct),
+		// eventHandler:      0,
+		eventChan:  make(chan *SimpleEvent),
+		msgbusChan: make(chan *msgbus.Event),
+		// protocolChan:      make(chan *SimpleEvent),
+		// commChan:          make(chan []byte),
+		connectionMapping: make(map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct),
 	}
 	return mySimpleStruct
 }
@@ -90,8 +93,8 @@ test steps
 */
 func TestSimpleStructRun(t *testing.T) {
 	simpleStruct := generateSimpleStruct()
-	context := generateTestContext() //this needs to be replaced to accept a context from the protocol
-	simpleStruct.Run(context) //run is working but needs to do "something" with the context
+	// context := generateTestContext() //this needs to be replaced to accept a context from the protocol
+	simpleStruct.Run() //run is working but needs to do "something" with the context
 }
 
 /*
@@ -113,8 +116,8 @@ test steps
 */
 func TestSimpleStructClose(t *testing.T) {
 	simpleStruct := generateSimpleStruct()
-	context := generateTestContext() //this needs to be replaced to accept a context from the protocol
-	simpleStruct.Run(context) //run is working but needs to do "something" with the context
+	//context := generateTestContext() //this needs to be replaced to accept a context from the protocol
+	simpleStruct.Run() //run is working but needs to do "something" with the context
 	simpleStruct.Close()
 }
 
@@ -138,7 +141,7 @@ func TestDialFunctionality(t *testing.T) {
 	simpleStruct := generateSimpleStruct()
 	testAddr := generateTestAddr()
 
-	if simpleStruct.connectionIndex !=0 {
+	if simpleStruct.connectionIndex != 0 {
 		t.Error("testing index is not 0")
 	}
 
@@ -148,7 +151,7 @@ func TestDialFunctionality(t *testing.T) {
 	}
 
 	if e != nil {
-		t.Errorf("%s",e)
+		t.Errorf("%s", e)
 	}
 
 }
@@ -169,15 +172,14 @@ func TestSimpleStructCreateOnRun(t *testing.T) {
 
 	//go routine to listen for the simpleListenStruct accept channel
 	go func() {
-		simpleStruct = <- simpleListenStruct.accept
+		simpleStruct = <-simpleListenStruct.accept
 		t.Log("\n\n\nmeow\n\n\n")
 		t.Logf("%+v", simpleStruct)
 		if simpleStruct.eventHandler != 1 {
 			t.Error("did not create an accurate SimpleStruct")
 		}
-	//need a way to detect if the SimpleStruct was correctly generated
+		//need a way to detect if the SimpleStruct was correctly generated
 	}()
-
 
 }
 
@@ -197,9 +199,9 @@ func TestProtocolDialTheSimpleStruct(t *testing.T) {
 
 	var simpleStruct *SimpleStruct
 
-	go func(){
-		simpleStruct = <- simpleListenStruct.accept
-		//initial dial 
+	go func() {
+		simpleStruct = <-simpleListenStruct.accept
+		//initial dial
 		uid, err := simpleStruct.Dial(testAddr)
 
 		if uid != 0 {
@@ -222,6 +224,3 @@ func TestProtocolDialTheSimpleStruct(t *testing.T) {
 
 	}()
 }
-
-
-

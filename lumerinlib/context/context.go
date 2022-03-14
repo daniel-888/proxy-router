@@ -140,6 +140,9 @@ func (s *ContextStruct) Logf(level log.Level, format string, args ...interface{}
 //
 func GetContextStruct(ctx context.Context) (s *ContextStruct) {
 	val := ctx.Value(ContextKey)
+	if val == nil {
+		panic("Unable to retrieve ContextKey from Context")
+	}
 	s, ok := val.(*ContextStruct)
 	if !ok {
 		panic(fmt.Sprintf("Unable to retrieve Context Value with ContextKey Val:%t", val))

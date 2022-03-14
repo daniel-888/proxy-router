@@ -53,11 +53,12 @@ func TestNewConnection(t *testing.T) {
 		t.Errorf("Write() error:%s", e)
 	}
 
+	<-sls.Ctx().Done()
 	sls.Cancel()
 
 }
 
-//
+// ---------------------------------------------------------------------------
 //
 //
 
@@ -72,9 +73,15 @@ func newConnection(t *testing.T, addr string) (sls *StratumV1ListenStruct) {
 
 	ctx := context.Background()
 
-	sls, err := New(ctx, ps, src, dst, StratumV1Func)
+	var new = &newStratumV1Struct{
+		funcptr: testStratumV1,
+	}
+
+	sls, err := NewListener(ctx, ps, src, dst, new)
+
+	// sls, err := NewListener(ctx, ps, src, dst, StratumV1Func)
 	if err != nil {
-		t.Errorf("New() returne error:%s", err)
+		t.Errorf("NewListner() returned error:%s", err)
 	}
 
 	return sls
@@ -95,14 +102,15 @@ func connect(t *testing.T, ctx context.Context, addr string) (s *sockettcp.Socke
 
 //
 //
-func StratumV1Func(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
+//
+func testStratumV1(ss *simple.SimpleStruct) {
 
-	contextlib.Logf(ss.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	contextlib.Logf(ss.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
-	i := ss.Ctx().Value(contextlib.ContextKey)
-	cs, ok := i.(contextlib.ContextStruct)
-	if !ok {
-		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct not in CTX")
+	cs := contextlib.GetContextStruct(ss.Ctx())
+
+	if cs == nil {
+		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Structre not correct")
 	}
 
 	dst := cs.GetDst()
@@ -116,6 +124,9 @@ func StratumV1Func(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
 	if err != nil {
 		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Create NewProtocol() failed: %s", err)
 	}
+	if pls == nil {
+		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Create NewProtocol() failed - no pointer returned")
+	}
 
 	svs := &StratumV1Struct{
 		protocol:            pls,
@@ -128,8 +139,6 @@ func StratumV1Func(ss *simple.SimpleStruct) chan *simple.SimpleEvent {
 	// Launch the event handler
 	go svs.goEvent()
 
-	// return the event handler channel to the caller (the simple layer accept() function )
-	return svs.protocol.Event()
 }
 
 //
