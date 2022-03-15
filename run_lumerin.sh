@@ -18,6 +18,7 @@ lumerin \
 	--configdownload="" \
 	--logfile="/tmp/lumerin1.log" \
 	--loglevel=4 \
+	--schedulepassthrough="true" \
 	--defaultpooladdr="stratum+tcp://127.0.0.1:33334/" \
 	--disableconnection="false" \
 	--disablecontract="false" \

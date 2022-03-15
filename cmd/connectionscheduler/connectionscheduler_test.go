@@ -37,7 +37,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 		IsBuyer:     false,
 	}
 
-	cs, err := New(&mainCtx, &nodeOperator)
+	cs, err := New(&mainCtx, &nodeOperator, false)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -353,7 +353,7 @@ func TestBuyerConnectionScheduler(t *testing.T) {
 		IsBuyer:     true,
 	}
 
-	cs, err := New(&mainCtx, &nodeOperator)
+	cs, err := New(&mainCtx, &nodeOperator, false)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -461,4 +461,379 @@ func TestBuyerConnectionScheduler(t *testing.T) {
 	ps.SetWait(msgbus.MinerMsg, msgbus.IDString(miner5.ID), miner5)
 
 	time.Sleep(time.Second * 5)
+}
+
+func TestPassthroughConnectionScheduler(t *testing.T) {
+	ps := msgbus.New(10, nil)
+	l := log.New()
+
+	ctxStruct := contextlib.NewContextStruct(nil, ps, l, nil, nil)
+	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)
+
+	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"
+	defaultDest := msgbus.Dest{
+		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
+		NetUrl: msgbus.DestNetUrl(defaultpooladdr),
+	}
+	event, err := ps.PubWait(msgbus.DestMsg, msgbus.IDString(msgbus.DEFAULT_DEST_ID), defaultDest)
+	if err != nil {
+		panic(fmt.Sprintf("Adding Default Dest Failed: %s", err))
+	}
+	if event.Err != nil {
+		panic(fmt.Sprintf("Adding Default Dest Failed: %s", event.Err))
+	}
+
+	nodeOperator := msgbus.NodeOperator{
+		ID:          msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
+		DefaultDest: defaultDest.ID,
+		IsBuyer:     true,
+	}
+
+	cs, err := New(&mainCtx, &nodeOperator, true)
+	if err != nil {
+		panic(fmt.Sprintf("schedule manager failed:%s", err))
+	}
+	err = cs.Start()
+	if err != nil {
+		panic(fmt.Sprintf("schedule manager failed to start:%s", err))
+	}
+
+	fmt.Print("\n\n/// Multiple miners connecting to node ///\n\n\n")
+
+	miner1 := msgbus.Miner{
+		ID:                   msgbus.MinerID("MinerID01"),
+		IP:                   "IpAddress1",
+		CurrentHashRate:      27,
+		State:                msgbus.OnlineState,
+		Dest:                 defaultDest.ID,
+		CsMinerHandlerIgnore: false,
+	}
+	miner2 := msgbus.Miner{
+		ID:                   msgbus.MinerID("MinerID02"),
+		IP:                   "IpAddress2",
+		CurrentHashRate:      35,
+		State:                msgbus.OnlineState,
+		Dest:                 defaultDest.ID,
+		CsMinerHandlerIgnore: false,
+	}
+	miner3 := msgbus.Miner{
+		ID:                   msgbus.MinerID("MinerID03"),
+		IP:                   "IpAddress3",
+		CurrentHashRate:      72,
+		State:                msgbus.OnlineState,
+		Dest:                 defaultDest.ID,
+		CsMinerHandlerIgnore: false,
+	}
+	miner4 := msgbus.Miner{
+		ID:                   msgbus.MinerID("MinerID04"),
+		IP:                   "IpAddress4",
+		CurrentHashRate:      16,
+		State:                msgbus.OnlineState,
+		Dest:                 defaultDest.ID,
+		CsMinerHandlerIgnore: false,
+	}
+	miner5 := msgbus.Miner{
+		ID:                   msgbus.MinerID("MinerID05"),
+		IP:                   "IpAddress5",
+		CurrentHashRate:      88,
+		State:                msgbus.OnlineState,
+		Dest:                 defaultDest.ID,
+		CsMinerHandlerIgnore: false,
+	}
+	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner1.ID), miner1)
+	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner2.ID), miner2)
+	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner3.ID), miner3)
+	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner4.ID), miner4)
+	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner5.ID), miner5)
+
+	time.Sleep(time.Second * 2)
+
+	fmt.Print("\n\n/// New available contract found ///\n\n\n")
+
+	contract1 := msgbus.Contract{
+		IsSeller: true,
+		ID:       msgbus.ContractID("ContractID01"),
+		State:    msgbus.ContAvailableState,
+		Price:    10,
+		Limit:    10,
+		Speed:    100,
+	}
+	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract1.ID), contract1)
+
+	correctReadyMiners := []msgbus.Miner{miner1, miner2, miner3, miner4, miner5}
+	correctBusyMiners := []msgbus.Miner{}
+
+	for _, v := range correctReadyMiners {
+		if !cs.ReadyMiners.Exists(string(v.ID)) {
+			t.Errorf("Ready miners map not correct")
+		}
+		if v.Contract != "" || v.Dest != nodeOperator.DefaultDest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+	for _, v := range correctBusyMiners {
+		if !cs.BusyMiners.Exists(string(v.ID)) {
+			t.Errorf("Busy miners map not correct")
+		}
+		if v.Contract != contract1.ID || v.Dest != contract1.Dest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+
+	time.Sleep(time.Second * 2)
+
+	fmt.Print("\n\n/// Contract purchased and now running ///\n\n\n")
+
+	contract1.State = msgbus.ContRunningState
+	contract1.Buyer = "buyer"
+	contract1.Dest = "stratum+tcp://127.0.0.1:55555/"
+	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract1.ID), contract1)
+	time.Sleep(time.Second * 2)
+
+	correctReadyMiners = []msgbus.Miner{}
+	correctBusyMiners = []msgbus.Miner{miner1, miner2, miner3, miner4, miner5}
+
+	for _, v := range correctReadyMiners {
+		if !cs.ReadyMiners.Exists(string(v.ID)) {
+			t.Errorf("Ready miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+	for _, v := range correctBusyMiners {
+		if !cs.BusyMiners.Exists(string(v.ID)) {
+			t.Errorf("Busy miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != contract1.ID || miner.Dest != contract1.Dest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+
+	time.Sleep(time.Second * 2)
+
+	fmt.Print("\n\n/// New miner connected ///\n\n\n")
+
+	miner6 := msgbus.Miner{
+		ID:                   msgbus.MinerID("MinerID06"),
+		IP:                   "IpAddress6",
+		CurrentHashRate:      88,
+		State:                msgbus.OnlineState,
+		Dest:                 defaultDest.ID,
+		CsMinerHandlerIgnore: false,
+	}
+	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner6.ID), miner6)
+	time.Sleep(time.Second * 2)
+
+	correctReadyMiners = []msgbus.Miner{}
+	correctBusyMiners = []msgbus.Miner{miner1, miner2, miner3, miner4, miner5, miner6}
+
+	for _, v := range correctReadyMiners {
+		if !cs.ReadyMiners.Exists(string(v.ID)) {
+			t.Errorf("Ready miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+	for _, v := range correctBusyMiners {
+		if !cs.BusyMiners.Exists(string(v.ID)) {
+			t.Errorf("Busy miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != contract1.ID || miner.Dest != contract1.Dest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+
+	time.Sleep(time.Second * 2)
+
+	fmt.Print("\n\n/// Contract closes out ///\n\n\n")
+
+	contract1.State = msgbus.ContAvailableState
+	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract1.ID), contract1)
+	time.Sleep(time.Second * 2)
+
+	correctReadyMiners = []msgbus.Miner{miner1, miner2, miner3, miner4, miner5, miner6}
+	correctBusyMiners = []msgbus.Miner{}
+
+	for _, v := range correctReadyMiners {
+		if !cs.ReadyMiners.Exists(string(v.ID)) {
+			t.Errorf("Ready miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+	for _, v := range correctBusyMiners {
+		if !cs.BusyMiners.Exists(string(v.ID)) {
+			t.Errorf("Busy miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != contract1.ID || miner.Dest != contract1.Dest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+
+	time.Sleep(time.Second * 2)
+
+	fmt.Print("\n\n/// New available contract found ///\n\n\n")
+
+	contract2 := msgbus.Contract{
+		IsSeller: true,
+		ID:       msgbus.ContractID("ContractID02"),
+		State:    msgbus.ContAvailableState,
+		Price:    10,
+		Limit:    10,
+		Speed:    100,
+	}
+	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract2.ID), contract2)
+
+	correctReadyMiners = []msgbus.Miner{miner1, miner2, miner3, miner4, miner5, miner6}
+	correctBusyMiners = []msgbus.Miner{}
+
+	for _, v := range correctReadyMiners {
+		if !cs.ReadyMiners.Exists(string(v.ID)) {
+			t.Errorf("Ready miners map not correct")
+		}
+		if v.Contract != "" || v.Dest != nodeOperator.DefaultDest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+	for _, v := range correctBusyMiners {
+		if !cs.BusyMiners.Exists(string(v.ID)) {
+			t.Errorf("Busy miners map not correct")
+		}
+		if v.Contract != contract2.ID || v.Dest != contract2.Dest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+	time.Sleep(time.Second * 2)
+
+	fmt.Print("\n\n/// Contract purchased and now running ///\n\n\n")
+
+	contract2.State = msgbus.ContRunningState
+	contract2.Buyer = "buyer"
+	contract2.Dest = "stratum+tcp://127.0.0.1:55555/"
+	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract2.ID), contract2)
+	time.Sleep(time.Second * 2)
+
+	correctReadyMiners = []msgbus.Miner{}
+	correctBusyMiners = []msgbus.Miner{miner1, miner2, miner3, miner4, miner5, miner6}
+
+	for _, v := range correctReadyMiners {
+		if !cs.ReadyMiners.Exists(string(v.ID)) {
+			t.Errorf("Ready miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+	for _, v := range correctBusyMiners {
+		if !cs.BusyMiners.Exists(string(v.ID)) {
+			t.Errorf("Busy miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != contract2.ID || miner.Dest != contract2.Dest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+
+	time.Sleep(time.Second * 2)
+
+	fmt.Print("\n\n/// Few miners disconnect ///\n\n\n")
+
+	miner5.State = msgbus.OfflineState
+	ps.SetWait(msgbus.MinerMsg, msgbus.IDString(miner5.ID), miner5)
+	ps.UnpubWait(msgbus.MinerMsg, msgbus.IDString(miner6.ID))
+	time.Sleep(time.Second * 2)
+
+	correctReadyMiners = []msgbus.Miner{}
+	correctBusyMiners = []msgbus.Miner{miner1, miner2, miner3, miner4}
+
+	for _, v := range correctReadyMiners {
+		if !cs.ReadyMiners.Exists(string(v.ID)) {
+			t.Errorf("Ready miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+	for _, v := range correctBusyMiners {
+		if !cs.BusyMiners.Exists(string(v.ID)) {
+			t.Errorf("Busy miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != contract2.ID || miner.Dest != contract2.Dest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+
+	time.Sleep(time.Second * 2)
+
+	fmt.Print("\n\n/// Contract Target Dest updated ///\n\n\n")
+
+	contract2.Dest = "stratum+tcp://127.0.0.1:66666/"
+	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract2.ID), contract2)
+	time.Sleep(time.Second * 2)
+
+	correctReadyMiners = []msgbus.Miner{}
+	correctBusyMiners = []msgbus.Miner{miner1, miner2, miner3, miner4}
+
+	for _, v := range correctReadyMiners {
+		if !cs.ReadyMiners.Exists(string(v.ID)) {
+			t.Errorf("Ready miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+	for _, v := range correctBusyMiners {
+		if !cs.BusyMiners.Exists(string(v.ID)) {
+			t.Errorf("Busy miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != contract2.ID || miner.Dest != contract2.Dest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+
+	time.Sleep(time.Second * 2)
+
+	fmt.Print("\n\n/// Contract Closed Out ///\n\n\n")
+
+	contract2.State = msgbus.ContAvailableState
+	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract2.ID), contract2)
+	time.Sleep(time.Second * 2)
+
+	correctReadyMiners = []msgbus.Miner{miner1, miner2, miner3, miner4}
+	correctBusyMiners = []msgbus.Miner{}
+
+	for _, v := range correctReadyMiners {
+		if !cs.ReadyMiners.Exists(string(v.ID)) {
+			t.Errorf("Ready miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+	for _, v := range correctBusyMiners {
+		if !cs.BusyMiners.Exists(string(v.ID)) {
+			t.Errorf("Busy miners map not correct")
+		}
+		miner,_ := ps.MinerGetWait(v.ID)
+		if miner.Contract != contract2.ID || miner.Dest != contract2.Dest {
+			t.Errorf("Miner contract and dest field incorrect")
+		}
+	}
+
+	time.Sleep(time.Second * 2)
 }

@@ -21,6 +21,7 @@ const (
 	ConfigConfigDownloadPath          ConfigConst = "ConfigConfigDownloadPath"
 	ConfigLogFilePath                 ConfigConst = "ConfigLogFilePath"
 	ConfigLogLevel                    ConfigConst = "ConfigLogLevel"
+	ConfigSchedulePassthrough		  ConfigConst = "ConfigSchedulePassthrough"
 	DefaultPoolAddr                   ConfigConst = "DefaultPoolAddr"
 	ConfigRESTPort                    ConfigConst = "ConfigRESTPort"
 	DisableConnection                 ConfigConst = "DisableConnection"
@@ -178,6 +179,15 @@ var ConfigMap = map[ConfigConst]configitem{
 		flagusage: "Log File Path",
 		envname:   "LOGFILEPATH",
 		defval:    "lumerin.log",
+		configval: nil,
+		envval:    nil,
+		flagval:   nil,
+	},
+	ConfigSchedulePassthrough: {
+		flagname:  "schedulepassthrough",
+		flagusage: "Run connection scheduler in passthrough mode i.e. no miner orchestration and only 1 contract running at a time",
+		envname:   "SCHEDULEPASSTHROUGH",
+		defval:    "false",
 		configval: nil,
 		envval:    nil,
 		flagval:   nil,

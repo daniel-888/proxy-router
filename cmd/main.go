@@ -183,7 +183,16 @@ func main() {
 	// Fire up schedule manager
 	//
 	if disableschedule == "false" {
-		cs, err := connectionscheduler.New(&mainContext, &nodeOperator)
+		schedulepassthrough := false
+		schedulepassthroughStr, err := config.ConfigGetVal(config.ConfigSchedulePassthrough)
+		if err != nil {
+			panic(fmt.Sprintf("Getting schedule passthrough val failed: %s\n", err))
+		}
+		if schedulepassthroughStr == "true" {
+			schedulepassthrough = true
+		}
+
+		cs, err := connectionscheduler.New(&mainContext, &nodeOperator, schedulepassthrough)
 		if err != nil {
 			l.Logf(log.LevelPanic, "Schedule manager failed: %v", err)
 		}
