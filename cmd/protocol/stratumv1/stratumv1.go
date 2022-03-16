@@ -109,6 +109,13 @@ func (s *StratumV1ListenStruct) Cancel() {
 // SIMPL defined this function as passing in a SimpeStruct abd retuning a chan for SimpleEvents
 //
 func (n *newStratumV1Struct) NewProtocol(ss *simple.SimpleStruct) {
+	if ss == nil {
+		panic(lumerinlib.FileLineFunc() + " nil SimpleStruct")
+	}
+	if ss.ConnectionStruct == nil {
+		panic(lumerinlib.FileLineFunc() + " nil SimpleStruct.ConnetionStruct")
+	}
+
 	n.funcptr(ss)
 }
 
@@ -118,11 +125,14 @@ func (n *newStratumV1Struct) NewProtocol(ss *simple.SimpleStruct) {
 //
 func NewStratumV1(ss *simple.SimpleStruct) {
 
+	if ss == nil {
+		panic(lumerinlib.FileLineFunc() + " nil SimpleStruct")
+	}
+
 	contextlib.Logf(ss.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	i := ss.Ctx().Value(contextlib.ContextKey)
-	cs, ok := i.(contextlib.ContextStruct)
-	if !ok {
+	cs := contextlib.GetContextStruct(ss.Ctx())
+	if cs == nil {
 		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct not in CTX")
 	}
 
@@ -151,7 +161,6 @@ func NewStratumV1(ss *simple.SimpleStruct) {
 
 	ss.Run()
 
-	// return the event handler channel to the caller (the simple layer accept() function )
 }
 
 // ---------------------------------------------------------------------
@@ -174,6 +183,12 @@ func (s *StratumV1Struct) goEvent() {
 // returns the StratumV1Struct context pointer
 //
 func (s *StratumV1Struct) Ctx() context.Context {
+	if s == nil {
+		panic(lumerinlib.FileLineFunc() + "StratumV1Struct is nil")
+	}
+	if s.protocol == nil {
+		panic(lumerinlib.FileLineFunc() + "StratumV1Struct.protocol is nil")
+	}
 	return s.protocol.Ctx()
 }
 

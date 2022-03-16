@@ -161,12 +161,21 @@ func SetContextStruct(ctx context.Context, cs *ContextStruct) (newctx context.Co
 //
 //
 func Logf(ctx context.Context, level log.Level, format string, args ...interface{}) {
-	val := ctx.Value(ContextKey)
-	_, ok := val.(*ContextStruct)
+	v := ctx.Value(ContextKey)
+	val, ok := v.(*ContextStruct)
 	if !ok {
 		fmt.Printf(levelMap[level]+":"+format+"\n", args...)
 	} else {
-		GetContextStruct(ctx).Logf(LevelTrace, format, args...)
+		if val.Log == nil {
+			str := fmt.Sprintf(levelMap[level]+":"+format+"\n", args...)
+			if level == log.LevelPanic {
+				panic(str)
+			}
+			fmt.Print(str)
+
+		} else {
+			GetContextStruct(ctx).Logf(LevelTrace, format, args...)
+		}
 	}
 }
 

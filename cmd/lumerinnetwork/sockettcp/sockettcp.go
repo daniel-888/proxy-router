@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
@@ -22,6 +22,7 @@ import (
 
 const TCPAcceptChannelLen int = 2
 const TCPReadChannelLen int = 10
+const TCPReadReadyChannelLen int = 1
 const TCPReadBufferSize int = 1024
 
 var ErrSocTCPClosed = errors.New("socket TCP: socket closed")
@@ -61,12 +62,13 @@ type ListenTCPStruct struct {
 }
 
 type SocketTCPStruct struct {
-	socket   net.Conn
-	ctx      context.Context
-	cancel   func()
-	readchan chan readStruct
-	readbuf  []byte
-	status   SocketStatusStruct
+	socket    net.Conn
+	ctx       context.Context
+	cancel    func()
+	readready chan bool
+	readchan  chan readStruct
+	readbuf   []byte // Way point for read data from the socket
+	status    SocketStatusStruct
 }
 
 type readStruct struct {
@@ -189,22 +191,17 @@ func (l *ListenTCPStruct) goAccept() {
 		l.accept <- newsoc
 	}
 
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" exiting")
 }
 
 //
 // Blocking call to Accept and open a new connection
 //
-func (l *ListenTCPStruct) Accept() (s *SocketTCPStruct, e error) {
+func (l *ListenTCPStruct) Accept() <-chan *SocketTCPStruct {
 
 	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	select {
-	case s := <-l.accept:
-		l.status.connectionCount++
-		return s, e
-	case <-l.ctx.Done():
-		return s, ErrSocTCPClosed
-	}
+	return l.accept
 
 }
 
@@ -302,6 +299,7 @@ func Dial(ctx context.Context, network string, addr string) (s *SocketTCPStruct,
 	if e != nil {
 		cancel()
 	} else {
+		ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 		s = createNewSocket(ctx, conn)
 	}
 
@@ -317,14 +315,16 @@ func createNewSocket(ctx context.Context, conn net.Conn) (soc *SocketTCPStruct) 
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
+	rr := make(chan bool, TCPReadReadyChannelLen)
 	rc := make(chan readStruct, TCPReadChannelLen)
 	ctx, cancel := contextlib.CreateNewContext(ctx)
 	soc = &SocketTCPStruct{
-		socket:   conn,
-		ctx:      ctx,
-		cancel:   cancel,
-		readchan: rc,
-		readbuf:  make([]byte, 0),
+		socket:    conn,
+		ctx:       ctx,
+		cancel:    cancel,
+		readready: rr,
+		readchan:  rc,
+		readbuf:   make([]byte, 0, TCPReadBufferSize),
 		status: SocketStatusStruct{
 			bytesRead:    0,
 			bytesWritten: 0,
@@ -359,16 +359,18 @@ func (s *SocketTCPStruct) goWaitOnCancel() {
 //
 // close() internal function to check to see if the socket has been canceled
 //
-func (s *SocketTCPStruct) closed() bool {
+func (s *SocketTCPStruct) closed() (ret bool) {
 
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	select {
 	case <-s.ctx.Done():
-		return true
+		ret = true
 	default:
-		return false
+		ret = false
 	}
+
+	return ret
 }
 
 //
@@ -379,6 +381,7 @@ func (s *SocketTCPStruct) goRead() {
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	defer close(s.readchan)
+	defer close(s.readready)
 
 	for !s.closed() {
 
@@ -388,31 +391,20 @@ func (s *SocketTCPStruct) goRead() {
 		buf := make([]byte, TCPReadBufferSize)
 		readcount, e := s.socket.Read(buf)
 
-		contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+"Read buf count:%d", readcount)
+		contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+"Socket Read buf count:%d", readcount)
 
 		if e != nil {
-			var err error = nil
 			if e == io.EOF {
-				err = e
 				s.Close()
 			} else {
 				select {
 				case <-s.ctx.Done():
-					err = ErrSocTCPClosed
+					e = ErrSocTCPClosed
 				default:
 					contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Read() returned error: %s", e)
 				}
 			}
-
-			r := readStruct{
-				err: err,
-				buf: buf[:readcount],
-			}
-			s.readchan <- r
-			return
-		}
-
-		if readcount == 0 {
+		} else if readcount == 0 {
 			e = fmt.Errorf("soc.goRead() returned 0 bytes")
 		}
 
@@ -420,7 +412,11 @@ func (s *SocketTCPStruct) goRead() {
 			err: e,
 			buf: buf[:readcount],
 		}
+
 		s.readchan <- r
+		if len(s.readready) == 0 {
+			s.readready <- true
+		}
 	}
 
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" exiting")
@@ -430,96 +426,90 @@ func (s *SocketTCPStruct) goRead() {
 //
 // Readready() Non-blocking call to see if a call to Read() would block or not
 //
-func (s *SocketTCPStruct) ReadReady() (ready bool) {
+func (s *SocketTCPStruct) ReadReady() <-chan bool {
 
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	if s.closed() {
-		return false
-	}
+	return s.readready
 
-	if len(s.readchan) != 0 || len(s.readbuf) != 0 {
-		return true
-	}
-
-	return false
 }
 
 //
 // Read()
-// Manages the read buffer, adding to it from the readchannel if the channel is ready
-// and filling the return buffer with what ever will fit from the read buffer.
-// The subroutine will block if there is nothing in the readchannel and the read buffer.
+// Blocks on getting a read back from readchan.
 //
 func (s *SocketTCPStruct) Read(buf []byte) (count int, e error) {
+
+	count = 0
 
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	if cap(buf) == 0 {
-		panic(fmt.Errorf(lumerinlib.FileLineFunc() + " Read() buffer capacity is zero"))
+		contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" buf is zero lenth")
+		return 0, fmt.Errorf(lumerinlib.FileLineFunc() + " buffer lenth is 0")
 	}
 
 	if s.closed() {
 		return 0, ErrSocTCPClosed
 	}
 
-	if !s.ReadReady() {
-		select {
-		case <-s.ctx.Done():
-			count = 0
-			e = s.ctx.Err()
-			return count, e
+	readbufsize := len(s.readbuf)
+	readchansize := len(s.readchan)
+	// NAND - only run the loop if these two condtions are met.
+	// Dont go into the loop if readbuf > 0 and readchansize is 0
+	// because there is no incoming reads, and there is data in the buffer
+	if !(readbufsize > 0 && readchansize == 0) {
 
-		case r := <-s.readchan:
-			if r.Err() != nil {
+		// s.readbuf is a local storage for reads to buffer incoming data
+		// The local buffer will reach a high water mark and just start returning data
+		// The buf will be filled or the s.readbuf will be emptied
+
+	FORLOOP:
+		for {
+			select {
+			// Exit, we are done
+			case <-s.ctx.Done():
 				count = 0
-				e = r.Err()
-				return count, e
-			} else {
+				e = s.ctx.Err()
+				break FORLOOP
+
+			case r := <-s.readchan:
+				// Exit, Socket returned an error
+				if r.Err() != nil {
+					count = 0
+					e = r.Err()
+					break FORLOOP
+				}
+
 				s.readbuf = append(s.readbuf, r.buf...)
+
+				if len(s.readbuf) > TCPReadBufferSize {
+					break FORLOOP
+				}
+
+				readbufsize = len(s.readbuf)
+				readchansize = len(s.readchan)
+				if readbufsize > 0 && readchansize == 0 {
+					break FORLOOP
+				}
 			}
 		}
 	}
 
-FORLOOP:
-	for {
-		select {
-		case <-s.ctx.Done():
-			count = 0
-			e = s.ctx.Err()
-			return count, e
+	if e == nil {
 
-		case r := <-s.readchan:
-			if r.Err() != nil {
-				count = 0
-				e = r.Err()
-				return count, e
-			} else {
-				s.readbuf = append(s.readbuf, r.buf...)
-			}
+		// Drain s.readbuf into the buf
 
-		default:
-			break FORLOOP
+		if len(s.readbuf) > 0 {
+			count = copy(buf, s.readbuf)
+			s.readbuf = s.readbuf[count:]
 		}
+
+		s.status.bytesRead += count
+		s.status.countRead++
 	}
 
-	bufcap := cap(buf)
-	readbuflen := len(s.readbuf)
-
-	if readbuflen == 0 {
-		return 0, nil
-	}
-
-	if readbuflen > bufcap {
-		count = copy(buf, s.readbuf)
-		s.readbuf = s.readbuf[count:]
-	} else {
-		count = copy(buf, s.readbuf)
-		s.readbuf = s.readbuf[:0]
-	}
-
-	s.status.bytesRead += count
-	s.status.countRead++
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" return count:%d", count)
 
 	return count, e
 }
@@ -603,7 +593,9 @@ func (l *ListenTCPStruct) LocalAddr() (host string, port int, e error) {
 
 	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	return getAddr(l.ctx, l.listener.Addr().String())
+	addr := l.listener.Addr().String()
+	host, port, e = getAddr(l.ctx, addr)
+	return
 }
 
 //
@@ -633,15 +625,15 @@ func getAddr(ctx context.Context, addr string) (host string, port int, e error) 
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	var values []string
+	regex := regexp.MustCompile("^(\\[*[a-fA-F0-9:]+\\]*):(\\d+)$")
 
-	values = strings.Split(addr, ":")
-	host = values[0]
-	if host == "" {
-		host = "0.0.0.0"
-	}
+	regexret := regex.FindStringSubmatch(addr)
+	_ = regexret
 
-	port, e = strconv.Atoi(values[1])
+	host = regexret[1]
+	portstr := regexret[2]
+
+	port, e = strconv.Atoi(portstr)
 
 	return host, port, e
 }

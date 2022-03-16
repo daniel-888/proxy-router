@@ -5,12 +5,20 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"testing"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
+
+var basePort int = 50000
+
+type testAddr struct {
+	ipaddr  string
+	network string
+}
 
 //
 //
@@ -22,9 +30,11 @@ func TestSetupListenCancel(t *testing.T) {
 	cs := &contextlib.ContextStruct{}
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
+	localport := getRandPort()
+	addr := fmt.Sprintf("127.0.0.1:%d", localport)
 	testaddr := &testAddr{
 		network: "tcp",
-		ipaddr:  "127.0.0.1:12345",
+		ipaddr:  addr,
 	}
 
 	l, e := testListen(ctx, testaddr)
@@ -34,19 +44,18 @@ func TestSetupListenCancel(t *testing.T) {
 
 	l.Cancel()
 
-	_, e = l.Accept()
-	if e != nil {
-		select {
-		case <-ctx.Done():
-			fmt.Printf(lumerinlib.FileLine()+" CTX Done(): %s\n", ctx.Err())
-		default:
-			fmt.Printf(lumerinlib.FileLine()+"Accept() Test Passed: %s\n", e)
-		}
-	} else {
-		t.Fatalf(fmt.Sprintf(lumerinlib.FileLine()+"Accept() Failed: %s\n", e))
+	select {
+	case <-l.ctx.Done():
+		fmt.Printf(lumerinlib.FileLine()+" CTX Done(): %s\n", ctx.Err())
+	case <-l.Accept():
+		t.Fatal(fmt.Errorf(lumerinlib.FileLine() + " <-Accept() Returned, wtf"))
 	}
 
 }
+
+//
+// TestSetupListenConnect  HERE
+//
 
 //
 //
@@ -56,19 +65,26 @@ func TestDial(t *testing.T) {
 	ctx := context.Background()
 	var TestString = "This is a test string\n"
 
+	localport := getRandPort()
+	addr := fmt.Sprintf("127.0.0.1:%d", localport)
 	testaddr := &testAddr{
 		network: "tcp",
-		ipaddr:  "127.0.0.1:12346",
+		ipaddr:  addr,
 	}
 
 	cs := &contextlib.ContextStruct{}
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
+	//
+	// Open Listener
+	//
 	l, e := testListen(ctx, testaddr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
 
+	//
+	// Setup
 	go goTestAcceptChannelEcho(l)
 
 	s := testDial(ctx, testaddr)
@@ -130,12 +146,10 @@ func goTestAcceptChannelEcho(l *LumerinListenStruct) {
 
 	fmt.Printf(lumerinlib.FileLine() + " Waiting on Connection\n")
 
-	s, e := l.Accept()
+	s := <-l.Accept()
 
-	if e != nil {
-		fmt.Printf(lumerinlib.FileLine()+" Socket Accept() Failed: %s\n", e)
-		l.Close()
-		return
+	if s == nil {
+		panic(fmt.Sprintf(lumerinlib.FileLine() + " scoket is nil"))
 	}
 
 	fmt.Printf(lumerinlib.FileLine() + " Connection Accepted\n")
@@ -161,13 +175,10 @@ func goTestAcceptChannelEcho(l *LumerinListenStruct) {
 			if writecount == 0 {
 				panic(fmt.Sprintf(lumerinlib.FileLine() + " write Failed: Zero bytes written\n"))
 			}
+		} else {
+			panic(fmt.Sprintf(lumerinlib.FileLine() + " readcount == 0"))
 		}
 	}
-}
-
-type testAddr struct {
-	ipaddr  string
-	network string
 }
 
 func (t *testAddr) Network() string {
@@ -176,4 +187,12 @@ func (t *testAddr) Network() string {
 
 func (t *testAddr) String() string {
 	return t.ipaddr
+}
+
+//
+//
+//
+func getRandPort() (port int) {
+	port = rand.Intn(10000) + basePort
+	return port
 }

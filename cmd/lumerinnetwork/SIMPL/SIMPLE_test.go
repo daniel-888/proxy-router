@@ -141,9 +141,9 @@ func TestDialFunctionality(t *testing.T) {
 	simpleStruct := generateSimpleStruct()
 	testAddr := generateTestAddr()
 
-	if simpleStruct.connectionIndex != 0 {
-		t.Error("testing index is not 0")
-	}
+	//if simpleStruct.connectionIndex != 0 {
+	//	t.Error("testing index is not 0")
+	//}
 
 	uID, e := simpleStruct.Dial(testAddr)
 	if uID != 0 {
@@ -164,24 +164,24 @@ steps:
 3. listen to the accept channel on the SimpleListenStruct
 4. finish test when a SimpleStruct is detected on accept channel
 */
-func TestSimpleStructCreateOnRun(t *testing.T) {
-	simpleListenStruct := generateSimpleListenStruct()
-	go simpleListenStruct.Run()
-
-	var simpleStruct *SimpleStruct
-
-	//go routine to listen for the simpleListenStruct accept channel
-	go func() {
-		simpleStruct = <-simpleListenStruct.accept
-		t.Log("\n\n\nmeow\n\n\n")
-		t.Logf("%+v", simpleStruct)
-		if simpleStruct.eventHandler != 1 {
-			t.Error("did not create an accurate SimpleStruct")
-		}
-		//need a way to detect if the SimpleStruct was correctly generated
-	}()
-
-}
+//func TestSimpleStructCreateOnRun(t *testing.T) {
+//	simpleListenStruct := generateSimpleListenStruct()
+//	go simpleListenStruct.Run()
+//
+//	var simpleStruct *SimpleStruct
+//
+//	//go routine to listen for the simpleListenStruct accept channel
+//	go func() {
+//		simpleStruct = <-simpleListenStruct.accept
+//		t.Log("\n\n\nmeow\n\n\n")
+//		t.Logf("%+v", simpleStruct)
+//		if simpleStruct.eventHandler != 1 {
+//			t.Error("did not create an accurate SimpleStruct")
+//		}
+//		//need a way to detect if the SimpleStruct was correctly generated
+//	}()
+//
+//}
 
 /*
 test to retrieve a SimpleStruct from the SimpleListenStruct and dial a connection

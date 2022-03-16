@@ -244,6 +244,7 @@ func (svs *StratumV1Struct) handleConnReadEvent(event *simple.SimpleEvent) {
 	// Parse Message
 
 	ret, e := unmarshalMsg([]byte(event.Data.(string)))
+
 	if e != nil {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Called")
 	}
