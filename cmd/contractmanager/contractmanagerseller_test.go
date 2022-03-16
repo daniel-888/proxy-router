@@ -55,7 +55,7 @@ func TestSellerRoutine(t *testing.T) {
 		panic(fmt.Sprintf("Adding Default Dest Failed: %s", event.Err))
 	}
 
-	contractManagerConfigFile, err := LoadTestConfiguration("contractManager", configPath)
+	contractManagerConfigFile, err := LoadTestConfiguration("contract", configPath)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load contract manager configuration:%s", err))
 	}
@@ -149,7 +149,7 @@ func TestSellerRoutine(t *testing.T) {
 	CreateHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, int(0), int(10), int(10), int(contractLength), buyerAddress)
 
 	// wait until created hashrate contract was found before continuing
-loop1:
+	loop1:
 	for {
 		if hashrateContractAddress[0] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop1
@@ -159,7 +159,7 @@ loop1:
 	PurchaseHashrateContract(cman.ethClient, buyerAddress, buyerPrivateKey, ts.cloneFactoryAddress, hashrateContractAddress[0], buyerAddress, "stratum+tcp://127.0.0.1:3333/testrig")
 
 	// wait until hashrate contract was purchased before continuing
-loop2:
+	loop2:
 	for {
 		if purchasedHashrateContractAddress[0] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop2
@@ -230,7 +230,7 @@ loop2:
 	fmt.Print("\n\n/// Purchase Available Contract and Closeout After Length ///\n\n\n")
 	// contract manager should updated state
 	// wait until created hashrate contract was found before continuing
-loop3:
+	loop3:
 	for {
 		if hashrateContractAddress[1] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop3
@@ -240,7 +240,7 @@ loop3:
 	PurchaseHashrateContract(cman.ethClient, buyerAddress, buyerPrivateKey, ts.cloneFactoryAddress, hashrateContractAddress[1], buyerAddress, "stratum+tcp://127.0.0.1:3333/testrig")
 
 	// wait until hashrate contract was purchased before continuing
-loop4:
+	loop4:
 	for {
 		if purchasedHashrateContractAddress[1] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop4
@@ -295,7 +295,7 @@ loop4:
 	ps.Pub(msgbus.MinerMsg, msgbus.IDString(miner3.ID), miner3)
 
 	// wait until created hashrate contract was found before continuing
-loop5:
+	loop5:
 	for {
 		if hashrateContractAddress[2] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop5
@@ -309,7 +309,7 @@ loop5:
 	PurchaseHashrateContract(cman.ethClient, buyerAddress, buyerPrivateKey, ts.cloneFactoryAddress, hashrateContractAddress[2], buyerAddress, "stratum+tcp://127.0.0.1:3333/testrig")
 
 	// wait until hashrate contract was purchased before continuing
-loop6:
+	loop6:
 	for {
 		if purchasedHashrateContractAddress[2] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop6
@@ -360,7 +360,7 @@ loop6:
 	ps.Pub(msgbus.MinerMsg, msgbus.IDString(miner4.ID), miner4)
 
 	// wait until created hashrate contract was found before continuing
-loop7:
+	loop7:
 	for {
 		if hashrateContractAddress[3] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop7
@@ -375,7 +375,7 @@ loop7:
 	PurchaseHashrateContract(cman.ethClient, buyerAddress, buyerPrivateKey, ts.cloneFactoryAddress, hashrateContractAddress[3], buyerAddress, "stratum+tcp://127.0.0.1:3333/testrig")
 
 	// wait until hashrate contract was purchased before continuing
-loop8:
+	loop8:
 	for {
 		if purchasedHashrateContractAddress[3] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop8

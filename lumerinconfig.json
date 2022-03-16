@@ -1,32 +1,25 @@
 {
     "version": 1,
 
-    "walletData": {
-        "walletAddress": ""
-    },
-    
-    "accountingManager": {
-
+    "config": {
+        "buyerNode": false
     },
 
-    "configurationManager": {
-        
+    "connection": {
+        "disable": false,
+        "disableStratumv1": false,
+        "listenIP": "127.0.0.1",
+        "listenPort": "3333",
+        "defaultPoolAddr": "stratum+tcp://127.0.0.1:33334/"
     },
 
-    "connectionManager": {
-        "sourceHost": "",
-        "sourcePort": "",
-        "sourceProto": "",
-        "defaultPoolHost": "",
-        "defaultPoolPort": "",
-        "defaultPoolProto": ""
+    "schedule": {
+        "disable": false,
+        "passthrough": false
     },
 
-    "connectionScheduler": {
-
-    },
-
-    "contractManager": {
+    "contract": {
+        "disable": false,
         "mnemonic": "YOUR MNEMONIC GOES HERE --- ADD TO GITIGNORE BEFORE PUSHING TO A PUBLIC REPOSITORY",
         "accountIndex": 0,
         "ethNodeAddr": "ws://127.0.0.1:7545",
@@ -38,25 +31,13 @@
         "proxyAddress": "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3"
     },
 
-    "externalAPI": {
-    
-    },
-
-    "localValidator": {
-
+    "api": {
+        "disable": false,
+        "port": "8080"
     },
 
     "logging": {
         "level": 4,
-        "filePath": "~/lumerin.log",
-        "testFilePath": "~/lumerin.log"  
-    },
-
-    "msgbus": {
-
-    },
-
-    "walletManager": {
-
+        "filePath": "/tmp/lumerin1.log"
     }
 }

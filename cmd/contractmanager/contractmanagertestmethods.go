@@ -373,7 +373,7 @@ func createNewGanacheBlock(ts TestSetup, account common.Address, privateKey stri
 
 func BeforeEach(configPath string) (ts TestSetup) {
 	var constructorParams [5]common.Address
-	configData, err := LoadTestConfiguration("contractManager", configPath)
+	configData, err := LoadTestConfiguration("contract", configPath)
 	if err != nil {
 		log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
 	}
