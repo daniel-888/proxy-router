@@ -200,7 +200,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 
 				if currentContract.State == event.Data.(msgbus.Contract).State {
 					cs.l.Logf(log.LevelTrace, lumerinlib.Funcname()+"Got Contract change with no state change: %v\n", event)
-					cs.contractUpdatedChans.Get(string(id)).(chan bool) <- true
+					// cs.contractUpdatedChans.Get(string(id)).(chan bool) <- true
 				} else {
 					switch event.Data.(msgbus.Contract).State {
 					case msgbus.ContAvailableState:
@@ -395,6 +395,21 @@ func (cs *ConnectionScheduler) ContractRunningPassthrough(contractId msgbus.Cont
 			return
 
 		case <-contractUpdated:
+			cs.l.Logf(log.LevelInfo, "Contract state switched to available: cancelling contract running go routine for contract: %v\n", contract.ID)
+
+			// free up busy miners with this contract id
+			miners := cs.BusyMiners.GetAll()
+			for _, v := range miners {
+				if v.(msgbus.Miner).Contract == contract.ID {
+					err := cs.ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, cs.nodeOperator.DefaultDest, true)
+					if err != nil {
+						cs.l.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+					}
+				}
+			}
+			return
+
+			/* Leaving this here in case destids change when dest is updated in the future (not the case currently)
 			event, err = cs.ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contractId))
 			if err != nil {
 				cs.l.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", event)
@@ -436,7 +451,7 @@ func (cs *ConnectionScheduler) ContractRunningPassthrough(contractId msgbus.Cont
 					cs.l.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 				}
 			}
-
+			*/
 		case <-minerMapUpdated:
 			miners, err := cs.ps.MinerGetAllWait()
 			if err != nil {

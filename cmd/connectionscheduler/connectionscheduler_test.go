@@ -584,9 +584,15 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 
 	fmt.Print("\n\n/// Contract purchased and now running ///\n\n\n")
 
+	targetDest := msgbus.Dest {
+		ID: msgbus.DestID(msgbus.GetRandomIDString()),
+		NetUrl: "stratum+tcp://127.0.0.1:55555/",
+	}
+	ps.PubWait(msgbus.DestMsg, msgbus.IDString(targetDest.ID), targetDest)
+
 	contract1.State = msgbus.ContRunningState
 	contract1.Buyer = "buyer"
-	contract1.Dest = "stratum+tcp://127.0.0.1:55555/"
+	contract1.Dest = targetDest.ID
 	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract1.ID), contract1)
 	time.Sleep(time.Second * 2)
 
@@ -779,8 +785,9 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 
 	fmt.Print("\n\n/// Contract Target Dest updated ///\n\n\n")
 
-	contract2.Dest = "stratum+tcp://127.0.0.1:66666/"
-	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract2.ID), contract2)
+	targetDest.NetUrl = "stratum+tcp://127.0.0.1:66666/"
+	ps.SetWait(msgbus.DestMsg, msgbus.IDString(targetDest.ID), targetDest)
+
 	time.Sleep(time.Second * 2)
 
 	correctReadyMiners = []msgbus.Miner{}

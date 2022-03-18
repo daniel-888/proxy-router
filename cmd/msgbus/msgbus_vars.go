@@ -16,6 +16,7 @@ type NodeOperatorID IDString
 type ContractID IDString
 
 // Do we still need this with the config package in place?
+
 type ConfigInfo struct {
 	ID           ConfigID
 	DefaultDest  DestID

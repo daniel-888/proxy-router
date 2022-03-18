@@ -130,7 +130,7 @@ func main() {
 	//
 	// Fire up schedule manager
 	//
-	if !configs.DisableApi {
+	if !configs.DisableSchedule {
 		cs, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
 		if err != nil {
 			l.Logf(log.LevelPanic, "Schedule manager failed: %v", err)

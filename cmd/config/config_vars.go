@@ -92,7 +92,7 @@ var ConfigMap = map[ConfigConst]configitem{
 		flagusage:  "Options: mainnet, ropsten, or custom",
 		envname:    "NEWTORK",
 		configname: "contract.network",
-		defval:     "ropsten",
+		defval:     "custom",
 		configval:  nil,
 		envval:     nil,
 		flagval:    nil,
