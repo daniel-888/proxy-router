@@ -161,7 +161,7 @@ func (ll *LumerinListenStruct) goAccept() {
 			soc := <-tcpchan
 			if soc == nil {
 				contextlib.Logf(ll.ctx, contextlib.LevelWarn, lumerinlib.FileLineFunc()+" Accept() returned nil, assumed closed")
-				return
+				break
 			} else {
 				lci := &LumerinSocketStruct{
 					ctx:    ll.ctx,
@@ -207,11 +207,7 @@ func (ll *LumerinListenStruct) Close() (e error) {
 
 	switch ll.listener.(type) {
 	case *sockettcp.ListenTCPStruct:
-		tcp := ll.listener.(*sockettcp.ListenTCPStruct)
-		e = tcp.Close()
-		if e != nil {
-			contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Close() error returned: %s", e)
-		}
+		ll.listener.(*sockettcp.ListenTCPStruct).Close()
 	default:
 		contextlib.Logf(ll.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", ll.listener)
 	}
@@ -294,10 +290,10 @@ func Dial(ctx context.Context, addr net.Addr) (lci *LumerinSocketStruct, e error
 //
 //
 //
-func (l *LumerinSocketStruct) ReadReady() <-chan bool {
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-	return l.socket.(*sockettcp.SocketTCPStruct).ReadReady()
-}
+// func (l *LumerinSocketStruct) ReadReady() <-chan bool {
+// 	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+// 	return l.socket.(*sockettcp.SocketTCPStruct).ReadReady()
+// }
 
 //
 //
@@ -372,10 +368,7 @@ func (l *LumerinSocketStruct) Close() (e error) {
 
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:
-		e = l.socket.(*sockettcp.SocketTCPStruct).Close()
-		if e != nil {
-			contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Close() returned error: %s", e)
-		}
+		l.socket.(*sockettcp.SocketTCPStruct).Close()
 	default:
 		contextlib.Logf(l.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", l.socket)
 	}

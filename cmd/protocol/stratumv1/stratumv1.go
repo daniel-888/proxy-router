@@ -39,29 +39,39 @@ type StratumV1Struct struct {
 //
 //
 //
-func NewListener(ctx context.Context, mb *msgbus.PubSub, src net.Addr, dst net.Addr, proto ...*newStratumV1Struct) (s *StratumV1ListenStruct, e error) {
-
-	// Validate src and dst here
+func NewListener(ctx context.Context, src net.Addr, dst net.Addr, proto ...*newStratumV1Struct) (s *StratumV1ListenStruct, e error) {
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	cs := &contextlib.ContextStruct{}
-	cs.SetMsgBus(mb)
+	var cs *contextlib.ContextStruct = contextlib.GetContextStruct(ctx)
+
+	if cs == nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" ContextStruct not defined")
+	}
+	if nil == cs.GetLog() {
+		contextlib.Logf(ctx, contextlib.LevelWarn, lumerinlib.FileLineFunc()+" ContextStruct no Logger defined")
+	}
+	if nil == cs.GetMsgBus() {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" ContextStruct no MsgBus defined")
+	}
+
 	cs.SetSrc(src)
 	cs.SetDst(dst)
 	//
 	// This is the only place that SetProtocol is called
 
-	if len(proto) > 0 {
-		cs.SetProtocol(proto[0])
-	} else {
-		var new = &newStratumV1Struct{
-			funcptr: NewStratumV1,
+	if nil == cs.GetProtocol() {
+		if len(proto) > 0 {
+			cs.SetProtocol(proto[0])
+		} else {
+			var new = &newStratumV1Struct{
+				funcptr: NewStratumV1, // This is the default
+			}
+			cs.SetProtocol(new)
 		}
-		cs.SetProtocol(new)
 	}
 
-	ctx = contextlib.SetContextStruct(ctx, cs)
+	// ctx = contextlib.SetContextStruct(ctx, cs)
 
 	protocollisten, err := protocol.NewListen(ctx)
 	if err != nil {
@@ -89,6 +99,10 @@ func (s *StratumV1ListenStruct) Run() {
 //
 //
 func (s *StratumV1ListenStruct) Ctx() context.Context {
+	if s == nil {
+		panic(lumerinlib.FileLineFunc() + " nil pointer")
+	}
+	contextlib.Logf(s.protocollisten.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 	return s.protocollisten.Ctx()
 }
 
@@ -112,8 +126,11 @@ func (n *newStratumV1Struct) NewProtocol(ss *simple.SimpleStruct) {
 	if ss == nil {
 		panic(lumerinlib.FileLineFunc() + " nil SimpleStruct")
 	}
+	if ss.Ctx() == nil {
+		panic(lumerinlib.FileLineFunc() + " nil SimpleStruct.Ctx()")
+	}
 	if ss.ConnectionStruct == nil {
-		panic(lumerinlib.FileLineFunc() + " nil SimpleStruct.ConnetionStruct")
+		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" nil SimpleStruct.ConnetionStruct")
 	}
 
 	n.funcptr(ss)
@@ -174,7 +191,8 @@ func (s *StratumV1Struct) goEvent() {
 
 	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	for event := range s.protocol.GetSimpleEvent() {
+	simplechan := s.protocol.GetSimpleEventChan()
+	for event := range simplechan {
 		s.eventHandler(event)
 	}
 }
@@ -218,17 +236,13 @@ func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) {
 		return
 
 	case simple.MsgBusEvent:
-		msg, ok := event.Data.(msgbus.Event)
-		if !ok {
-			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Event Data wrong Type:%t", event.Data)
-		}
-		// Error checking here  ev == megbus.Event
-		svs.decodeMsgBusEvent(msg)
+		//msg := event.MsgBusEvent
+		// svs.decodeMsgBusEvent(msg)
 		return
 
 	case simple.ConnReadEvent:
-		// Error checking here event == connection event
-		svs.handleConnReadEvent(event)
+		scre := event.ConnEvent
+		svs.handleConnReadEvent(scre)
 		return
 
 	case simple.ConnEOFEvent:

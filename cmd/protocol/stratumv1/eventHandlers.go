@@ -229,25 +229,25 @@ func (svs *StratumV1Struct) handleMsgRemovedEvent(event msgbus.Event) {
 // Parse the message
 // Run the message through a handle routine
 //
-func (svs *StratumV1Struct) handleConnReadEvent(event *simple.SimpleEvent) {
+func (svs *StratumV1Struct) handleConnReadEvent(scre *simple.SimpleConnReadEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
-	// Need a SimpleEventStruct to indicate the connectionID of the incoming read event
+	// Events should come in as '\n' terminated strings
+	if nil == scre.Err() {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" scre had an error:%s", scre.Err)
+	}
 
-	// index: -1 = SRC, 0 = default, >0 = Dst
-	var index int = 0
+	// count := scre.Count()
+	index := scre.Index()
+	data := scre.Data()
 
-	// Get ConnectionID
-	// Is Src or Dst
-	// Translate to index int
-	// Parse Message
-
-	ret, e := unmarshalMsg([]byte(event.Data.(string)))
+	ret, e := unmarshalMsg(data)
 
 	if e != nil {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Called")
 	}
+
 	switch ret := ret.(type) {
 	case *stratumRequest:
 		svs.handleRequest(index, ret)
@@ -414,6 +414,7 @@ func (svs *StratumV1Struct) handleSrcAuthorize(request *stratumRequest) {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() returned error:%s ", e)
 	}
 
+	// HERE
 	count, e := svs.protocol.WriteSrc(msg)
 	if e != nil {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() returned error:%s ", e)

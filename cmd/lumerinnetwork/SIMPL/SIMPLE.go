@@ -12,9 +12,6 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
-
-	//_ "gitlab.com/TitanInd/lumerin/cmd/config"
-	_ "gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
@@ -83,18 +80,36 @@ type SimpleStruct struct {
 a struct that contains the data and the event type being passed into the SimpleStruct
 */
 type SimpleEvent struct {
-	EventType EventType
+	EventType   EventType
+	ConnEvent   *SimpleConnReadEvent
+	MsgBusEvent *SimpleMsgBusEvent
+}
+
+type SimpleConnReadEvent struct {
+	index int
+	data  []byte
+	count int
+	err   error
+}
+
+func (s *SimpleConnReadEvent) Index() int   { return s.index }
+func (s *SimpleConnReadEvent) Data() []byte { return s.data }
+func (s *SimpleConnReadEvent) Count() int   { return s.count }
+func (s *SimpleConnReadEvent) Err() error   { return s.err }
+
+type SimpleMsgBusEvent struct {
+	EventType msgbus.EventType
+	Msg       msgbus.MsgType
+	ID        msgbus.IDString
+	RequestID int
 	Data      interface{}
+	Err       error
 }
 
 /*
 struct that tells the SimpleStruct which connection to provide
 the encoded data to
 */
-type SimpleConn struct {
-	id   ConnUniqueID
-	data []byte
-}
 
 type EventType string
 
@@ -194,6 +209,8 @@ func (s *SimpleListenStruct) Run() {
 //
 func (s *SimpleListenStruct) goListenAccept() {
 
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" enter")
+
 	cs := contextlib.GetContextStruct(s.ctx)
 	if cs == nil {
 		contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Structre not correct")
@@ -214,16 +231,12 @@ func (s *SimpleListenStruct) goListenAccept() {
 		select {
 		case <-s.ctx.Done():
 			return
-		case connectionStruct, ok := <-s.connectionListen.Accept():
-
-			if !ok {
-				contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" ConnectionListen.Accept no ok, closing down listener")
-				s.cancel()
-				return
-			}
+		case connectionStruct := <-s.connectionListen.Accept():
 
 			if connectionStruct == nil {
 				contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Connection Listen Accept returned nil")
+				s.cancel()
+				break
 			}
 
 			//create a cancel function from the context in the SimpleListenStruct
@@ -243,11 +256,14 @@ func (s *SimpleListenStruct) goListenAccept() {
 			// var np NewProtocolInterface = proto.(NewProtocolInterface)
 			var np NewProtocolInterface
 			np = proto.(NewProtocolInterface)
+
 			np.NewProtocol(newSimpleStruct) // Call the supplied "new" protocol function here
 
 			s.accept <- newSimpleStruct
 		}
 	}
+
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" exit")
 }
 
 //
@@ -281,7 +297,7 @@ func (s *SimpleListenStruct) Close() {
 func (s *SimpleStruct) SetEventChan(eventchan chan *SimpleEvent) {
 	s.eventChan = eventchan
 }
-func (s *SimpleStruct) GetEvent() <-chan *SimpleEvent {
+func (s *SimpleStruct) GetEventChan() <-chan *SimpleEvent {
 	return s.eventChan
 }
 
@@ -317,30 +333,64 @@ func (s *SimpleStruct) Run() {
 		s.maxMessageSize = 10 //setting the default max message size to 10 bytes
 	}
 
+	go s.goRun()
+}
+
+func (s *SimpleStruct) goRun() {
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" enter")
 	//
 	// Using connection managers index as the UniqueID (for now?)
 	//
-	go func() {
-		for {
-			select {
-			case <-s.Ctx().Done():
-				contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Closing down")
-				return
-			case comm := <-s.ConnectionStruct.ReadReady():
-				ev := &SimpleEvent{
-					EventType: ConnReadEvent,
-					Data:      comm,
-				}
-				s.eventChan <- ev
-			case msg := <-s.msgbusChan:
-				ev := &SimpleEvent{
-					EventType: MsgBusEvent,
-					Data:      msg,
-				}
-				s.eventChan <- ev
+FORLOOP:
+	for {
+		readchan := s.ConnectionStruct.GetReadChan()
+		msgbuschan := s.msgbusChan
+		select {
+		case <-s.Ctx().Done():
+			contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Closing down")
+			break FORLOOP
+		case comm := <-readchan:
+			if comm == nil {
+				contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" readchan returned nil")
+				break FORLOOP
 			}
+			//
+			// Grossly inefficient... will fix later...
+			scre := &SimpleConnReadEvent{}
+			scre.index = comm.Index()
+			scre.data = comm.Data()
+			scre.count = comm.Count()
+			scre.err = comm.Err()
+
+			ev := &SimpleEvent{
+				EventType:   ConnReadEvent,
+				ConnEvent:   scre,
+				MsgBusEvent: nil,
+			}
+			s.eventChan <- ev
+		case msg := <-msgbuschan:
+			if msg == nil {
+				contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" msgbuschan returned nil")
+				break FORLOOP
+			}
+			smbe := &SimpleMsgBusEvent{}
+			smbe.Data = msg.Data
+			smbe.Err = msg.Err
+			smbe.EventType = msg.EventType
+			smbe.ID = msg.ID
+			smbe.RequestID = msg.RequestID
+
+			ev := &SimpleEvent{
+				EventType:   MsgBusEvent,
+				ConnEvent:   nil,
+				MsgBusEvent: smbe,
+			}
+			s.eventChan <- ev
+
 		}
-	}()
+	}
+
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" exit")
 }
 
 /*
@@ -437,7 +487,11 @@ func (s *SimpleStruct) SetReadHandler() {}
 
 // Writes buffer to the specified connection
 func (s *SimpleStruct) Write(i int, msg []byte) (int, error) {
-	return s.ConnectionStruct.IdxWrite(i, msg)
+	if i < 0 {
+		return s.ConnectionStruct.SrcWrite(msg)
+	} else {
+		return s.ConnectionStruct.IdxWrite(i, msg)
+	}
 }
 
 // Automatic duplication of writes to a MsgBus data channel

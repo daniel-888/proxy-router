@@ -278,7 +278,7 @@ func TestTCPSetupListenerReadReady(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Write() server Test Failed count: %d != %d\n", writeservercount, len(writeb)))
 	}
 
-	<-server.ReadReady()
+	// <-server.ReadReady()
 
 	var serverReadbuf []byte = make([]byte, 1024)
 	serverreadcount, e := server.Read(serverReadbuf)
@@ -289,7 +289,7 @@ func TestTCPSetupListenerReadReady(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+"Read Server Count Test Failed counts: %d, write: %d\n", serverreadcount, len(writeb)))
 	}
 
-	<-client.ReadReady()
+	// <-client.ReadReady()
 
 	var clientReadbuf []byte = make([]byte, 1024)
 	clientreadcount, e := client.Read(clientReadbuf)

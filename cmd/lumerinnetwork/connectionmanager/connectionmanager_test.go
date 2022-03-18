@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
+	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
@@ -44,6 +45,8 @@ func TestSetupListenCancel(t *testing.T) {
 		fmt.Printf(lumerinlib.FileLineFunc()+" CTX Done(): %s\n", ctx.Err())
 	case <-l.Accept():
 		fmt.Printf(lumerinlib.FileLineFunc() + "Accept() OK: returned error:")
+	case <-time.After(time.Second * 1):
+		t.Fatal(fmt.Errorf(lumerinlib.FileLine() + " timeout on Accept()"))
 	}
 
 }

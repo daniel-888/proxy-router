@@ -27,8 +27,8 @@ var levelMap = map[log.Level]string{
 	LevelPanic: "PANIC",
 	LevelFatal: "FATAL",
 	LevelError: "ERROR",
-	LevelWarn:  "WARN",
-	LevelInfo:  "INFO",
+	LevelWarn:  " WARN",
+	LevelInfo:  " INFO",
 	LevelDebug: "DEBUG",
 	LevelTrace: "TRACE",
 }
@@ -122,6 +122,13 @@ func (s *ContextStruct) GetSrc() (x net.Addr) {
 //
 func (s *ContextStruct) GetDst() (x net.Addr) {
 	return s.Dst
+}
+
+//
+//
+//
+func (s *ContextStruct) GetLog() (x *log.Logger) {
+	return s.Log
 }
 
 //

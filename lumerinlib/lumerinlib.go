@@ -1,6 +1,7 @@
 package lumerinlib
 
 import (
+	"bytes"
 	"fmt"
 	"runtime"
 	"strconv"
@@ -89,7 +90,9 @@ func FileLineFunc(a ...int) string {
 		funcName = g[len(g)-1]
 	}
 
-	ret := "[" + fileName + ":" + lineno + ":" + funcName + "()]:"
+	gid := fmt.Sprintf("%04d", getGID())
+
+	ret := "[" + gid + "|" + fileName + ":" + lineno + ":" + funcName + "()]:"
 	return ret
 }
 
@@ -161,4 +164,17 @@ func PanicHere(text ...string) string {
 	lineno := strconv.Itoa(line)
 
 	panic(fmt.Sprintf("[%s:%s]:%s", f[len(f)-1], lineno, text[0]))
+}
+
+//
+//
+// borrowed from https://blog.sgmansfield.com/2015/12/goroutine-ids/
+//
+func getGID() uint64 {
+	b := make([]byte, 64)
+	b = b[:runtime.Stack(b, false)]
+	b = bytes.TrimPrefix(b, []byte("goroutine "))
+	b = b[:bytes.IndexByte(b, ' ')]
+	n, _ := strconv.ParseUint(string(b), 10, 64)
+	return n
 }
