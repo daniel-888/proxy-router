@@ -1,4 +1,4 @@
-package main
+package maintest
 
 import (
 	"testing"
@@ -7,8 +7,10 @@ import (
 	"net"
 	"os"
 	"time"
+	"path/filepath"
+	"io/ioutil"
+	"encoding/json"
 
-	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
@@ -17,7 +19,55 @@ import (
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
-func SimMain(ps *msgbus.PubSub, l *log.Logger, configs config.ConfigRead ) msgbus.DestID {
+type Config struct {
+	BuyerNode 			bool
+	ListenIP 			string
+	ListenPort 			string
+	DefaultPoolAddr 	string
+	SchedulePassthrough	bool
+	LogFilePath			string
+}
+
+func LoadTestConfiguration(filePath string) (configs Config, err error) {
+	var data map[string]interface{}
+	currDir, _ := os.Getwd()
+	defer os.Chdir(currDir)
+
+	if err != nil {
+		panic(fmt.Errorf("error retrieving config file variable: %s", err))
+	}
+	file := filepath.Base(filePath)
+	filePath = filepath.Dir(filePath)
+	os.Chdir(filePath)
+
+	configFile, err := os.Open(file)
+	if err != nil {
+		return configs, err
+	}
+	defer configFile.Close()
+	byteValue, _ := ioutil.ReadAll(configFile)
+
+	err = json.Unmarshal(byteValue, &data)
+
+	configData := data["config"].(map[string]interface{})
+	configs.BuyerNode = configData["buyerNode"].(bool)
+
+	connConfigData := data["connection"].(map[string]interface{})
+	configs.ListenIP = connConfigData["listenIP"].(string)
+	configs.ListenPort = connConfigData["listenPort"].(string)
+	configs.DefaultPoolAddr = connConfigData["defaultPoolAddr"].(string)
+
+
+	schedConfigData := data["schedule"].(map[string]interface{})
+	configs.SchedulePassthrough = schedConfigData["passthrough"].(bool)
+
+	logConfigData := data["logging"].(map[string]interface{})
+	configs.LogFilePath = logConfigData["filePath"].(string)
+
+	return configs, err
+}
+
+func SimMain(ps *msgbus.PubSub, l *log.Logger, configs Config) msgbus.DestID {
 	mainContext := context.Background()
 
 	//
@@ -73,53 +123,51 @@ func SimMain(ps *msgbus.PubSub, l *log.Logger, configs config.ConfigRead ) msgbu
 	//
 	// Fire up the StratumV1 Potocol
 	//
-	if !configs.DisableStratumv1 {
-
-		src, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", configs.ListenIP, configs.ListenPort))
-		if err != nil {
-			lumerinlib.PanicHere("")
-		}
-
-		dst, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "127.0.0.1", "3334"))
-		if err != nil {
-			lumerinlib.PanicHere("")
-		}
-
-		stratum, err := stratumv1.NewListener(mainContext, ps, src, dst)
-		if err != nil {
-			panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
-		}
-
-		stratum.Run()
-
+	srcStrat, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", configs.ListenIP, configs.ListenPort))
+	if err != nil {
+		lumerinlib.PanicHere("")
 	}
+
+	dstStrat, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "127.0.0.1", "3334"))
+	if err != nil {
+		lumerinlib.PanicHere("")
+	}
+
+	stratum, err := stratumv1.NewListener(mainContext, ps, srcStrat, dstStrat)
+	if err != nil {
+		panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
+	}
+
+	stratum.Run()
 
 	//
 	// Fire up schedule manager
 	//
-	if !configs.DisableSchedule {
-		cs, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
-		if err != nil {
-			l.Logf(log.LevelPanic, "Schedule manager failed: %v", err)
-		}
-		err = cs.Start()
-		if err != nil {
-			l.Logf(log.LevelPanic, "Schedule manager to start: %v", err)
-		}
+	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
+	if err != nil {
+		l.Logf(log.LevelPanic, "Schedule manager failed: %v", err)
 	}
+	err = csched.Start()
+	if err != nil {
+		l.Logf(log.LevelPanic, "Schedule manager to start: %v", err)
+	}
+	
 
 	return dest.ID
 }
 
 func TestMain(t *testing.T) {
-	os.Args[1] = "-configfile=../ganacheconfig.json"
-	config.Init()
-	configs := config.ReadConfigs()
+	configPath := "../../ganacheconfig.json"
+	
+	configs,err := LoadTestConfiguration(configPath)
+	if err != nil {
+		panic(fmt.Sprintf("Loading Config Failed: %s", err))
+	}
 
 	var sleepTime time.Duration = 3*time.Second
 
 	l := log.New()
-	
+
 	logFile, err := os.OpenFile(configs.LogFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
 		l.Logf(log.LevelFatal, "error opening log file: %v", err)
@@ -134,6 +182,8 @@ func TestMain(t *testing.T) {
 	//
 	// miner connecting to lumerin node
 	//
+	fmt.Print("\n\n/// Miner connecting to node ///\n\n\n")
+
 	miner := msgbus.Miner {
 		ID:                   msgbus.MinerID("MinerID01"),
 		IP:                   "IpAddress1",
@@ -149,6 +199,8 @@ func TestMain(t *testing.T) {
 	//
 	// seller created contract found by lumerin node
 	//
+	fmt.Print("\n\n/// Created contract found by lumerin node ///\n\n\n")
+
 	contract := msgbus.Contract{
 		IsSeller: true,
 		ID:       msgbus.ContractID("ContractID01"),
@@ -174,6 +226,8 @@ func TestMain(t *testing.T) {
 	//
 	// contract was purchased and target dest was inputed in it
 	//
+	fmt.Print("\n\n/// Contract was purchased and target dest was inputed in it ///\n\n\n")
+
 	targetDest := msgbus.Dest {
 		ID: msgbus.DestID(msgbus.GetRandomIDString()),
 		NetUrl: "stratum+tcp://127.0.0.1:55555/",
@@ -200,6 +254,8 @@ func TestMain(t *testing.T) {
 	//
 	// target dest was updated while contract running
 	//
+	fmt.Print("\n\n/// Target dest was updated while contract running ///\n\n\n")
+
 	targetDest.NetUrl = "stratum+tcp://127.0.0.1:66666/"
 	ps.SetWait(msgbus.DestMsg, msgbus.IDString(targetDest.ID), targetDest)
 

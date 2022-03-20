@@ -33,7 +33,7 @@ import (
 //
 //
 
-func Init() {
+func init() {
 
 	//
 	// Read in command line flags
