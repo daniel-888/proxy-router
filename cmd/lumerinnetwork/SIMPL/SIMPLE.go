@@ -486,12 +486,19 @@ func (s *SimpleStruct) SetDefaultReadHandler() {}
 func (s *SimpleStruct) SetReadHandler() {}
 
 // Writes buffer to the specified connection
-func (s *SimpleStruct) Write(i int, msg []byte) (int, error) {
+func (s *SimpleStruct) Write(i int, msg []byte) (count int, e error) {
 	if i < 0 {
-		return s.ConnectionStruct.SrcWrite(msg)
+		count, e = s.ConnectionStruct.SrcWrite(msg)
+		// Need to so some error checking here, if src is closed, then the whole thing needs to be shutdown.
+		if e != nil {
+			contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" ConnectionStruct.SrcRead() error:%s", e)
+		}
+
 	} else {
-		return s.ConnectionStruct.IdxWrite(i, msg)
+		count, e = s.ConnectionStruct.IdxWrite(i, msg)
 	}
+
+	return count, e
 }
 
 // Automatic duplication of writes to a MsgBus data channel

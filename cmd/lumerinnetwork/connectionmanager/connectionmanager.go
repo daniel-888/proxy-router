@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
@@ -166,13 +167,21 @@ func (cls *ConnectionListenStruct) Cancel() {
 }
 
 //
+// func (cs *ConnectionStruct) closeReadChan()
+//
+func (cs *ConnectionStruct) closeReadChan() {
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" enter"))
+	close(cs.readChan)
+}
+
+//
 // func (cs *ConnectionStruct) goRead()
 //
 func (cs *ConnectionStruct) goRead(index int) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" called on index: %d", index))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" enter"))
 
-	defer close(cs.readChan)
+	// defer cs.closeReadChan()
 
 	var l *lumerinconnection.LumerinSocketStruct
 
@@ -195,18 +204,22 @@ func (cs *ConnectionStruct) goRead(index int) {
 
 		data := make([]byte, DefaultReadBufSize)
 		count, e := l.Read(data)
-		data = data[:count]
 		if e != nil {
-			contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" Read() on index:%d returned error:%s\n", index, e))
+			if e == io.EOF {
+				contextlib.Logf(cs.ctx, contextlib.LevelInfo, fmt.Sprint(lumerinlib.FileLineFunc()+" Read() returned EOF"))
+			} else {
+				contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" Read() on index returned error:%s\n", e))
+			}
 			cs.Cancel()
-			return
+			break
 		}
 		if count == 0 {
-			contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" Read() on index:%d returned zero count\n", index))
+			contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" Read() on index returned zero count\n"))
 			cs.Cancel()
-			return
+			break
 		}
 
+		data = data[:count]
 		cre := &ConnectionReadEvent{
 			index: index,
 			data:  data,

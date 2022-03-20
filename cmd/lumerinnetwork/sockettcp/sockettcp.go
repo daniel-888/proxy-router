@@ -143,7 +143,7 @@ func Listen(ctx context.Context, network string, addr string) (l *ListenTCPStruc
 	// Function to listen to the context for cancel
 	//
 
-	go l.goWaitOnCancel()
+	// go l.goWaitOnCancel()
 
 	//
 	// Go routine to run accept() on the socket and pass the connection back
@@ -353,7 +353,7 @@ func createNewSocket(ctx context.Context, conn net.Conn) (soc *SocketTCPStruct) 
 		},
 	}
 
-	go soc.goWaitOnCancel()
+	// go soc.goWaitOnCancel()
 	// go soc.goRead()
 
 	return soc
@@ -478,6 +478,9 @@ func (s *SocketTCPStruct) goRead_save() {
 func (s *SocketTCPStruct) Read(buf []byte) (count int, e error) {
 	count, e = s.socket.Read(buf)
 	if e != nil {
+		if e == io.ErrUnexpectedEOF {
+			contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Socket Read() return Unexpected EOF")
+		}
 		if e == io.EOF {
 			contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Socket Read() return EOF")
 		} else {

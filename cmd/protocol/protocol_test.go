@@ -114,7 +114,7 @@ func (p *ProtocolStruct) goEvent() {
 
 	contextlib.Logf(p.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	for event := range p.GetSimpleEvent() {
+	for event := range p.GetSimpleEventChan() {
 		contextlib.Logf(p.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Got Event %v", event)
 	}
 }

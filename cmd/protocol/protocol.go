@@ -28,6 +28,7 @@ type ProtocolStruct struct {
 	srcconn   *ProtocolConnectionStruct
 	dstconn   *ProtocolDstStruct
 	msgbus    *ProtocolMsgBusStruct
+	defRoute  int
 }
 
 //
@@ -163,6 +164,11 @@ func NewProtocol(s *simple.SimpleStruct) (ps *ProtocolStruct, e error) {
 
 	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
+	dst := contextlib.GetDst(s.Ctx())
+	if dst == nil {
+		contextlib.Logf(ps.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDst() returned nil")
+	}
+
 	cs := contextlib.GetContextStruct(s.Ctx())
 	src := cs.GetSrc()
 	ctx, cancel := context.WithCancel(s.Ctx())
@@ -176,8 +182,10 @@ func NewProtocol(s *simple.SimpleStruct) (ps *ProtocolStruct, e error) {
 		simple:    s,
 		eventchan: eventchan,
 		srcconn: &ProtocolConnectionStruct{
-			Addr: src,
-			Id:   -1,
+			Addr:  src,
+			UID:   -1,
+			State: ConnStateReady,
+			Err:   nil,
 		},
 		dstconn: &ProtocolDstStruct{
 			conn: make(map[int]*ProtocolConnectionStruct),
@@ -186,6 +194,13 @@ func NewProtocol(s *simple.SimpleStruct) (ps *ProtocolStruct, e error) {
 	}
 
 	s.Run()
+
+	// Fire up the default destination here
+	index, e := ps.AsyncDial(dst)
+
+	if index != 0 {
+		contextlib.Logf(ps.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" AsyncDial returned non-zero for the default dest")
+	}
 
 	return ps, e
 }
@@ -234,77 +249,62 @@ func (ps *ProtocolStruct) GetSimpleEventChan() <-chan *simple.SimpleEvent {
 }
 
 //
-// Dial()
+// AsyncDial()
 // opens a new connection to the desitnation and returns the index of it
 //
-func (ps *ProtocolStruct) Dial(dst net.Addr) (index int, e error) {
+func (ps *ProtocolStruct) AsyncDial(dst net.Addr) (index int, e error) {
+
+	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	if ps == nil {
 		panic(lumerinlib.FileLineFunc() + "ProtocolStruct is nil")
 	}
 	if ps.simple == nil {
 		contextlib.Logf(ps.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" simple struct is nil")
-		return -2, fmt.Errorf(lumerinlib.FileLineFunc() + " ProtoclStruct.SimpleStruct is nil")
+		e = fmt.Errorf(lumerinlib.FileLineFunc() + " ProtoclStruct.SimpleStruct is nil")
 	}
 	if ps.simple.ConnectionStruct == nil {
 		contextlib.Logf(ps.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" simple struct CoonectionStruct is nil")
-		return -2, fmt.Errorf(lumerinlib.FileLineFunc() + " ProtoclStruct.SimpleStruct.ConnectionStruct is nil")
+		e = fmt.Errorf(lumerinlib.FileLineFunc() + " ProtoclStruct.SimpleStruct.ConnectionStruct is nil")
 	}
 
-	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	if e == nil {
+		index, e = ps.dstconn.New(dst)
+		ps.goOpenConn(index)
 
-	//
-	// Call simple layer to dial up a connection to the dst
-	//
-	id, e := ps.simple.Dial(dst)
-	if e != nil {
-		return -1, e
 	}
 
-	//
-	// Add new connection to the ProtocolDstStruct
-	//
-	return ps.dstconn.addConn(dst, id)
+	return index, e
 }
 
 //
 // SetDefaultRoute()
 // Set the SIMPL layer default route
 //
-func (ps *ProtocolStruct) SetDefaultRoute(index int) (e error) {
+func (ps *ProtocolStruct) SetDefaultRouteIndex(index int) (e error) {
 
-	id, e := ps.dstconn.getConnID(index)
-	if e != nil {
-		return e
+	slot, ok := ps.dstconn.conn[index]
+	if !ok {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" bad index: %d", index)
+	} else if ConnStateReady == slot.getState() {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" connection state not ready: %s", slot.getState())
+	} else if ps.defRoute == index {
+		contextlib.Logf(ps.ctx, contextlib.LevelWarn, lumerinlib.FileLineFunc()+" default route already set to index: %d", index)
+	} else {
+		uid := slot.getUID()
+		ps.simple.SetRoute(uid) // Are we going to keep this, or just assume that the protocol layer will know the default route?
+		ps.defRoute = index
 	}
 
-	// Set the default route to the first route
-	// e := ps.simple.SetRoute(id)
-	// if e != nil {}
-
-	ps.simple.SetRoute(id)
-
-	return nil
+	return e
 }
 
 //
-// GetDefaultRoute()
+// GetDefaultRouteIndex()
 // get the  SIMPL layer default route
 //
-func (ps *ProtocolStruct) GetDefaultRoute() (index int, e error) {
-
-	// Set the default route to the first route
-	ps.simple.GetRoute()
-	var id int = 0
-	//id, e := ps.simple.GetRoute()
-	//if e != nil {
-	//	return -1, e
-	//}
-
-	index, e = ps.dstconn.getConnIndex(id)
-
-	return index, e
-
+func (ps *ProtocolStruct) GetDefaultRouteIndex() int {
+	return ps.defRoute
 }
 
 //
@@ -312,27 +312,14 @@ func (ps *ProtocolStruct) GetDefaultRoute() (index int, e error) {
 //
 func (ps *ProtocolStruct) Write(msg []byte) (count int, e error) {
 	count = 0
-	// l := len(msg)
 
-	index, e := ps.GetDefaultRoute()
-	if e != nil {
-		return -1, e
+	index := ps.defRoute
+	state := ps.dstconn.conn[index].getState()
+	if ConnStateReady != state {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" Connection state:%s", state)
+	} else {
+		count, e = ps.simple.Write(index, msg)
 	}
-
-	// id, e := ps.dstconn.getConnID(index)
-	// if e != nil {
-	// 	return -1, e
-	// }
-
-	count, e = ps.simple.Write(index, msg)
-
-	// count, e = ps.simple.Write(id, msg)
-	// if e != nil {
-	// 	return count, e
-	// }
-	// if l != count {
-	// 	return count, fmt.Errorf(lumerinlib.FileLineFunc() + " full msg length was not written")
-	// }
 
 	return count, e
 }

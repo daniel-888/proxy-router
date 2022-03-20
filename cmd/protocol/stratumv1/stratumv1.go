@@ -17,7 +17,6 @@ import (
 //
 //
 
-// type newStratumV1Func func(*simple.SimpleStruct) chan *simple.SimpleEvent
 type newStratumV1Func func(*simple.SimpleStruct)
 
 type newStratumV1Struct struct {
@@ -153,6 +152,8 @@ func NewStratumV1(ss *simple.SimpleStruct) {
 		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct not in CTX")
 	}
 
+	// Async Open Dst connection Here
+
 	dst := cs.GetDst()
 	if dst == nil {
 		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct DST not defined")
@@ -175,7 +176,6 @@ func NewStratumV1(ss *simple.SimpleStruct) {
 
 	// Launch the event handler
 	go svs.goEvent()
-
 	ss.Run()
 
 }

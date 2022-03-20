@@ -40,7 +40,7 @@ func main() {
 	}
 	defer logFile.Close()
 
-	l.SetFormat(log.FormatJSON).SetOutput(logFile)
+	//l.SetFormat(log.FormatJSON).SetOutput(logFile)
 
 	mainContext, mainCancel := context.WithCancel(context.Background())
 	sigInt := make(chan os.Signal, 1)
@@ -116,7 +116,7 @@ func main() {
 	//
 	// the proro argument (#1) gets set in the Protocol sus-system
 	//
-	cs := contextlib.NewContextStruct(nil, ps, l, src, dst)
+	cs := contextlib.NewContextStruct(nil, ps, nil, src, dst)
 
 	//
 	//  All of the various needed subsystem values get passed into the context here.
@@ -165,7 +165,7 @@ func main() {
 			lumerinlib.PanicHere("")
 		}
 
-		dst, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "127.0.0.1", "3334"))
+		dst, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "127.0.0.1", "33335"))
 		if err != nil {
 			lumerinlib.PanicHere("")
 		}

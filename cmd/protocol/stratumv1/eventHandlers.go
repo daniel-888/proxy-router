@@ -231,10 +231,10 @@ func (svs *StratumV1Struct) handleMsgRemovedEvent(event msgbus.Event) {
 //
 func (svs *StratumV1Struct) handleConnReadEvent(scre *simple.SimpleConnReadEvent) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called %v", scre)
 
 	// Events should come in as '\n' terminated strings
-	if nil == scre.Err() {
+	if nil != scre.Err() {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" scre had an error:%s", scre.Err)
 	}
 
@@ -301,7 +301,7 @@ func (svs *StratumV1Struct) handleErrorEvent(event *simple.SimpleEvent) {
 //
 func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called Index: %d Method: %s", index, request.Method)
 
 	// Recieved Src message
 	if index < 0 {
@@ -402,36 +402,29 @@ func (svs *StratumV1Struct) handleSrcAuthorize(request *stratumRequest) {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" getID() returned error:%s ", e)
 	}
 
-	var errval *string = nil
+	// Move this to JSON file
+
+	result := true
+
 	response := &stratumResponse{
 		ID:     id,
-		Error:  errval,
-		Result: nil,
+		Error:  nil,
+		Result: result,
+		Reject: nil,
 	}
 
 	msg, e := response.createResponseMsg()
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() returned error:%s ", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg error:%s", e)
 	}
 
-	// HERE
 	count, e := svs.protocol.WriteSrc(msg)
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() returned error:%s ", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc error:%s", e)
 	}
-	if len(msg) != count {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Write() did not send all of the message msg len:%d, sent len:%d ", len(msg), count)
+	if count != len(msg) {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
 	}
-
-	//
-	//  Need to check if the dest has alternate credentials and substitute them
-	//
-
-	// msg, e := request.createRequestMsg()
-	// if e != nil {
-	// 	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createAuthorizeRequest() returned error:%s", e)
-	// }
-	// svs.protocol.Write(msg)
 
 }
 
@@ -474,34 +467,45 @@ func (svs *StratumV1Struct) handleSrcSubscribe(request *stratumRequest) {
 
 	id, e := request.getID()
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" getID() returned error:%s ", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" getID() error:%s", e)
 	}
 
-	var errval *string = nil
+	// Move this to JSON file
+
+	extranonce := "1"
+	extranonce2 := 1
+
+	subscriptions := make([]string, 2)
+	subscriptions[0] = string(SERVER_MINING_NOTIFY)
+	subscriptions[1] = "0"
+
+	sub2 := make([][]string, 1)
+	sub2[0] = subscriptions
+
+	result := make([]interface{}, 3)
+	result[0] = sub2
+	result[1] = extranonce
+	result[2] = extranonce2
+
 	response := &stratumResponse{
 		ID:     id,
-		Error:  errval,
-		Result: nil,
+		Error:  nil,
+		Result: result,
+		Reject: nil,
 	}
 
-	// msg, e := response.createSubscribeResponseMsg()
 	msg, e := response.createResponseMsg()
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() returned error:%s ", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg error:%s", e)
 	}
 
 	count, e := svs.protocol.WriteSrc(msg)
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() returned error:%s ", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc error:%s", e)
 	}
-	if len(msg) != count {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Write() did not send all of the message msg len:%d, sent len:%d ", len(msg), count)
+	if count != len(msg) {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
 	}
-
-	// Break down parameters into user and password
-	// store these in the StratumV1Struct
-
-	// If there is any open connection send the subscribe
 
 }
 
@@ -593,10 +597,7 @@ func (svs *StratumV1Struct) handleDstNotify(index int, request *stratumNotice) {
 	// If not, store the notify?
 	// If so, pass it to the Src
 
-	defroutidx, e := svs.protocol.GetDefaultRoute()
-	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDefaultRouter returned error:%s", e)
-	}
+	defroutidx := svs.protocol.GetDefaultRouteIndex()
 
 	// This is the default route
 	if defroutidx == index {
@@ -609,7 +610,7 @@ func (svs *StratumV1Struct) handleDstNotify(index int, request *stratumNotice) {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 	}
 
-	// Ok, what do we do now?
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" ... not handled yet")
 
 }
 
@@ -623,10 +624,7 @@ func (svs *StratumV1Struct) handleDstSetDifficulty(index int, request *stratumNo
 	// If not, store the notify?
 	// If so, pass it to the Src
 
-	defroutidx, e := svs.protocol.GetDefaultRoute()
-	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDefaultRouter returned error:%s", e)
-	}
+	defroutidx := svs.protocol.GetDefaultRouteIndex()
 
 	// This is the default route
 	if defroutidx == index {
@@ -638,5 +636,7 @@ func (svs *StratumV1Struct) handleDstSetDifficulty(index int, request *stratumNo
 	} else {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 	}
+
+	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" ... not handled yet")
 
 }
