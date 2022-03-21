@@ -1,6 +1,8 @@
 package stratumv1
 
 import (
+	"fmt"
+
 	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
@@ -229,13 +231,14 @@ func (svs *StratumV1Struct) handleMsgRemovedEvent(event msgbus.Event) {
 // Parse the message
 // Run the message through a handle routine
 //
-func (svs *StratumV1Struct) handleConnReadEvent(scre *simple.SimpleConnReadEvent) {
+func (svs *StratumV1Struct) handleConnReadEvent(scre *simple.SimpleConnReadEvent) (e error) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called %v", scre)
 
-	// Events should come in as '\n' terminated strings
-	if nil != scre.Err() {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" scre had an error:%s", scre.Err)
+	e = scre.Err()
+	if nil != e {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" scre had an error:%s", e)
+		return e
 	}
 
 	// count := scre.Count()
@@ -245,19 +248,21 @@ func (svs *StratumV1Struct) handleConnReadEvent(scre *simple.SimpleConnReadEvent
 	ret, e := unmarshalMsg(data)
 
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Called")
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Called")
+		return e
 	}
 
 	switch ret := ret.(type) {
 	case *stratumRequest:
-		svs.handleRequest(index, ret)
+		e = svs.handleRequest(index, ret)
 	case *stratumResponse:
-		svs.handleResponse(index, ret)
+		e = svs.handleResponse(index, ret)
 	case *stratumNotice:
-		svs.handleNotice(index, ret)
+		e = svs.handleNotice(index, ret)
 	default:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Called")
 	}
+	return e
 }
 
 //
@@ -299,7 +304,7 @@ func (svs *StratumV1Struct) handleErrorEvent(event *simple.SimpleEvent) {
 // handleRequest()
 // index: -1 = SRC, 0 = default, >0 = Dst
 //
-func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) {
+func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) (e error) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called Index: %d Method: %s", index, request.Method)
 
@@ -311,9 +316,9 @@ func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) {
 		case string(CLIENT_MINING_EXTRANONCE):
 			svs.handleSrcExtranonce(request)
 		case string(CLIENT_MINING_AUTHORIZE):
-			svs.handleSrcAuthorize(request)
+			e = svs.handleSrcAuthorize(request)
 		case string(CLIENT_MINING_SUBSCRIBE):
-			svs.handleSrcSubscribe(request)
+			e = svs.handleSrcSubscribe(request)
 		case string(CLIENT_MINING_SUBMIT):
 			svs.handleSrcSubmit(request)
 		case string(CLIENT_MINING_SUGGEST_DIFFICULTY):
@@ -345,23 +350,25 @@ func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) {
 
 	}
 
+	return e
 }
 
 //
 // handleResponse()
 // index: -1 = SRC, 0 = default, >0 = Dst
 //
-func (svs *StratumV1Struct) handleResponse(index int, request *stratumResponse) {
+func (svs *StratumV1Struct) handleResponse(index int, request *stratumResponse) (e error) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
+	return nil
 }
 
 //
 // handleNotice()
 // index: -1 = SRC, 0 = default, >0 = Dst
 //
-func (svs *StratumV1Struct) handleNotice(index int, notice *stratumNotice) {
+func (svs *StratumV1Struct) handleNotice(index int, notice *stratumNotice) (e error) {
 
 	if index < 0 {
 		switch notice.Method {
@@ -382,6 +389,7 @@ func (svs *StratumV1Struct) handleNotice(index int, notice *stratumNotice) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
+	return nil
 }
 
 // -------------------------------------------------------------------------
@@ -391,7 +399,7 @@ func (svs *StratumV1Struct) handleNotice(index int, notice *stratumNotice) {
 //
 //
 //
-func (svs *StratumV1Struct) handleSrcAuthorize(request *stratumRequest) {
+func (svs *StratumV1Struct) handleSrcAuthorize(request *stratumRequest) (e error) {
 
 	if svs.srcAuthRequest == nil {
 		svs.srcAuthRequest = request
@@ -399,7 +407,8 @@ func (svs *StratumV1Struct) handleSrcAuthorize(request *stratumRequest) {
 
 	id, e := request.getID()
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" getID() returned error:%s ", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" getID() returned error:%s ", e)
+		return e
 	}
 
 	// Move this to JSON file
@@ -415,17 +424,22 @@ func (svs *StratumV1Struct) handleSrcAuthorize(request *stratumRequest) {
 
 	msg, e := response.createResponseMsg()
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg error:%s", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createResponseMsg error:%s", e)
+		return e
 	}
 
 	count, e := svs.protocol.WriteSrc(msg)
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc error:%s", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" WriteSrc error:%s", e)
+		return e
 	}
 	if count != len(msg) {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+		return e
 	}
 
+	return nil
 }
 
 //
@@ -459,7 +473,7 @@ func (svs *StratumV1Struct) handleSrcExtranonce(request *stratumRequest) {
 // handleSrcSubscribe()
 // takes a parsed message from the source
 //
-func (svs *StratumV1Struct) handleSrcSubscribe(request *stratumRequest) {
+func (svs *StratumV1Struct) handleSrcSubscribe(request *stratumRequest) (e error) {
 
 	if svs.srcSubscribeRequest == nil {
 		svs.srcSubscribeRequest = request
@@ -467,7 +481,8 @@ func (svs *StratumV1Struct) handleSrcSubscribe(request *stratumRequest) {
 
 	id, e := request.getID()
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" getID() error:%s", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" getID() error:%s", e)
+		return e
 	}
 
 	// Move this to JSON file
@@ -496,17 +511,24 @@ func (svs *StratumV1Struct) handleSrcSubscribe(request *stratumRequest) {
 
 	msg, e := response.createResponseMsg()
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg error:%s", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createResponseMsg error:%s", e)
+		return e
 	}
 
 	count, e := svs.protocol.WriteSrc(msg)
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc error:%s", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" WriteSrc error:%s, Close it down", e)
+		// Error writing to Src (close it down here)
+		svs.Cancel()
+		return e
 	}
 	if count != len(msg) {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+		return e
 	}
 
+	return nil
 }
 
 //

@@ -15,7 +15,9 @@ import (
 const DefaultDstSlots int = 8
 const MaxDstSlots int = 16
 const DefaultReadBufSize = 1024
-const DefaultReadEventChanSize = 10
+
+// const DefaultReadEventChanSize = 10
+const DefaultReadEventChanSize = 0
 
 const SrcIdx int = -1
 const DstIdx0 int = 0
@@ -120,6 +122,7 @@ FORLOOP:
 	for {
 		select {
 		case <-cls.ctx.Done():
+			contextlib.Logf(cls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" context canceled")
 			break FORLOOP
 		case l := <-cls.listen.Accept():
 			ctx, cancel := context.WithCancel(cls.ctx)
@@ -167,21 +170,13 @@ func (cls *ConnectionListenStruct) Cancel() {
 }
 
 //
-// func (cs *ConnectionStruct) closeReadChan()
-//
-func (cs *ConnectionStruct) closeReadChan() {
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" enter"))
-	close(cs.readChan)
-}
-
-//
 // func (cs *ConnectionStruct) goRead()
 //
 func (cs *ConnectionStruct) goRead(index int) {
 
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" enter"))
 
-	// defer cs.closeReadChan()
+	defer cs.Cancel()
 
 	var l *lumerinconnection.LumerinSocketStruct
 
@@ -194,11 +189,11 @@ func (cs *ConnectionStruct) goRead(index int) {
 	if l == nil {
 		contextlib.Logf(cs.ctx, contextlib.LevelPanic, fmt.Sprint(lumerinlib.FileLineFunc()+" bad index:%d", index))
 	}
-
+FORLOOP:
 	for {
 		select {
 		case <-cs.ctx.Done():
-			return
+			break FORLOOP
 		default:
 		}
 
@@ -210,13 +205,11 @@ func (cs *ConnectionStruct) goRead(index int) {
 			} else {
 				contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" Read() on index returned error:%s\n", e))
 			}
-			cs.Cancel()
-			break
+			break FORLOOP
 		}
 		if count == 0 {
 			contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" Read() on index returned zero count\n"))
-			cs.Cancel()
-			break
+			break FORLOOP
 		}
 
 		data = data[:count]
@@ -246,6 +239,16 @@ func (cs *ConnectionStruct) GetReadChan() <-chan *ConnectionReadEvent {
 //
 //
 func (cs *ConnectionStruct) Cancel() {
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
+
+	select {
+	case <-cs.ctx.Done():
+		contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" called already"))
+		return
+	default:
+	}
+
+	close(cs.readChan)
 	cs.cancel()
 }
 
@@ -306,13 +309,12 @@ func (cs *ConnectionStruct) ReDialIdx(idx int) (e error) {
 //
 // Close() will close out all src and dst connections via the cancel context function
 //
-func (cs *ConnectionStruct) Close() (e error) {
+func (cs *ConnectionStruct) Close() {
 
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
-	cs.cancel() // This should close all open src and dst connections
+	cs.Cancel() // This should close all open src and dst connections
 
-	return nil
 }
 
 //
@@ -424,11 +426,11 @@ func (cs *ConnectionStruct) SrcWrite(buf []byte) (count int, e error) {
 //
 // SrcClose() calls (*CS) Close() to close everything down
 //
-func (cs *ConnectionStruct) SrcClose() (e error) {
+func (cs *ConnectionStruct) SrcClose() {
 
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
-	return cs.Close()
+	cs.Close()
 }
 
 //

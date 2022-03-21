@@ -193,7 +193,11 @@ func (s *StratumV1Struct) goEvent() {
 
 	simplechan := s.protocol.GetSimpleEventChan()
 	for event := range simplechan {
-		s.eventHandler(event)
+		contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" event:%v", event)
+		e := s.eventHandler(event)
+		if e != nil {
+			contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" eventHandler() returned error:%s ", e)
+		}
 	}
 }
 
@@ -227,7 +231,7 @@ func (s *StratumV1Struct) Cancel() {
 // The event hander is expected to be single threaded
 //
 // Event Handler
-func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) {
+func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) (e error) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -242,7 +246,7 @@ func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) {
 
 	case simple.ConnReadEvent:
 		scre := event.ConnEvent
-		svs.handleConnReadEvent(scre)
+		e = svs.handleConnReadEvent(scre)
 		return
 
 	case simple.ConnEOFEvent:
@@ -261,9 +265,11 @@ func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) {
 		return
 
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default Reached: Event Type:%s", string(event.EventType))
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Default Reached: Event Type:%s", string(event.EventType))
+		e = fmt.Errorf(" Default Reached: Event Type:%s", string(event.EventType))
 	}
 
+	return e
 }
 
 //

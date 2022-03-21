@@ -23,7 +23,6 @@ import (
 const TCPAcceptChannelLen int = 2
 const TCPReadChannelLen int = 10
 
-// const TCPReadReadyChannelLen int = 1
 const TCPReadBufferSize int = 1024
 
 var ErrSocTCPClosed = errors.New("socket TCP: socket closed")
@@ -317,7 +316,8 @@ func Dial(ctx context.Context, network string, addr string) (s *SocketTCPStruct,
 
 	if e != nil {
 		contextlib.Logf(ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" DialContext Error:%s", e)
-		cancel()
+		_ = cancel
+		return nil, e
 	} else {
 		ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 		s = createNewSocket(ctx, conn)
@@ -335,14 +335,12 @@ func createNewSocket(ctx context.Context, conn net.Conn) (soc *SocketTCPStruct) 
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	//	rr := make(chan bool, TCPReadReadyChannelLen)
 	rc := make(chan readStruct, TCPReadChannelLen)
 	ctx, cancel := contextlib.CreateNewContext(ctx)
 	soc = &SocketTCPStruct{
-		socket: conn,
-		ctx:    ctx,
-		cancel: cancel,
-		//		readready: rr,
+		socket:   conn,
+		ctx:      ctx,
+		cancel:   cancel,
 		readchan: rc,
 		readbuf:  make([]byte, 0, TCPReadBufferSize),
 		status: SocketStatusStruct{
@@ -353,9 +351,6 @@ func createNewSocket(ctx context.Context, conn net.Conn) (soc *SocketTCPStruct) 
 		},
 	}
 
-	// go soc.goWaitOnCancel()
-	// go soc.goRead()
-
 	return soc
 }
 
@@ -364,6 +359,7 @@ func createNewSocket(ctx context.Context, conn net.Conn) (soc *SocketTCPStruct) 
 //
 func (s *SocketTCPStruct) Cancel() {
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	close(s.readchan)
 	s.cancel()
 }
 
@@ -378,12 +374,12 @@ func (s *SocketTCPStruct) Ctx() context.Context {
 //
 // Go Routine to listen to the context for cancel
 //
-func (s *SocketTCPStruct) goWaitOnCancel() {
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-	<-s.ctx.Done()
-	s.Close()
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" exiting")
-}
+// func (s *SocketTCPStruct) goWaitOnCancel() {
+// 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+// 	<-s.ctx.Done()
+// 	s.Close()
+// 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" exiting")
+// }
 
 //
 // close() internal function to check to see if the socket has been canceled
@@ -408,74 +404,20 @@ func (l *SocketTCPStruct) TestingIsClosed() (ret bool) {
 }
 
 //
-// goRead() go routine to read the socket, buffer it and send it to the Read() function
-//
-func (s *SocketTCPStruct) goRead_save() {
-
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-
-	defer close(s.readchan)
-	//	defer close(s.readready)
-
-	for !s.isClosed() {
-
-		contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" enter Read() loop")
-
-		var e error
-		buf := make([]byte, TCPReadBufferSize)
-		readcount, e := s.socket.Read(buf)
-
-		if e != nil {
-			if e == io.EOF {
-				contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Socket Read() return EOF")
-			} else {
-				select {
-				case <-s.ctx.Done():
-					e = ErrSocTCPClosed
-				default:
-					contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Read() returned error: %s", e)
-				}
-			}
-			s.Close()
-		} else if readcount == 0 {
-			e = fmt.Errorf("soc.goRead() returned 0 bytes")
-			contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Read() returned 0 bytes")
-		} else {
-			contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Socket Read() count:%d", readcount)
-		}
-
-		r := readStruct{
-			err:   e,
-			count: readcount,
-			buf:   buf[:readcount],
-		}
-
-		s.readchan <- r
-		//if len(s.readready) == 0 {
-		//	s.readready <- true
-		//}
-	}
-
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" exiting")
-
-}
-
-//
-// Readready() Non-blocking call to see if a call to Read() would block or not
-//
-// func (s *SocketTCPStruct) ReadReady() <-chan bool {
-//
-// 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-//
-// 	return s.readready
-//
-// }
-
-//
 // Read()
 // Blocks on getting a read back from readchan.
 //
 func (s *SocketTCPStruct) Read(buf []byte) (count int, e error) {
+
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	select {
+	case <-s.ctx.Done():
+		contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" called but canceled already called...")
+		return 0, io.EOF
+	default:
+	}
+
 	count, e = s.socket.Read(buf)
 	if e != nil {
 		if e == io.ErrUnexpectedEOF {
@@ -498,91 +440,17 @@ func (s *SocketTCPStruct) Read(buf []byte) (count int, e error) {
 }
 
 //
-// Read()
-// Blocks on getting a read back from readchan.
-//
-func (s *SocketTCPStruct) Read_save(buf []byte) (count int, e error) {
-
-	count = 0
-
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-
-	if cap(buf) == 0 {
-		contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" buf is zero lenth")
-		return 0, fmt.Errorf(lumerinlib.FileLineFunc() + " buffer lenth is 0")
-	}
-
-	if s.isClosed() {
-		return 0, ErrSocTCPClosed
-	}
-
-	readbufsize := len(s.readbuf)
-	readchansize := len(s.readchan)
-	// NAND - only run the loop if these two condtions are met.
-	// Dont go into the loop if readbuf > 0 and readchansize is 0
-	// because there is no incoming reads, and there is data in the buffer
-	if !(readbufsize > 0 && readchansize == 0) {
-
-		// s.readbuf is a local storage for reads to buffer incoming data
-		// The local buffer will reach a high water mark and just start returning data
-		// The buf will be filled or the s.readbuf will be emptied
-
-	FORLOOP:
-		for {
-			select {
-			// Exit, we are done
-			case <-s.ctx.Done():
-				count = 0
-				e = s.ctx.Err()
-				break FORLOOP
-
-			case r := <-s.readchan:
-				// Exit, Socket returned an error
-				if r.Err() != nil {
-					count = 0
-					e = r.Err()
-					break FORLOOP
-				}
-
-				s.readbuf = append(s.readbuf, r.buf...)
-
-				if len(s.readbuf) > TCPReadBufferSize {
-					break FORLOOP
-				}
-
-				readbufsize = len(s.readbuf)
-				readchansize = len(s.readchan)
-				if readbufsize > 0 && readchansize == 0 {
-					break FORLOOP
-				}
-			}
-		}
-	}
-
-	if e == nil {
-
-		// Drain s.readbuf into the buf
-
-		if len(s.readbuf) > 0 {
-			count = copy(buf, s.readbuf)
-			s.readbuf = s.readbuf[count:]
-		}
-
-		s.status.bytesRead += count
-		s.status.countRead++
-	}
-
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" return count:%d", count)
-
-	return count, e
-}
-
-//
 //
 //
 func (s *SocketTCPStruct) Write(buf []byte) (count int, e error) {
 
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	select {
+	case <-s.ctx.Done():
+		return 0, io.EOF
+	default:
+	}
 
 	if len(buf) == 0 {
 		panic(fmt.Errorf(lumerinlib.FileLineFunc() + " Write() buffer lenth is zero"))
@@ -608,6 +476,12 @@ func (s *SocketTCPStruct) Write(buf []byte) (count int, e error) {
 func (s *SocketTCPStruct) Status() (ss SocketStatusStruct, e error) {
 
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	select {
+	case <-s.ctx.Done():
+		return s.status, ErrSocTCPClosed
+	default:
+	}
 
 	if s.isClosed() {
 		e = ErrSocTCPClosed

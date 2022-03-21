@@ -225,12 +225,13 @@ func (s *SimpleListenStruct) goListenAccept() {
 	if proto == nil {
 		contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetProtocol() returned nil")
 	}
-	// contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" GetProtocol func type:%t", proto)
 
+FORLOOP:
 	for {
 		select {
 		case <-s.ctx.Done():
-			return
+			contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" context canceled")
+			break FORLOOP
 		case connectionStruct := <-s.connectionListen.Accept():
 
 			if connectionStruct == nil {
@@ -368,6 +369,7 @@ FORLOOP:
 				MsgBusEvent: nil,
 			}
 			s.eventChan <- ev
+
 		case msg := <-msgbuschan:
 			if msg == nil {
 				contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" msgbuschan returned nil")
@@ -386,7 +388,6 @@ FORLOOP:
 				MsgBusEvent: smbe,
 			}
 			s.eventChan <- ev
-
 		}
 	}
 
