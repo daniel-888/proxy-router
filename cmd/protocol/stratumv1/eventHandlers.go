@@ -23,7 +23,7 @@ import (
 // else
 // Check to see if this is a event that we care about, and handle it
 //
-func (svs *StratumV1Struct) handleMsgUpdateEvent(event msgbus.Event) {
+func (svs *StratumV1Struct) handleMsgUpdateEvent(event *simple.SimpleMsgBusEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
@@ -64,7 +64,7 @@ func (svs *StratumV1Struct) handleMsgUpdateEvent(event msgbus.Event) {
 // else
 // Check to see if this is a event that we care about, and handle it
 //
-func (svs *StratumV1Struct) handleMsgDeleteEvent(event msgbus.Event) {
+func (svs *StratumV1Struct) handleMsgDeleteEvent(event *simple.SimpleMsgBusEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
@@ -80,7 +80,7 @@ func (svs *StratumV1Struct) handleMsgDeleteEvent(event msgbus.Event) {
 // Check the request ID to see if it was requested, pull the request off and handle the result
 // else error out
 //
-func (svs *StratumV1Struct) handleMsgGetEvent(event msgbus.Event) {
+func (svs *StratumV1Struct) handleMsgGetEvent(event *simple.SimpleMsgBusEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
@@ -96,7 +96,7 @@ func (svs *StratumV1Struct) handleMsgGetEvent(event msgbus.Event) {
 // Check the request ID to see if it was requested, pull the request off and handle the result
 // else error out
 //
-func (svs *StratumV1Struct) handleMsgIndexEvent(event msgbus.Event) {
+func (svs *StratumV1Struct) handleMsgIndexEvent(event *simple.SimpleMsgBusEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
@@ -112,7 +112,7 @@ func (svs *StratumV1Struct) handleMsgIndexEvent(event msgbus.Event) {
 // Check the request ID to see if it was requested, pull the request off and handle the result
 // else error out
 //
-func (svs *StratumV1Struct) handleMsgSearchEvent(event msgbus.Event) {
+func (svs *StratumV1Struct) handleMsgSearchEvent(event *simple.SimpleMsgBusEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
@@ -128,7 +128,7 @@ func (svs *StratumV1Struct) handleMsgSearchEvent(event msgbus.Event) {
 // Check the request ID to see if it was requested, pull the request off and handle the result
 // else error out
 //
-func (svs *StratumV1Struct) handleMsgSearchIndexEvent(event msgbus.Event) {
+func (svs *StratumV1Struct) handleMsgSearchIndexEvent(event *simple.SimpleMsgBusEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
@@ -145,7 +145,7 @@ func (svs *StratumV1Struct) handleMsgSearchIndexEvent(event msgbus.Event) {
 // else
 // Check to see if this is a event that we care about, and handle it
 //
-func (svs *StratumV1Struct) handleMsgPublishEvent(event msgbus.Event) {
+func (svs *StratumV1Struct) handleMsgPublishEvent(event *simple.SimpleMsgBusEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
@@ -162,7 +162,7 @@ func (svs *StratumV1Struct) handleMsgPublishEvent(event msgbus.Event) {
 // else
 // Check to see if this is a event that we care about, and handle it
 //
-func (svs *StratumV1Struct) handleMsgUnpublishEvent(event msgbus.Event) {
+func (svs *StratumV1Struct) handleMsgUnpublishEvent(event *simple.SimpleMsgBusEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
@@ -179,7 +179,7 @@ func (svs *StratumV1Struct) handleMsgUnpublishEvent(event msgbus.Event) {
 // else
 // Check to see if this is a event that we care about, and handle it
 //
-func (svs *StratumV1Struct) handleMsgSubscribedEvent(event msgbus.Event) {
+func (svs *StratumV1Struct) handleMsgSubscribedEvent(event *simple.SimpleMsgBusEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
@@ -196,7 +196,7 @@ func (svs *StratumV1Struct) handleMsgSubscribedEvent(event msgbus.Event) {
 // else
 // Check to see if this is a event that we care about, and handle it
 //
-func (svs *StratumV1Struct) handleMsgUnsubscribedEvent(event msgbus.Event) {
+func (svs *StratumV1Struct) handleMsgUnsubscribedEvent(event *simple.SimpleMsgBusEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
@@ -214,7 +214,7 @@ func (svs *StratumV1Struct) handleMsgUnsubscribedEvent(event msgbus.Event) {
 // Check to see if this is a event that we care about, and handle it
 //
 //
-func (svs *StratumV1Struct) handleMsgRemovedEvent(event msgbus.Event) {
+func (svs *StratumV1Struct) handleMsgRemovedEvent(event *simple.SimpleMsgBusEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 

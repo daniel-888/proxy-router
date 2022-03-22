@@ -96,7 +96,7 @@ func newProtcolConnection(ss *simple.SimpleStruct) {
 
 	// inialize a new ProtocolStruct to gain access to the standard protocol functions
 	// The default Dst should be opened when this returns
-	pls, err := NewProtocol(ss)
+	pls, err := NewProtocol(ss.Ctx(), ss)
 	if err != nil {
 		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Create NewProtocol() failed: %s", err)
 	}

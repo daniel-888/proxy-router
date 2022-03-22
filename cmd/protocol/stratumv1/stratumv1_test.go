@@ -200,14 +200,14 @@ func newContextStruct(ctx context.Context, srcstr string, dststr string, proto .
 	//
 	// This is the only place that SetProtocol is called
 
-	if len(proto) > 0 {
-		cs.SetProtocol(proto[0])
-	} else {
-		var new = &newStratumV1Struct{
-			funcptr: NewStratumV1, // Set the default new function
-		}
-		cs.SetProtocol(new)
-	}
+	// if len(proto) > 0 {
+	// 	cs.SetProtocol(proto[0])
+	// } else {
+	// 	var new = &newStratumV1Struct{
+	// 		funcptr: NewStratumV1, // Set the default new function
+	// 	}
+	// 	cs.SetProtocol(new)
+	// }
 
 	ret = contextlib.SetContextStruct(ctx, cs)
 	return ret
@@ -229,6 +229,8 @@ func newStratumConnection(t *testing.T, ctx context.Context, src string, dst str
 	dstaddr := cs.GetDst()
 
 	sls, err := NewListener(ctx, srcaddr, dstaddr, nil)
+
+	sls.Run()
 
 	if err != nil {
 		t.Errorf("NewListner() returned error:%s", err)
@@ -280,7 +282,7 @@ func testNewStratumV1(ss *simple.SimpleStruct) {
 
 	// inialize a new ProtocolStruct to gain access to the standard protocol functions
 	// The default Dst should be opened when this returns
-	pls, err := protocol.NewProtocol(ss)
+	pls, err := protocol.NewProtocol(ss.Ctx(), ss)
 	if err != nil {
 		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Create NewProtocol() failed: %s", err)
 	}
@@ -318,10 +320,12 @@ func socketListener(ctx context.Context) (l *sockettcp.ListenTCPStruct, port int
 
 	port = getRandPort()
 	addr := fmt.Sprintf("0.0.0.0:%d", port)
-	l, e = sockettcp.Listen(ctx, "tcp", addr)
+	l, e = sockettcp.NewListen(ctx, "tcp", addr)
 	if e != nil {
 		contextlib.Logf(ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Create sockettcp.Listen() errored:%s", e)
 	}
+
+	l.Run()
 
 	_, port, e = l.LocalAddr()
 	if e != nil {

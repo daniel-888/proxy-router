@@ -43,6 +43,8 @@ func TestSetupListenCancel(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
 
+	l.Run()
+
 	l.Cancel()
 
 	select {
@@ -52,7 +54,7 @@ func TestSetupListenCancel(t *testing.T) {
 			t.Fatal(lumerinlib.FileLine()+" CTX Done(): %s\n", ctx.Err())
 		}
 
-	case <-l.Accept():
+	case <-l.GetAcceptChan():
 		t.Fatal(lumerinlib.FileLine() + " <-Accept() Returned, wtf")
 	}
 
@@ -83,6 +85,8 @@ func TestSetupListenConnect(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
 
+	l.Run()
+
 	// Connect here
 	dialctx, dialcancel := context.WithCancel(ctx)
 	_ = dialcancel
@@ -97,7 +101,7 @@ func TestSetupListenConnect(t *testing.T) {
 
 	t.Logf(lumerinlib.FileLine() + " Dial completed\n")
 
-	lconnection := <-l.Accept()
+	lconnection := <-l.GetAcceptChan()
 	_ = lconnection
 
 	select {
@@ -152,12 +156,14 @@ func TestDialOut(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
 
+	l.Run()
+
 	testDial(ctx, testaddr)
 	// s := testDial(ctx, testaddr)
 
 	// Accept connection
 	select {
-	case <-l.Accept():
+	case <-l.GetAcceptChan():
 	case <-time.After(time.Second * 1):
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine() + " timeout on Accept()"))
 	}
@@ -191,10 +197,12 @@ func TestDialOutReadWrite(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
 
+	l.Run()
+
 	s := testDial(ctx, testaddr)
 
 	select {
-	case lsocket = <-l.Accept():
+	case lsocket = <-l.GetAcceptChan():
 	case <-time.After(time.Second * 1):
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine() + " timeout on Accept()"))
 	}
@@ -224,11 +232,11 @@ func TestDialOutReadWrite(t *testing.T) {
 // ---------------------------------------------------------------------------------
 
 //
-//
+// testListen()
+// Dont forget to call Run()
 //
 func testListen(ctx context.Context, addr net.Addr) (l *LumerinListenStruct, e error) {
-
-	return Listen(ctx, addr)
+	return NewListen(ctx, addr)
 }
 
 //
@@ -253,7 +261,7 @@ func goTestAcceptChannelEcho(l *LumerinListenStruct) {
 
 	fmt.Printf(lumerinlib.FileLine() + " Waiting on Connection\n")
 
-	s := <-l.Accept()
+	s := <-l.GetAcceptChan()
 
 	if s == nil {
 		panic(fmt.Sprintf(lumerinlib.FileLine() + " scoket is nil"))

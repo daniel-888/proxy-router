@@ -33,10 +33,12 @@ func TestSetupListenCancel(t *testing.T) {
 	cs.SetSrc(testaddr)
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
-	l, e := Listen(ctx)
+	l, e := NewListen(ctx)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Listen() Failed: %s\n", e))
 	}
+
+	l.Run()
 
 	l.Cancel()
 
@@ -69,10 +71,12 @@ func TestSrcDial(t *testing.T) {
 	cs.SetSrc(testaddr)
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
-	cls, e := Listen(ctx)
+	cls, e := NewListen(ctx)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Listen() Failed: %s\n", e))
 	}
+
+	cls.Run()
 
 	// Setsup to Echo data sent to SRC channel back to the originator
 	go goTestAcceptSrcChannelEcho(cls)
@@ -129,10 +133,12 @@ func TestSrcDefDstDial(t *testing.T) {
 	cs.SetSrc(testaddr)
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
-	l, e := Listen(ctx)
+	l, e := NewListen(ctx)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Listen() Failed: %s\n", e))
 	}
+
+	l.Run()
 
 	defer l.Close()
 
@@ -185,10 +191,12 @@ func TestSrcIdxDstDial(t *testing.T) {
 	cs.SetSrc(testaddr)
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
-	l, e := Listen(ctx)
+	l, e := NewListen(ctx)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Listen() Failed: %s\n", e))
 	}
+
+	l.Run()
 
 	defer l.Close()
 
@@ -285,6 +293,9 @@ func (cs *ConnectionStruct) goSrcChannelEcho() {
 		case <-cs.ctx.Done():
 			return
 		case readevent := <-cs.readChan:
+			if readevent == nil {
+				return
+			}
 			if readevent.index != -1 {
 				fmt.Printf(lumerinlib.FileLineFunc()+" readChan incorrect index:%d\n", readevent.index)
 				cs.Cancel()

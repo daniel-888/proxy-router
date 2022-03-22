@@ -65,7 +65,7 @@ func generateSimpleStruct() SimpleStruct {
 func generateSimpleListenStruct() SimpleListenStruct {
 	myContext := generateTestContext()
 	myAddr := generateTestAddr()
-	myStruct, _ := New(myContext, myAddr)
+	myStruct, _ := NewListen(myContext, myAddr)
 	return myStruct
 }
 
@@ -77,7 +77,7 @@ test steps
 
 */
 func TestInitializeSimpleListenStruct(t *testing.T) {
-	_, err := New(generateTestContext(), generateTestAddr())
+	_, err := NewListen(generateTestContext(), generateTestAddr())
 	if err != nil {
 		t.Error("failed to initialize SimpleListenStruct")
 	}
@@ -104,7 +104,7 @@ test steps
 3. ensure all associated routines are closed
 */
 func TestSimpleListenStructClose(t *testing.T) {
-	listenStruct, _ := New(generateTestContext(), generateTestAddr())
+	listenStruct, _ := NewListen(generateTestContext(), generateTestAddr())
 	listenStruct.Close()
 }
 

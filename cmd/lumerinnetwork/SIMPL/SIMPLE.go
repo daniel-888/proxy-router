@@ -37,6 +37,8 @@ type EventHandler string
 type SearchString string
 
 // type NewProtocolFunc func(*SimpleStruct) chan *SimpleEvent
+// Interface for the higer level layers to insert a startup
+// function to be called when a new connection is established
 type NewProtocolInterface interface {
 	NewProtocol(*SimpleStruct)
 }
@@ -152,7 +154,7 @@ create and return a struct with channels to listen to
 call goroutine embedded in the struct
 //assuming that the context being passed in will contain a ContextStruct in the value
 */
-func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
+func NewListen(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
 	//myContext may be used in the future
 	//myContext := ctx.Value("ContextKey")
 
@@ -172,7 +174,7 @@ func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
 		cs.Logf(contextlib.LevelPanic, "Context Src Addr not defined")
 	}
 
-	cls, e := connectionmanager.Listen(ctx)
+	cls, e := connectionmanager.NewListen(ctx)
 	if e != nil {
 		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Lumerin Listen() returne error:%s", e)
 	}
@@ -191,15 +193,9 @@ func New(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
 //protocll layer will have a layer to communicate with a chan over
 func (s *SimpleListenStruct) Run() {
 
-	cs := contextlib.GetContextStruct(s.ctx)
-	if cs == nil {
-		contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLine()+" Context Structre not correct")
-	}
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	if cs.GetProtocol() == nil {
-		cs.Logf(contextlib.LevelPanic, "Context New Protocol Function not defined")
-	}
-
+	s.connectionListen.Run()
 	go s.goListenAccept()
 
 }
@@ -216,15 +212,17 @@ func (s *SimpleListenStruct) goListenAccept() {
 		contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Structre not correct")
 	}
 
-	if cs.GetProtocol() == nil {
-		contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context New Protocol Function not defined")
-	}
+	// if cs.GetProtocol() == nil {
+	// 	contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context New Protocol Function not defined")
+	// }
 
 	// This needs error checking....
-	proto := cs.GetProtocol()
-	if proto == nil {
-		contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetProtocol() returned nil")
-	}
+	// proto := cs.GetProtocol()
+	// if proto == nil {
+	// 	contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetProtocol() returned nil")
+	// }
+
+	connectionStructChan := s.connectionListen.Accept()
 
 FORLOOP:
 	for {
@@ -232,7 +230,7 @@ FORLOOP:
 		case <-s.ctx.Done():
 			contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" context canceled")
 			break FORLOOP
-		case connectionStruct := <-s.connectionListen.Accept():
+		case connectionStruct := <-connectionStructChan:
 
 			if connectionStruct == nil {
 				contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Connection Listen Accept returned nil")
@@ -242,23 +240,25 @@ FORLOOP:
 
 			//create a cancel function from the context in the SimpleListenStruct
 			newctx, cancel := context.WithCancel(s.ctx)
+			eventchan := make(chan *SimpleEvent)
 
 			//creating a new simple struct to pass to the protocol layer
 			newSimpleStruct := &SimpleStruct{
 				ctx:               newctx,
 				cancel:            cancel,
-				eventChan:         make(chan *SimpleEvent),
+				eventChan:         eventchan,
 				msgbusChan:        make(chan *msgbus.Event),
 				maxMessageSize:    0,
 				connectionMapping: map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct{},
 				ConnectionStruct:  connectionStruct,
 			}
 
-			// var np NewProtocolInterface = proto.(NewProtocolInterface)
-			var np NewProtocolInterface
-			np = proto.(NewProtocolInterface)
-
-			np.NewProtocol(newSimpleStruct) // Call the supplied "new" protocol function here
+			// Take the NewProtocol function passed in via the ContextStruct, attach it to the NewProtocolInterface
+			// The run it to initialize the upper layer new connection
+			//			var np NewProtocolInterface
+			//			np = proto.(NewProtocolInterface)
+			//
+			//			np.NewProtocol(newSimpleStruct) // Call the supplied "new" protocol function here
 
 			s.accept <- newSimpleStruct
 		}
@@ -270,7 +270,7 @@ FORLOOP:
 //
 //
 //
-func (s *SimpleListenStruct) Accept() <-chan *SimpleStruct {
+func (s *SimpleListenStruct) GetAccept() <-chan *SimpleStruct {
 	return s.accept
 }
 
@@ -295,10 +295,12 @@ func (s *SimpleListenStruct) Close() {
 	//	cancel() //cancel is a function which terminates the associated goroutine
 }
 
-func (s *SimpleStruct) SetEventChan(eventchan chan *SimpleEvent) {
-	s.eventChan = eventchan
-}
 func (s *SimpleStruct) GetEventChan() <-chan *SimpleEvent {
+
+	if s.eventChan == nil {
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" EventChan is nil SimpleStruct:%v", s)
+	}
+
 	return s.eventChan
 }
 
@@ -316,6 +318,7 @@ It is assumed that Run() can only be called once
 TODO pass context to SimpleListenStruct's designated connection layer
 */
 func (s *SimpleStruct) Run() {
+	contextlib.Logf(s.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" enter")
 
 	if s == nil {
 		panic(lumerinlib.FileLineFunc() + " SimpleStruct is nil")
@@ -334,11 +337,13 @@ func (s *SimpleStruct) Run() {
 		s.maxMessageSize = 10 //setting the default max message size to 10 bytes
 	}
 
-	go s.goRun()
+	// s.ConnectionStruct.Run()
+
+	go s.goEvent()
 }
 
-func (s *SimpleStruct) goRun() {
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" enter")
+func (s *SimpleStruct) goEvent() {
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" enter ")
 	//
 	// Using connection managers index as the UniqueID (for now?)
 	//
@@ -368,6 +373,7 @@ FORLOOP:
 				ConnEvent:   scre,
 				MsgBusEvent: nil,
 			}
+			contextlib.Logf(s.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" Simplechan:%v", s.eventChan)
 			s.eventChan <- ev
 
 		case msg := <-msgbuschan:

@@ -20,19 +20,21 @@ func TestTCPSetupTestCancel(t *testing.T) {
 	localport := getRandPort()
 	addr := fmt.Sprintf("127.0.0.1:%d", localport)
 
-	l, e := Listen(ctx, "tcp", addr)
+	l, e := NewListen(ctx, "tcp", addr)
 	if e != nil {
 		t.Fatalf(fmt.Sprintf(lumerinlib.FileLine()+"Listen() Test Failed: %s", e))
 	}
 
+	l.Run()
+
 	l.Cancel()
 
 	select {
-	case s := <-l.Accept():
+	case s := <-l.GetAcceptChan():
 		if s != nil {
 			t.Fatalf(fmt.Sprintf(lumerinlib.FileLine()+"Cancel() Test Failed:%v", s))
 		}
-	case <-ctx.Done():
+	case <-l.ctx.Done():
 		t.Logf(fmt.Sprintf(lumerinlib.FileLine() + "Cancel() Passed"))
 	}
 
@@ -48,10 +50,12 @@ func TestTCPListenAddr(t *testing.T) {
 	localport := getRandPort()
 	addr := fmt.Sprintf("127.0.0.1:%d", localport)
 
-	l, e := Listen(ctx, "tcp4", addr)
+	l, e := NewListen(ctx, "tcp4", addr)
 	if e != nil {
 		t.Fatalf(fmt.Sprintf(lumerinlib.FileLine()+"Listen() Test Failed: network:%s", e))
 	}
+
+	l.Run()
 
 	netaddr, e := l.Addr()
 	if e != nil {
@@ -80,10 +84,12 @@ func TestTCPSetupListenerAccept(t *testing.T) {
 	localport := getRandPort()
 	addr := fmt.Sprintf("127.0.0.1:%d", localport)
 
-	l, e := Listen(ctx, "tcp", addr)
+	l, e := NewListen(ctx, "tcp", addr)
 	if e != nil {
 		t.Fatalf("Listen() Test Failed: %s", e)
 	}
+
+	l.Run()
 
 	fmt.Printf(lumerinlib.FileLine() + " Dialing\n")
 
@@ -94,7 +100,8 @@ func TestTCPSetupListenerAccept(t *testing.T) {
 
 	fmt.Printf(lumerinlib.FileLine()+" Dial completed L:%s R:%s\n", client.LocalAddrString(), client.RemoteAddrString())
 
-	server := <-l.Accept()
+	server := <-l.GetAcceptChan()
+
 	if server == nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Accept() Test Failed: %s\n", e))
 	}
@@ -111,10 +118,12 @@ func TestTCPSetupListenerWrite(t *testing.T) {
 	localport := getRandPort()
 	addr := fmt.Sprintf("127.0.0.1:%d", localport)
 
-	l, e := Listen(ctx, "tcp", addr)
+	l, e := NewListen(ctx, "tcp", addr)
 	if e != nil {
 		t.Fatalf("Listen() Test Failed: %s", e)
 	}
+
+	l.Run()
 
 	fmt.Printf(lumerinlib.FileLine() + " Dialing\n")
 
@@ -125,7 +134,8 @@ func TestTCPSetupListenerWrite(t *testing.T) {
 
 	fmt.Printf(lumerinlib.FileLine()+" Dial completed L:%s R:%s\n", client.LocalAddrString(), client.RemoteAddrString())
 
-	server := <-l.Accept()
+	accept := <-l.GetAcceptChan()
+	server := accept.(*SocketTCPStruct)
 	if server == nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Accept() Test Failed: %s\n", e))
 	}
@@ -174,10 +184,12 @@ func test_TCPSetupListenerReadWrite(t *testing.T, teststring string, buflen int,
 	localport := getRandPort()
 	addr := fmt.Sprintf("127.0.0.1:%d", localport)
 
-	l, e := Listen(ctx, "tcp", addr)
+	l, e := NewListen(ctx, "tcp", addr)
 	if e != nil {
 		t.Fatalf("Listen() Test Failed: %s", e)
 	}
+
+	l.Run()
 
 	fmt.Printf(lumerinlib.FileLine() + " Dialing\n")
 
@@ -188,7 +200,8 @@ func test_TCPSetupListenerReadWrite(t *testing.T, teststring string, buflen int,
 
 	fmt.Printf(lumerinlib.FileLine()+" Dial completed L:%s R:%s\n", client.LocalAddrString(), client.RemoteAddrString())
 
-	server := <-l.Accept()
+	accept := <-l.GetAcceptChan()
+	server := accept.(*SocketTCPStruct)
 	if server == nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Accept() Test Failed: %s\n", e))
 	}
@@ -241,10 +254,12 @@ func TestTCPSetupListenerReadReady(t *testing.T) {
 	localport := getRandPort()
 	addr := fmt.Sprintf("127.0.0.1:%d", localport)
 
-	l, e := Listen(ctx, "tcp", addr)
+	l, e := NewListen(ctx, "tcp", addr)
 	if e != nil {
 		t.Fatalf("Listen() Test Failed: %s", e)
 	}
+
+	l.Run()
 
 	fmt.Printf(lumerinlib.FileLine() + " Dialing\n")
 
@@ -255,7 +270,8 @@ func TestTCPSetupListenerReadReady(t *testing.T) {
 
 	fmt.Printf(lumerinlib.FileLine()+" Dial completed L:%s R:%s\n", client.LocalAddrString(), client.RemoteAddrString())
 
-	server := <-l.Accept()
+	accept := <-l.GetAcceptChan()
+	server := accept.(*SocketTCPStruct)
 	if server == nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Accept() Test Failed: %s\n", e))
 	}

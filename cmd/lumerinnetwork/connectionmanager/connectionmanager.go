@@ -31,12 +31,12 @@ var ErrConnReadNotReady = errors.New("CM: there is nothing to read")
 // Listen Struct for new SRC connections coming in
 //
 type ConnectionListenStruct struct {
-	listen *lumerinconnection.LumerinListenStruct
-	ctx    context.Context
-	cancel func()
-	port   int
-	addr   net.Addr
-	accept chan *ConnectionStruct
+	ctx     context.Context
+	cancel  func()
+	lumerin *lumerinconnection.LumerinListenStruct
+	port    int
+	addr    net.Addr
+	accept  chan *ConnectionStruct
 }
 
 //
@@ -68,7 +68,7 @@ func (c *ConnectionReadEvent) Err() error   { return c.err }
 //
 //
 //
-func Listen(ctx context.Context) (cls *ConnectionListenStruct, e error) {
+func NewListen(ctx context.Context) (cls *ConnectionListenStruct, e error) {
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -77,21 +77,32 @@ func Listen(ctx context.Context) (cls *ConnectionListenStruct, e error) {
 
 	addr := contextlib.GetSrc(ctx)
 
-	l, e := lumerinconnection.Listen(ctx, addr)
+	l, e := lumerinconnection.NewListen(ctx, addr)
 	if e == nil {
 		accept := make(chan *ConnectionStruct)
 		cls = &ConnectionListenStruct{
-			listen: l,
-			ctx:    ctx,
-			cancel: cancel,
-			port:   0,
-			addr:   addr,
-			accept: accept,
+			lumerin: l,
+			ctx:     ctx,
+			cancel:  cancel,
+			port:    0,
+			addr:    addr,
+			accept:  accept,
 		}
-		go cls.goAccept()
 	}
 
 	return cls, e
+}
+
+//
+//
+//
+func (cls *ConnectionListenStruct) Run() {
+
+	contextlib.Logf(cls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	cls.lumerin.Run()
+	go cls.goListenAccept()
+
 }
 
 //
@@ -112,11 +123,13 @@ func (cls *ConnectionListenStruct) getIp() net.Addr {
 //
 //
 //
-func (cls *ConnectionListenStruct) goAccept() {
+func (cls *ConnectionListenStruct) goListenAccept() {
 
 	contextlib.Logf(cls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	defer close(cls.accept)
+
+	lumerinAcceptChan := cls.lumerin.GetAcceptChan()
 
 FORLOOP:
 	for {
@@ -124,7 +137,7 @@ FORLOOP:
 		case <-cls.ctx.Done():
 			contextlib.Logf(cls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" context canceled")
 			break FORLOOP
-		case l := <-cls.listen.Accept():
+		case l := <-lumerinAcceptChan:
 			ctx, cancel := context.WithCancel(cls.ctx)
 			cs := &ConnectionStruct{
 				src:      l,
@@ -158,7 +171,7 @@ func (cls *ConnectionListenStruct) Accept() <-chan *ConnectionStruct {
 //
 func (cls *ConnectionListenStruct) Close() (e error) {
 	contextlib.Logf(cls.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" called"))
-	return cls.listen.Close()
+	return cls.lumerin.Close()
 }
 
 //

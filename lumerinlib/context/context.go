@@ -38,28 +38,19 @@ var levelMap = map[log.Level]string{
 // to all of the sub-system and go routines.  Important values are for logging, msgbus, etc
 //
 type ContextStruct struct {
-	MsgBus       *msgbus.PubSub
-	Log          *log.Logger
-	Src          net.Addr
-	Dst          net.Addr
-	ProtocolFunc interface{}
+	MsgBus *msgbus.PubSub
+	Log    *log.Logger
+	Src    net.Addr
+	Dst    net.Addr
 }
 
 func NewContextStruct(proto interface{}, msgbus *msgbus.PubSub, log *log.Logger, src net.Addr, dst net.Addr) (s *ContextStruct) {
 	return &ContextStruct{
-		ProtocolFunc: proto,
-		MsgBus:       msgbus,
-		Log:          log,
-		Src:          src,
-		Dst:          dst,
+		MsgBus: msgbus,
+		Log:    log,
+		Src:    src,
+		Dst:    dst,
 	}
-}
-
-//
-//
-//
-func (s *ContextStruct) SetProtocol(x interface{}) {
-	s.ProtocolFunc = x
 }
 
 //
@@ -94,13 +85,6 @@ func (s *ContextStruct) SetDst(x net.Addr) {
 //
 func (s *ContextStruct) SetLog(x *log.Logger) {
 	s.Log = x
-}
-
-//
-//
-//
-func (s *ContextStruct) GetProtocol() (x interface{}) {
-	return s.ProtocolFunc
 }
 
 //
@@ -184,13 +168,6 @@ func Logf(ctx context.Context, level log.Level, format string, args ...interface
 			GetContextStruct(ctx).Logf(LevelTrace, format, args...)
 		}
 	}
-}
-
-//
-//
-//
-func GetProtocol(ctx context.Context) (x interface{}) {
-	return GetContextStruct(ctx).ProtocolFunc
 }
 
 //

@@ -57,8 +57,9 @@ type ListenTCPStruct struct {
 	listener net.Listener
 	ctx      context.Context
 	cancel   func()
-	accept   chan *SocketTCPStruct
-	status   ListenerStatusStruct
+	// accept   chan *SocketTCPStruct
+	accept chan interface{}
+	status ListenerStatusStruct
 }
 
 type SocketTCPStruct struct {
@@ -101,7 +102,8 @@ func (r *readStruct) Count() int {
 //
 // Opens a listening socket on the port and IP address of the local system
 //
-func Listen(ctx context.Context, network string, addr string) (l *ListenTCPStruct, e error) {
+// func NewListen(ctx context.Context, network string, addr string) (l interface{}, e error) {
+func NewListen(ctx context.Context, network string, addr string) (l *ListenTCPStruct, e error) {
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -126,7 +128,8 @@ func Listen(ctx context.Context, network string, addr string) (l *ListenTCPStruc
 		return l, e
 	}
 
-	accept := make(chan *SocketTCPStruct, TCPAcceptChannelLen)
+	// accept := make(chan *SocketTCPStruct, TCPAcceptChannelLen)
+	accept := make(chan interface{}, TCPAcceptChannelLen)
 
 	l = &ListenTCPStruct{
 		listener: listener,
@@ -139,18 +142,19 @@ func Listen(ctx context.Context, network string, addr string) (l *ListenTCPStruc
 	}
 
 	//
-	// Function to listen to the context for cancel
-	//
-
-	// go l.goWaitOnCancel()
-
-	//
 	// Go routine to run accept() on the socket and pass the connection back
 	// via the channel.  The accept function can be canceled via the context
 	//
-	go l.goAccept()
 
 	return l, e
+}
+
+//
+//
+//
+func (l *ListenTCPStruct) Run() {
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	go l.goListenAccept()
 }
 
 //
@@ -161,20 +165,9 @@ func (l *ListenTCPStruct) Ctx() context.Context {
 }
 
 //
-// goWaitOnCancel() Go Routine to listen to the context for cancel and close the socket
-//
-func (l *ListenTCPStruct) goWaitOnCancel() {
-
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-	<-l.ctx.Done()
-	l.Close()
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-}
-
-//
 // goAccept() go routine to accept connections and return new socket structs to the Accept() function
 //
-func (l *ListenTCPStruct) goAccept() {
+func (l *ListenTCPStruct) goListenAccept() {
 
 	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -205,7 +198,8 @@ func (l *ListenTCPStruct) goAccept() {
 //
 //
 //
-func (l *ListenTCPStruct) Accept() <-chan *SocketTCPStruct {
+//func (l *ListenTCPStruct) GetAcceptChan() <-chan *SocketTCPStruct {
+func (l *ListenTCPStruct) GetAcceptChan() <-chan interface{} {
 
 	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
