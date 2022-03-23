@@ -49,8 +49,8 @@ func generateTestAddr() net.Addr {
 func generateSimpleStruct() SimpleStruct {
 	myContext := generateTestContext()
 	mySimpleStruct := SimpleStruct{
-		ctx:    myContext,
-		cancel: dummyFunc,
+		ctx: myContext,
+		// cancel: dummyFunc,
 		// eventHandler:      0,
 		eventChan:  make(chan *SimpleEvent),
 		msgbusChan: make(chan *msgbus.Event),
@@ -121,17 +121,16 @@ func TestSimpleStructClose(t *testing.T) {
 	simpleStruct.Close()
 }
 
-func TestSetMessageSizeDefault(t *testing.T) {
-	simpleStruct := generateSimpleStruct()
-	if simpleStruct.maxMessageSize != 0 {
-		t.Errorf("message expected to be 0, actually is: %d", simpleStruct.maxMessageSize)
-	}
-	simpleStruct.SetMessageSizeDefault(100)
-	if simpleStruct.maxMessageSize != 100 {
-		t.Errorf("message expected to be 100, actually is: %d", simpleStruct.maxMessageSize)
-	}
-
-}
+//func TestSetMessageSizeDefault(t *testing.T) {
+//	simpleStruct := generateSimpleStruct()
+//	if simpleStruct.maxMessageSize != 0 {
+//		t.Errorf("message expected to be 0, actually is: %d", simpleStruct.maxMessageSize)
+//	}
+//	simpleStruct.SetMessageSizeDefault(100)
+//	if simpleStruct.maxMessageSize != 100 {
+//		t.Errorf("message expected to be 100, actually is: %d", simpleStruct.maxMessageSize)
+//	}
+//}
 
 /*
 testing that a SimpleStruct will dial a connection and accuratley store the resulting
@@ -145,10 +144,7 @@ func TestDialFunctionality(t *testing.T) {
 	//	t.Error("testing index is not 0")
 	//}
 
-	uID, e := simpleStruct.Dial(testAddr)
-	if uID != 0 {
-		t.Error("conn index is not 0")
-	}
+	e := simpleStruct.AsyncDial(0, testAddr)
 
 	if e != nil {
 		t.Errorf("%s", e)
@@ -202,21 +198,14 @@ func TestProtocolDialTheSimpleStruct(t *testing.T) {
 	go func() {
 		simpleStruct = <-simpleListenStruct.accept
 		//initial dial
-		uid, err := simpleStruct.Dial(testAddr)
-
-		if uid != 0 {
-			t.Error("uid is incorrect")
-		}
+		err := simpleStruct.AsyncDial(0, testAddr)
 
 		if err != nil {
 			t.Errorf("error creating a connection: %s", err)
 		}
 
 		//second dial to ensure that the uid increases as expected
-		uid2, err := simpleStruct.Dial(testAddr)
-		if uid2 != 1 {
-			t.Error("uid is incorrect")
-		}
+		err = simpleStruct.AsyncDial(1, testAddr)
 
 		if err != nil {
 			t.Errorf("error creating a connection: %s", err)

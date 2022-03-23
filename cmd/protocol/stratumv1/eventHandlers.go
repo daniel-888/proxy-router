@@ -5,6 +5,7 @@ import (
 
 	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/cmd/protocol"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
@@ -262,6 +263,38 @@ func (svs *StratumV1Struct) handleConnReadEvent(scre *simple.SimpleConnReadEvent
 	default:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Called")
 	}
+	return e
+}
+
+//
+// handleConnOpenEvent()
+// Matches the Request ID with the returned Unique ID
+// UID is what is fed to the connection functions like Write
+//
+func (svs *StratumV1Struct) handleConnOpenEvent(scoe *simple.SimpleConnOpenEvent) (e error) {
+
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called %v", scoe)
+
+	// If there is an error do we handle it here, or put it into the connection struct?
+	e = scoe.Err()
+	if nil != e {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" scre had an error:%s", e)
+	}
+
+	UID := scoe.UniqueID()
+	ID := scoe.RequestID()
+	// Err := scoe.Err()
+
+	dstconn, e := svs.protocol.GetDstConn(ID)
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" GetDstConn() bad index:%d", ID)
+		return e
+	}
+	dstconn.SetState(protocol.ConnStateReady)
+	dstconn.SetUID(UID)
+
+	// Send initialization message here
+
 	return e
 }
 

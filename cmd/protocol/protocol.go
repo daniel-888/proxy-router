@@ -278,22 +278,20 @@ func (ps *ProtocolStruct) AsyncDial(dst net.Addr) (index int, e error) {
 
 	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
+	// Paranoid error checking here
 	if ps == nil {
 		panic(lumerinlib.FileLineFunc() + "ProtocolStruct is nil")
 	}
 	if ps.simple == nil {
-		contextlib.Logf(ps.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" simple struct is nil")
-		e = fmt.Errorf(lumerinlib.FileLineFunc() + " ProtoclStruct.SimpleStruct is nil")
+		contextlib.Logf(ps.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" simple struct is nil")
 	}
 	if ps.simple.ConnectionStruct == nil {
-		contextlib.Logf(ps.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" simple struct CoonectionStruct is nil")
-		e = fmt.Errorf(lumerinlib.FileLineFunc() + " ProtoclStruct.SimpleStruct.ConnectionStruct is nil")
+		contextlib.Logf(ps.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" simple struct CoonectionStruct is nil")
 	}
 
+	index, e = ps.dstconn.NewProtocolDstStruct(dst)
 	if e == nil {
-		index, e = ps.dstconn.NewProtocolDstStruct(dst)
-		pcs := ps.dstconn.conn[index]
-		go pcs.goOpenConn(ps)
+		e = ps.simple.AsyncDial(index, dst)
 	}
 
 	return index, e
@@ -319,6 +317,18 @@ func (ps *ProtocolStruct) SetDefaultRouteIndex(index int) (e error) {
 	}
 
 	return e
+}
+
+//
+// DstConn()
+//
+func (ps *ProtocolStruct) GetDstConn(index int) (pcs *ProtocolConnectionStruct, e error) {
+	if ps.dstconn.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		pcs = ps.dstconn.conn[index]
+	}
+	return pcs, e
 }
 
 //

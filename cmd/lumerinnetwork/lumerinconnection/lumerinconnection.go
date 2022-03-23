@@ -142,6 +142,10 @@ func NewListen(ctx context.Context, addr net.Addr) (l *LumerinListenStruct, e er
 //
 func (ll *LumerinListenStruct) Run() {
 
+	if ll.ctx == nil {
+		panic(lumerinlib.FileLineFunc() + " ctx == nil")
+	}
+
 	contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	switch ll.listener.(type) {

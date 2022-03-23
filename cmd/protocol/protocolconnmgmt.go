@@ -3,6 +3,7 @@ package protocol
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
@@ -91,6 +92,120 @@ func (p *ProtocolDstStruct) NewProtocolDstStruct(dst net.Addr) (index int, e err
 }
 
 //
+// These should use an Interface.... circle back to this later
+//
+
+// ---------------------------------------------------
+// *ProtocolDstStruct)
+
+//
+// Cancel()
+//
+func (p *ProtocolDstStruct) Cancel(index int) (e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		p.conn[index].cancel()
+	}
+
+	return e
+}
+
+//
+// GetUID()
+//
+func (p *ProtocolDstStruct) GetUID(index int) (uid int, e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		uid = p.conn[index].uID
+	}
+	return uid, e
+}
+
+//
+// SetUID()
+//
+func (p *ProtocolDstStruct) SetUID(index int, uid int) (e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		p.conn[index].uID = uid
+	}
+
+	return e
+
+}
+
+//
+// GetAddr()
+//
+func (p *ProtocolDstStruct) GetAddr(index int) (addr net.Addr, e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		addr = p.conn[index].addr
+	}
+
+	return addr, e
+}
+
+//
+// GetState()
+//
+func (p *ProtocolDstStruct) GetState(index int) (state ConnectionState, e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		state = p.conn[index].state
+	}
+
+	return state, e
+}
+
+//
+// SetState()
+//
+func (p *ProtocolDstStruct) SetState(index int, s ConnectionState) (e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		p.conn[index].state = s
+	}
+
+	return e
+}
+
+//
+//
+//
+func (p *ProtocolDstStruct) GetError(index int) (err error, e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		err = p.conn[index].err
+	}
+
+	return err, e
+}
+
+//
+//
+//
+func (p *ProtocolDstStruct) SetError(index int, err error) (e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		p.conn[index].err = err
+	}
+
+	return e
+}
+
+// ---------------------------------------------------
+// *ProtocolConnectionStruct)
+
+//
 // Ctx()
 //
 func (p *ProtocolConnectionStruct) Ctx() context.Context {
@@ -151,32 +266,4 @@ func (p *ProtocolConnectionStruct) GetError() error {
 //
 func (p *ProtocolConnectionStruct) SetError(e error) {
 	p.err = e
-}
-
-//
-// goOpenConn()
-// Dial new connection to Dst, and then handle the start up sequence
-//
-func (pcs *ProtocolConnectionStruct) goOpenConn(ps *ProtocolStruct) {
-
-	contextlib.Logf(pcs.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-
-	state := pcs.GetState()
-	if state != ConnStateNew {
-		contextlib.Logf(pcs.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" getState() returned:%s, not %s", state, ConnStateNew)
-	}
-
-	addr := pcs.GetAddr()
-
-	UniqueID, e := ps.simple.Dial(addr)
-	if e != nil {
-		pcs.SetState(ConnStateError)
-		pcs.SetError(e)
-	} else {
-		pcs.SetState(ConnStateReady)
-		pcs.SetUID(UniqueID)
-	}
-
-	// Open Handler Here
-
 }

@@ -129,16 +129,11 @@ func newListen(t *testing.T) (pls *ProtocolListenStruct) {
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
 
-	var new = &newProtocolStruct{
-		funcptr: NewProtocolFunc,
-	}
-
 	ctx := context.Background()
 	cs := &contextlib.ContextStruct{}
 	cs.SetMsgBus(ps)
 	cs.SetSrc(src)
 	cs.SetDst(dst)
-	cs.SetProtocol(new)
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
 	pls, e := NewListen(ctx)
