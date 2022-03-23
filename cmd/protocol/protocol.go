@@ -18,6 +18,7 @@ type ProtocolListenStruct struct {
 	ctx          context.Context
 	cancel       func()
 	simplelisten *simple.SimpleListenStruct
+	accept       chan *ProtocolStruct
 }
 
 type ProtocolStruct struct {
@@ -28,6 +29,7 @@ type ProtocolStruct struct {
 	srcconn   *ProtocolConnectionStruct
 	dstconn   *ProtocolDstStruct
 	msgbus    *ProtocolMsgBusStruct
+	defRoute  simple.ConnUniqueID
 }
 
 //
@@ -35,7 +37,6 @@ type ProtocolStruct struct {
 // Opens the default destination
 //
 func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
-	var ok bool
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -43,18 +44,14 @@ func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 	// Basic error checking, make sure that the ContextStruct is
 	// filled out correctly
 	//
-	c := ctx.Value(contextlib.ContextKey)
-	if c == nil {
-		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" called")
+	cs := contextlib.GetContextStruct(ctx)
+	if cs == nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Structre not present")
 	}
 
-	cs, ok := c.(*contextlib.ContextStruct)
-	if !ok {
-		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Structre not correct")
-	}
-	if cs.GetProtocol() == nil {
-		cs.Logf(contextlib.LevelPanic, "Context Protocol not defined")
-	}
+	// if cs.GetProtocol() == nil {
+	// 	cs.Logf(contextlib.LevelPanic, "Context Protocol not defined")
+	// }
 	if cs.GetMsgBus() == nil {
 		cs.Logf(contextlib.LevelPanic, "Context MsgBus not defined")
 	}
@@ -68,20 +65,29 @@ func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	listenaddr := contextlib.GetSrc(ctx)
-	sls, err := simple.New(ctx, listenaddr)
-	sls.Run()
+
+	sls, err := simple.NewListen(ctx, listenaddr)
 
 	if err != nil {
 		lumerinlib.PanicHere(fmt.Sprintf("Error:%s", err))
 	}
 
+	accept := make(chan *ProtocolStruct)
 	pls = &ProtocolListenStruct{
 		ctx:          ctx,
 		cancel:       cancel,
 		simplelisten: &sls,
+		accept:       accept,
 	}
 
 	return pls, e
+}
+
+//
+//
+//
+func (p *ProtocolListenStruct) GetAccept() <-chan *ProtocolStruct {
+	return p.accept
 }
 
 //
@@ -108,32 +114,57 @@ func (pls *ProtocolListenStruct) Run() {
 
 	contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	go pls.goAccept()
+	pls.simplelisten.Run()
+	go pls.goListenAccept()
 }
 
 //
 // goAccept()
+// Listens for the Accept event from the SIMPL layer
+// The simpleStruct has already been inialized
 //
-func (pls *ProtocolListenStruct) goAccept() {
+func (pls *ProtocolListenStruct) goListenAccept() {
 
 	contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	go func() {
-		for {
-			select {
-			case <-pls.ctx.Done():
-				return
-			case newSimpleStruct := <-pls.simplelisten.Accept():
-				contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" simplelisten.Accept() recieved")
+	newSimpleStructChan := pls.simplelisten.GetAccept()
 
-				ps, e := NewProtocol(newSimpleStruct)
-				if e != nil {
-					contextlib.Logf(pls.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" NewProtocol() returned error:%s", e)
-					ps.Run()
-				}
+FORLOOP:
+	for {
+		select {
+		case <-pls.ctx.Done():
+			break FORLOOP
+		case newSimpleStruct := <-newSimpleStructChan:
+			contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" simplelisten.Accept() recieved")
+
+			if newSimpleStruct == nil {
+				contextlib.Logf(pls.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" pls.simplelisten.Accept() stopping")
+				pls.Cancel()
+				break FORLOOP
 			}
+			if nil == newSimpleStruct.Ctx() {
+				contextlib.Logf(pls.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" newSimpleStruct empty CTX stopping")
+				pls.Cancel()
+				break FORLOOP
+			}
+			if nil == newSimpleStruct.ConnectionStruct {
+				contextlib.Logf(pls.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" newSimpleStruct empty ConnectionStruct stopping")
+				pls.Cancel()
+				break FORLOOP
+			}
+
+			ps, e := NewProtocol(pls.ctx, newSimpleStruct)
+			if e != nil {
+				contextlib.Logf(pls.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" NewProtocol() error:%s", e)
+			}
+			if ps == nil {
+				contextlib.Logf(pls.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" NewProtocol() returned nil, assuming closed")
+				break
+			}
+
+			pls.accept <- ps
 		}
-	}()
+	}
 }
 
 // --------------------------------------------
@@ -146,55 +177,43 @@ func (pls *ProtocolListenStruct) goAccept() {
 // This function is called from the layer above to initalize the common protocol functions, and enable
 // access to the standard functions provided by this layer.
 //
-func NewProtocol(s *simple.SimpleStruct) (ps *ProtocolStruct, e error) {
+func NewProtocol(ctx context.Context, s *simple.SimpleStruct) (ps *ProtocolStruct, e error) {
 
-	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	cs := contextlib.GetContextStruct(s.Ctx())
-	src := cs.GetSrc()
-	dst := cs.GetDst()
+	dst := contextlib.GetDst(ctx)
+	if dst == nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDst() returned nil")
+	}
+
+	ps = NewProtocolStruct(ctx, s)
+
+	return ps, e
+}
+
+func NewProtocolStruct(ctx context.Context, s *simple.SimpleStruct) (n *ProtocolStruct) {
 
 	ctx, cancel := context.WithCancel(s.Ctx())
+	cs := contextlib.GetContextStruct(s.Ctx())
+	src := cs.GetSrc()
 	eventchan := make(chan *simple.SimpleEvent)
+	pcs := NewProtocolConnectionStruct(ctx, src)
+	pcs.SetState(ConnStateReady)
 
-	s.SetEventChan(eventchan)
-
-	ps = &ProtocolStruct{
+	n = &ProtocolStruct{
 		ctx:       ctx,
 		cancel:    cancel,
 		simple:    s,
 		eventchan: eventchan,
-		srcconn: &ProtocolConnectionStruct{
-			Addr: src,
-			Id:   0,
-		},
+		srcconn:   pcs,
 		dstconn: &ProtocolDstStruct{
+			ctx:  ctx,
 			conn: make(map[int]*ProtocolConnectionStruct),
 		},
 		msgbus: &ProtocolMsgBusStruct{},
 	}
 
-	// Open the default connection
-	// What happens if the Default Destination does not take the connection?
-	//
-	index, e := ps.OpenConn(dst)
-	// First connection should be zero
-	if e != nil {
-		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" openConn(dst) returned error:%s", e)
-	}
-	if index != 0 {
-		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" wrong index returned")
-	}
-
-	s.Run()
-
-	e = ps.SetDefaultRoute(index)
-	if e != nil {
-		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" SetDefaultRoute(index) returned error:%s", e)
-
-	}
-
-	return ps, e
+	return n
 }
 
 //
@@ -202,7 +221,7 @@ func NewProtocol(s *simple.SimpleStruct) (ps *ProtocolStruct, e error) {
 //
 func (ps *ProtocolStruct) Ctx() context.Context {
 	if ps == nil {
-		panic(lumerinlib.FileLineFunc() + " nil ProtocolStruct pointer")
+		panic(lumerinlib.FileLineFunc() + "ProtocolStruct is nil")
 	}
 	return ps.ctx
 }
@@ -211,9 +230,10 @@ func (ps *ProtocolStruct) Ctx() context.Context {
 // Cancel() calls the simple layer Cancel function on the SimpleListenStruct
 //
 func (ps *ProtocolStruct) Cancel() {
-
+	if ps == nil {
+		panic(lumerinlib.FileLineFunc() + "ProtocolStruct is nil")
+	}
 	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-
 	ps.cancel()
 }
 
@@ -221,120 +241,111 @@ func (ps *ProtocolStruct) Cancel() {
 // Run() calls the simple layer Run function on the SimpleListenStruct
 //
 func (ps *ProtocolStruct) Run() {
-
+	if ps == nil {
+		panic(lumerinlib.FileLineFunc() + "ProtocolStruct is nil")
+	}
 	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 	ps.simple.Run()
 }
 
 //
-// Run() calls the simple layer Run function on the SimpleListenStruct
 //
-func (ps *ProtocolStruct) GetSimpleEvent() <-chan *simple.SimpleEvent {
-	return ps.simple.GetEvent()
+//
+func (ps *ProtocolStruct) GetSimpleEventChan() <-chan *simple.SimpleEvent {
+	if ps == nil {
+		panic(lumerinlib.FileLineFunc() + "ProtocolStruct is nil")
+	}
+	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	c := ps.simple.GetEventChan()
+	if c == nil {
+		contextlib.Logf(ps.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetEVentChan returned nil, ps:%v", ps)
+	}
+	return c
 }
 
 //
+// AsyncDial()
+// opens a new connection to the desitnation
 //
 //
-//func (ps *ProtocolStruct) Event() chan *simple.SimpleEvent {
-//
-//	if ps == nil {
-//		panic(lumerinlib.FileLineFunc() + " empty pointer")
-//	}
-//
-//	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-//
-//	return ps.eventchan
-//}
-
-//
-// OpenConn()
-// opens a new connection to the desitnation and returns the index of it
-//
-func (ps *ProtocolStruct) OpenConn(dst net.Addr) (index int, e error) {
+func (ps *ProtocolStruct) AsyncDial(dst net.Addr) (index int, e error) {
 
 	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	//
-	// Call simple layer to dial up a connection to the dst
-	//
-	id, e := ps.simple.Dial(dst)
-	if e != nil {
-		return -1, e
+	// Paranoid error checking here
+	if ps == nil {
+		panic(lumerinlib.FileLineFunc() + "ProtocolStruct is nil")
+	}
+	if ps.simple == nil {
+		contextlib.Logf(ps.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" simple struct is nil")
+	}
+	if ps.simple.ConnectionStruct == nil {
+		contextlib.Logf(ps.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" simple struct CoonectionStruct is nil")
 	}
 
-	//
-	// Add new connection to the ProtocolDstStruct
-	//
-	return ps.dstconn.addConn(dst, id)
+	index, e = ps.dstconn.NewProtocolDstStruct(dst)
+	if e == nil {
+		e = ps.simple.AsyncDial(index, dst)
+	}
+
+	return index, e
 }
 
 //
 // SetDefaultRoute()
 // Set the SIMPL layer default route
 //
-func (ps *ProtocolStruct) SetDefaultRoute(index int) (e error) {
+func (ps *ProtocolStruct) SetDefaultRouteIndex(index simple.ConnUniqueID) (e error) {
 
-	id, e := ps.dstconn.getConnID(index)
-	if e != nil {
-		return e
+	slot, ok := ps.dstconn.conn[int(index)]
+	if !ok {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" bad index: %d", index)
+	} else if ConnStateReady == slot.GetState() {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" connection state not ready: %s", slot.GetState())
+	} else if ps.defRoute == index {
+		contextlib.Logf(ps.ctx, contextlib.LevelWarn, lumerinlib.FileLineFunc()+" default route already set to index: %d", index)
+	} else {
+		uid := slot.GetUID()
+		ps.simple.SetRoute(uid) // Are we going to keep this, or just assume that the protocol layer will know the default route?
+		ps.defRoute = index
 	}
 
-	// Set the default route to the first route
-	// e := ps.simple.SetRoute(id)
-	// if e != nil {}
-
-	ps.simple.SetRoute(id)
-
-	return nil
+	return e
 }
 
 //
-// GetDefaultRoute()
+// DstConn()
+//
+func (ps *ProtocolStruct) GetDstConn(index int) (pcs *ProtocolConnectionStruct, e error) {
+	if ps.dstconn.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		pcs = ps.dstconn.conn[index]
+	}
+	return pcs, e
+}
+
+//
+// GetDefaultRouteIndex()
 // get the  SIMPL layer default route
 //
-func (ps *ProtocolStruct) GetDefaultRoute() (index int, e error) {
-
-	// Set the default route to the first route
-	ps.simple.GetRoute()
-	var id int = 0
-	//id, e := ps.simple.GetRoute()
-	//if e != nil {
-	//	return -1, e
-	//}
-
-	index, e = ps.dstconn.getConnIndex(id)
-
-	return index, e
-
+func (ps *ProtocolStruct) GetDefaultRouteIndex() simple.ConnUniqueID {
+	return ps.defRoute
 }
 
 //
-// Write()
+// Write() writes to the default route
 //
 func (ps *ProtocolStruct) Write(msg []byte) (count int, e error) {
 	count = 0
-	// l := len(msg)
 
-	index, e := ps.GetDefaultRoute()
-	if e != nil {
-		return -1, e
+	index := ps.defRoute
+	state := ps.dstconn.conn[int(index)].GetState()
+	if ConnStateReady != state {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" Connection state:%s", state)
+	} else {
+		count, e = ps.simple.Write(index, msg)
 	}
-
-	id, e := ps.dstconn.getConnID(index)
-	if e != nil {
-		return -1, e
-	}
-
-	ps.simple.Write(id, msg)
-
-	// count, e = ps.simple.Write(id, msg)
-	// if e != nil {
-	// 	return count, e
-	// }
-	// if l != count {
-	// 	return count, fmt.Errorf(lumerinlib.FileLineFunc() + " full msg length was not written")
-	// }
 
 	return count, e
 }
@@ -343,7 +354,8 @@ func (ps *ProtocolStruct) Write(msg []byte) (count int, e error) {
 // WriteSrc()
 //
 func (ps *ProtocolStruct) WriteSrc(msg []byte) (count int, e error) {
-	count = 0
+
+	count, e = ps.simple.Write(-1, msg)
 
 	return count, e
 }
@@ -351,9 +363,8 @@ func (ps *ProtocolStruct) WriteSrc(msg []byte) (count int, e error) {
 //
 // WriteDst()
 //
-func (ps *ProtocolStruct) WriteDst(index int, msg []byte) (count int, e error) {
-	count = 0
-
+func (ps *ProtocolStruct) WriteDst(index simple.ConnUniqueID, msg []byte) (count int, e error) {
+	count, e = ps.simple.Write(index, msg)
 	return count, e
 }
 

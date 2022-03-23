@@ -1,15 +1,15 @@
 package maintest
 
 import (
-	"testing"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
-	"time"
 	"path/filepath"
-	"io/ioutil"
-	"encoding/json"
+	"testing"
+	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/log"
@@ -20,12 +20,12 @@ import (
 )
 
 type Config struct {
-	BuyerNode 			bool
-	ListenIP 			string
-	ListenPort 			string
-	DefaultPoolAddr 	string
-	SchedulePassthrough	bool
-	LogFilePath			string
+	BuyerNode           bool
+	ListenIP            string
+	ListenPort          string
+	DefaultPoolAddr     string
+	SchedulePassthrough bool
+	LogFilePath         string
 }
 
 func LoadTestConfiguration(filePath string) (configs Config, err error) {
@@ -56,7 +56,6 @@ func LoadTestConfiguration(filePath string) (configs Config, err error) {
 	configs.ListenIP = connConfigData["listenIP"].(string)
 	configs.ListenPort = connConfigData["listenPort"].(string)
 	configs.DefaultPoolAddr = connConfigData["defaultPoolAddr"].(string)
-
 
 	schedConfigData := data["schedule"].(map[string]interface{})
 	configs.SchedulePassthrough = schedConfigData["passthrough"].(bool)
@@ -133,7 +132,7 @@ func SimMain(ps *msgbus.PubSub, l *log.Logger, configs Config) msgbus.DestID {
 		lumerinlib.PanicHere("")
 	}
 
-	stratum, err := stratumv1.NewListener(mainContext, ps, srcStrat, dstStrat)
+	stratum, err := stratumv1.NewListener(mainContext, srcStrat, dstStrat)
 	if err != nil {
 		panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
 	}
@@ -151,20 +150,19 @@ func SimMain(ps *msgbus.PubSub, l *log.Logger, configs Config) msgbus.DestID {
 	if err != nil {
 		l.Logf(log.LevelPanic, "Schedule manager to start: %v", err)
 	}
-	
 
 	return dest.ID
 }
 
 func TestMain(t *testing.T) {
 	configPath := "../../ganacheconfig.json"
-	
-	configs,err := LoadTestConfiguration(configPath)
+
+	configs, err := LoadTestConfiguration(configPath)
 	if err != nil {
 		panic(fmt.Sprintf("Loading Config Failed: %s", err))
 	}
 
-	var sleepTime time.Duration = 3*time.Second
+	var sleepTime time.Duration = 3 * time.Second
 
 	l := log.New()
 
@@ -184,7 +182,7 @@ func TestMain(t *testing.T) {
 	//
 	fmt.Print("\n\n/// Miner connecting to node ///\n\n\n")
 
-	miner := msgbus.Miner {
+	miner := msgbus.Miner{
 		ID:                   msgbus.MinerID("MinerID01"),
 		IP:                   "IpAddress1",
 		State:                msgbus.OnlineState,
@@ -215,9 +213,9 @@ func TestMain(t *testing.T) {
 
 	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract.ID), contract)
 
-	miners,_ := ps.MinerGetAllWait()
-	for _,v := range miners {
-		miner,_ := ps.MinerGetWait(msgbus.MinerID(v))
+	miners, _ := ps.MinerGetAllWait()
+	for _, v := range miners {
+		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
 		if miner.Contract != "" || miner.Dest != defaultDestID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
@@ -228,8 +226,8 @@ func TestMain(t *testing.T) {
 	//
 	fmt.Print("\n\n/// Contract was purchased and target dest was inputed in it ///\n\n\n")
 
-	targetDest := msgbus.Dest {
-		ID: msgbus.DestID(msgbus.GetRandomIDString()),
+	targetDest := msgbus.Dest{
+		ID:     msgbus.DestID(msgbus.GetRandomIDString()),
 		NetUrl: "stratum+tcp://127.0.0.1:55555/",
 	}
 	ps.PubWait(msgbus.DestMsg, msgbus.IDString(targetDest.ID), targetDest)
@@ -242,14 +240,13 @@ func TestMain(t *testing.T) {
 
 	time.Sleep(sleepTime)
 
-	miners,_ = ps.MinerGetAllWait()
-	for _,v := range miners {
-		miner,_ := ps.MinerGetWait(msgbus.MinerID(v))
+	miners, _ = ps.MinerGetAllWait()
+	for _, v := range miners {
+		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
 		if miner.Contract != "ContractID01" || miner.Dest != targetDest.ID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
-
 
 	//
 	// target dest was updated while contract running
@@ -261,9 +258,9 @@ func TestMain(t *testing.T) {
 
 	time.Sleep(sleepTime)
 
-	miners,_ = ps.MinerGetAllWait()
-	for _,v := range miners {
-		miner,_ := ps.MinerGetWait(msgbus.MinerID(v))
+	miners, _ = ps.MinerGetAllWait()
+	for _, v := range miners {
+		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
 		if miner.Contract != "ContractID01" || miner.Dest != targetDest.ID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}

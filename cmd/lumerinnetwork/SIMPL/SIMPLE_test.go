@@ -49,8 +49,8 @@ func generateTestAddr() net.Addr {
 func generateSimpleStruct() SimpleStruct {
 	myContext := generateTestContext()
 	mySimpleStruct := SimpleStruct{
-		ctx:    myContext,
-		cancel: dummyFunc,
+		ctx: myContext,
+		// cancel: dummyFunc,
 		// eventHandler:      0,
 		eventChan:  make(chan *SimpleEvent),
 		msgbusChan: make(chan *msgbus.Event),
@@ -65,7 +65,7 @@ func generateSimpleStruct() SimpleStruct {
 func generateSimpleListenStruct() SimpleListenStruct {
 	myContext := generateTestContext()
 	myAddr := generateTestAddr()
-	myStruct, _ := New(myContext, myAddr)
+	myStruct, _ := NewListen(myContext, myAddr)
 	return myStruct
 }
 
@@ -103,7 +103,7 @@ test steps
 3. ensure all associated routines are closed
 */
 func TestSimpleListenStructClose(t *testing.T) {
-	listenStruct, _ := New(generateTestContext(), generateTestAddr())
+	listenStruct, _ := NewListen(generateTestContext(), generateTestAddr())
 	listenStruct.Close()
 }
 
@@ -120,17 +120,16 @@ func TestSimpleStructClose(t *testing.T) {
 	simpleStruct.Close()
 }
 
-// func TestSetMessageSizeDefault(t *testing.T) {
-// 	simpleStruct := generateSimpleStruct()
-// 	if simpleStruct.maxMessageSize != 0 {
-// 		t.Errorf("message expected to be 0, actually is: %d", simpleStruct.maxMessageSize)
-// 	}
-// 	simpleStruct.SetMessageSizeDefault(100)
-// 	if simpleStruct.maxMessageSize != 100 {
-// 		t.Errorf("message expected to be 100, actually is: %d", simpleStruct.maxMessageSize)
-// 	}
-
-// }
+//func TestSetMessageSizeDefault(t *testing.T) {
+//	simpleStruct := generateSimpleStruct()
+//	if simpleStruct.maxMessageSize != 0 {
+//		t.Errorf("message expected to be 0, actually is: %d", simpleStruct.maxMessageSize)
+//	}
+//	simpleStruct.SetMessageSizeDefault(100)
+//	if simpleStruct.maxMessageSize != 100 {
+//		t.Errorf("message expected to be 100, actually is: %d", simpleStruct.maxMessageSize)
+//	}
+//}
 
 /*
 testing that a SimpleStruct will dial a connection and accuratley store the resulting
@@ -140,14 +139,11 @@ connection in the mapping, and retrieve the mapping
 // 	simpleStruct := generateSimpleStruct()
 // 	testAddr := generateTestAddr()
 
-// 	if simpleStruct.connectionIndex != 0 {
-// 		t.Error("testing index is not 0")
-// 	}
+//if simpleStruct.connectionIndex != 0 {
+//	t.Error("testing index is not 0")
+//}
 
-// 	uID, e := simpleStruct.Dial(testAddr)
-// 	if uID != 0 {
-// 		t.Error("conn index is not 0")
-// 	}
+//	e := simpleStruct.AsyncDial(0, testAddr)
 
 // 	if e != nil {
 // 		t.Errorf("%s", e)
@@ -163,24 +159,24 @@ steps:
 3. listen to the accept channel on the SimpleListenStruct
 4. finish test when a SimpleStruct is detected on accept channel
 */
-// func TestSimpleStructCreateOnRun(t *testing.T) {
-// 	simpleListenStruct := generateSimpleListenStruct()
-// 	go simpleListenStruct.Run()
-
-// 	var simpleStruct *SimpleStruct
-
-// 	//go routine to listen for the simpleListenStruct accept channel
-// 	go func() {
-// 		simpleStruct = <-simpleListenStruct.accept
-// 		t.Log("\n\n\nmeow\n\n\n")
-// 		t.Logf("%+v", simpleStruct)
-// 		if simpleStruct.eventHandler != 1 {
-// 			t.Error("did not create an accurate SimpleStruct")
-// 		}
-// 		//need a way to detect if the SimpleStruct was correctly generated
-// 	}()
-
-// }
+//func TestSimpleStructCreateOnRun(t *testing.T) {
+//	simpleListenStruct := generateSimpleListenStruct()
+//	go simpleListenStruct.Run()
+//
+//	var simpleStruct *SimpleStruct
+//
+//	//go routine to listen for the simpleListenStruct accept channel
+//	go func() {
+//		simpleStruct = <-simpleListenStruct.accept
+//		t.Log("\n\n\nmeow\n\n\n")
+//		t.Logf("%+v", simpleStruct)
+//		if simpleStruct.eventHandler != 1 {
+//			t.Error("did not create an accurate SimpleStruct")
+//		}
+//		//need a way to detect if the SimpleStruct was correctly generated
+//	}()
+//
+//}
 
 /*
 test to retrieve a SimpleStruct from the SimpleListenStruct and dial a connection
@@ -191,35 +187,28 @@ steps:
 4. call the dial function on the SimpleStruct
 5. confirm that the id counter is now 1
 */
-// func TestProtocolDialTheSimpleStruct(t *testing.T) {
-// 	simpleListenStruct := generateSimpleListenStruct()
-// 	simpleListenStruct.Run()
-// 	testAddr := generateTestAddr()
+func TestProtocolDialTheSimpleStruct(t *testing.T) {
+	simpleListenStruct := generateSimpleListenStruct()
+	simpleListenStruct.Run()
+	testAddr := generateTestAddr()
 
-// 	var simpleStruct *SimpleStruct
+	var simpleStruct *SimpleStruct
 
-// 	go func() {
-// 		simpleStruct = <-simpleListenStruct.accept
-// 		//initial dial
-// 		uid, err := simpleStruct.Dial(testAddr)
+	go func() {
+		simpleStruct = <-simpleListenStruct.accept
+		//initial dial
+		err := simpleStruct.AsyncDial(0, testAddr)
 
-// 		if uid != 0 {
-// 			t.Error("uid is incorrect")
-// 		}
+		if err != nil {
+			t.Errorf("error creating a connection: %s", err)
+		}
 
-// 		if err != nil {
-// 			t.Errorf("error creating a connection: %s", err)
-// 		}
+		//second dial to ensure that the uid increases as expected
+		err = simpleStruct.AsyncDial(1, testAddr)
 
-// 		//second dial to ensure that the uid increases as expected
-// 		uid2, err := simpleStruct.Dial(testAddr)
-// 		if uid2 != 1 {
-// 			t.Error("uid is incorrect")
-// 		}
+		if err != nil {
+			t.Errorf("error creating a connection: %s", err)
+		}
 
-// 		if err != nil {
-// 			t.Errorf("error creating a connection: %s", err)
-// 		}
-
-// 	}()
-// }
+	}()
+}

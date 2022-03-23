@@ -27,8 +27,8 @@ var levelMap = map[log.Level]string{
 	LevelPanic: "PANIC",
 	LevelFatal: "FATAL",
 	LevelError: "ERROR",
-	LevelWarn:  "WARN",
-	LevelInfo:  "INFO",
+	LevelWarn:  " WARN",
+	LevelInfo:  " INFO",
 	LevelDebug: "DEBUG",
 	LevelTrace: "TRACE",
 }
@@ -38,28 +38,19 @@ var levelMap = map[log.Level]string{
 // to all of the sub-system and go routines.  Important values are for logging, msgbus, etc
 //
 type ContextStruct struct {
-	MsgBus       *msgbus.PubSub
-	Log          *log.Logger
-	Src          net.Addr
-	Dst          net.Addr
-	ProtocolFunc interface{}
+	MsgBus *msgbus.PubSub
+	Log    *log.Logger
+	Src    net.Addr
+	Dst    net.Addr
 }
 
 func NewContextStruct(proto interface{}, msgbus *msgbus.PubSub, log *log.Logger, src net.Addr, dst net.Addr) (s *ContextStruct) {
 	return &ContextStruct{
-		ProtocolFunc: proto,
-		MsgBus:       msgbus,
-		Log:          log,
-		Src:          src,
-		Dst:          dst,
+		MsgBus: msgbus,
+		Log:    log,
+		Src:    src,
+		Dst:    dst,
 	}
-}
-
-//
-//
-//
-func (s *ContextStruct) SetProtocol(x interface{}) {
-	s.ProtocolFunc = x
 }
 
 //
@@ -99,13 +90,6 @@ func (s *ContextStruct) SetLog(x *log.Logger) {
 //
 //
 //
-func (s *ContextStruct) GetProtocol() (x interface{}) {
-	return s.ProtocolFunc
-}
-
-//
-//
-//
 func (s *ContextStruct) GetMsgBus() (x *msgbus.PubSub) {
 	return s.MsgBus
 }
@@ -122,6 +106,13 @@ func (s *ContextStruct) GetSrc() (x net.Addr) {
 //
 func (s *ContextStruct) GetDst() (x net.Addr) {
 	return s.Dst
+}
+
+//
+//
+//
+func (s *ContextStruct) GetLog() (x *log.Logger) {
+	return s.Log
 }
 
 //
@@ -161,20 +152,22 @@ func SetContextStruct(ctx context.Context, cs *ContextStruct) (newctx context.Co
 //
 //
 func Logf(ctx context.Context, level log.Level, format string, args ...interface{}) {
-	val := ctx.Value(ContextKey)
-	_, ok := val.(*ContextStruct)
+	v := ctx.Value(ContextKey)
+	val, ok := v.(*ContextStruct)
 	if !ok {
 		fmt.Printf(levelMap[level]+":"+format+"\n", args...)
 	} else {
-		GetContextStruct(ctx).Logf(LevelTrace, format, args...)
-	}
-}
+		if val.Log == nil {
+			str := fmt.Sprintf(levelMap[level]+":"+format+"\n", args...)
+			if level == log.LevelPanic {
+				panic(str)
+			}
+			fmt.Print(str)
 
-//
-//
-//
-func GetProtocol(ctx context.Context) (x interface{}) {
-	return GetContextStruct(ctx).ProtocolFunc
+		} else {
+			GetContextStruct(ctx).Logf(LevelTrace, format, args...)
+		}
+	}
 }
 
 //

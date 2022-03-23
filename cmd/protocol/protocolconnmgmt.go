@@ -1,12 +1,25 @@
 package protocol
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net"
+
+	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
+	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 var ErrProtoConnNoDstIndex = errors.New("DST index not found")
 var ErrProtoConnNoID = errors.New("Connection ID not found")
+
+type ConnectionState string
+
+const ConnStateNew ConnectionState = "New"
+const ConnStateInit ConnectionState = "Init"
+const ConnStateReady ConnectionState = "Ready"
+const ConnStateError ConnectionState = "Error"
 
 //
 // Protocol encapulates the non upper layer protocol specific items
@@ -18,86 +31,240 @@ var ErrProtoConnNoID = errors.New("Connection ID not found")
 //
 //
 
+// Addr stores the address of the connection
+// State shows the current state of the conneciton
+// UID is the unique ID from the SIMPL layer
+// Err shows the error state if it is in the error state
 type ProtocolConnectionStruct struct {
-	Addr net.Addr
-	Id   int
+	ctx    context.Context
+	cancel func()
+	addr   net.Addr
+	state  ConnectionState
+	uID    simple.ConnUniqueID
+	err    error
 }
 
 type ProtocolDstStruct struct {
+	ctx  context.Context
 	conn map[int]*ProtocolConnectionStruct
 }
 
 //
-// addConn() Finds and existing instance index or returnes a new index to a new entry
 //
-func (p *ProtocolDstStruct) addConn(dst net.Addr, id int) (index int, e error) {
+//
+func NewProtocolConnectionStruct(ctx context.Context, addr net.Addr) (pcs *ProtocolConnectionStruct) {
 
-	l := len(p.conn)
+	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	for i := 0; i < l; i++ {
-		if p.conn[i].Addr != dst {
-			continue
-		}
-		if p.conn[i].Id != id {
-			continue
-		}
-
-		return i, e
+	ctx, cancel := context.WithCancel(ctx)
+	pcs = &ProtocolConnectionStruct{
+		ctx:    ctx,
+		cancel: cancel,
+		addr:   addr,
+		uID:    -1,
+		state:  ConnStateNew,
+		err:    nil,
 	}
 
-	p.conn[l] = &ProtocolConnectionStruct{
-		Addr: dst,
-		Id:   id,
-	}
-
-	// Find next open slot and insert it
-
-	return l, nil
+	return pcs
 }
 
 //
+// New() finds or creates an open slot and starts to open a connection to the dst address
 //
-//
-func (p *ProtocolDstStruct) getConnIndex(id int) (index int, e error) {
+func (p *ProtocolDstStruct) NewProtocolDstStruct(dst net.Addr) (index int, e error) {
 
-	l := len(p.conn)
+	contextlib.Logf(p.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	for i := 0; i < l; i++ {
-		if p.conn[i].Id == id {
-			return l, e
+	pcs := NewProtocolConnectionStruct(p.ctx, dst)
+
+	var i int
+	length := len(p.conn)
+	for i = 0; i < length; i++ {
+		if p.conn[i] == nil {
+			p.conn[i] = pcs
 		}
 	}
+	if i == length {
+		p.conn[i] = pcs
+	}
 
-	return -1, ErrProtoConnNoID
-
+	return i, e
 }
 
 //
+// These should use an Interface.... circle back to this later
 //
+
+// ---------------------------------------------------
+// *ProtocolDstStruct)
+
 //
-func (p *ProtocolDstStruct) getConnID(index int) (id int, e error) {
-	var ok bool
-	if _, ok = p.conn[index]; !ok {
-		e = ErrProtoConnNoDstIndex
+// Cancel()
+//
+func (p *ProtocolDstStruct) Cancel(index int) (e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
 	} else {
-		id = p.conn[index].Id
+		p.conn[index].cancel()
 	}
 
-	return id, e
+	return e
+}
+
+//
+// GetUID()
+//
+func (p *ProtocolDstStruct) GetUID(index int) (uid simple.ConnUniqueID, e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		uid = p.conn[index].uID
+	}
+	return uid, e
+}
+
+//
+// SetUID()
+//
+func (p *ProtocolDstStruct) SetUID(index int, uid simple.ConnUniqueID) (e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		p.conn[index].uID = uid
+	}
+
+	return e
 
 }
 
 //
+// GetAddr()
 //
-//
-func (p *ProtocolDstStruct) getConnAddr(index int) (addr net.Addr, e error) {
-	var ok bool
-	if _, ok = p.conn[index]; !ok {
-		e = ErrProtoConnNoDstIndex
+func (p *ProtocolDstStruct) GetAddr(index int) (addr net.Addr, e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
 	} else {
-		addr = p.conn[index].Addr
+		addr = p.conn[index].addr
 	}
 
 	return addr, e
+}
 
+//
+// GetState()
+//
+func (p *ProtocolDstStruct) GetState(index int) (state ConnectionState, e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		state = p.conn[index].state
+	}
+
+	return state, e
+}
+
+//
+// SetState()
+//
+func (p *ProtocolDstStruct) SetState(index int, s ConnectionState) (e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		p.conn[index].state = s
+	}
+
+	return e
+}
+
+//
+//
+//
+func (p *ProtocolDstStruct) GetError(index int) (err error, e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		err = p.conn[index].err
+	}
+
+	return err, e
+}
+
+//
+//
+//
+func (p *ProtocolDstStruct) SetError(index int, err error) (e error) {
+	if p.conn[index] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		p.conn[index].err = err
+	}
+
+	return e
+}
+
+// ---------------------------------------------------
+// *ProtocolConnectionStruct)
+
+//
+// Ctx()
+//
+func (p *ProtocolConnectionStruct) Ctx() context.Context {
+	return p.ctx
+}
+
+//
+// Cancel()
+//
+func (p *ProtocolConnectionStruct) Cancel() {
+	p.cancel()
+}
+
+//
+// GetUID()
+//
+func (p *ProtocolConnectionStruct) GetUID() simple.ConnUniqueID {
+	return p.uID
+}
+
+//
+// SetUID()
+//
+func (p *ProtocolConnectionStruct) SetUID(uid simple.ConnUniqueID) {
+	p.uID = uid
+}
+
+//
+// GetAddr()
+//
+func (p *ProtocolConnectionStruct) GetAddr() net.Addr {
+	return p.addr
+}
+
+//
+// GetState()
+//
+func (p *ProtocolConnectionStruct) GetState() ConnectionState {
+	return p.state
+}
+
+//
+// SetState()
+//
+func (p *ProtocolConnectionStruct) SetState(s ConnectionState) {
+	p.state = s
+}
+
+//
+//
+//
+func (p *ProtocolConnectionStruct) GetError() error {
+	return p.err
+}
+
+//
+//
+//
+func (p *ProtocolConnectionStruct) SetError(e error) {
+	p.err = e
 }

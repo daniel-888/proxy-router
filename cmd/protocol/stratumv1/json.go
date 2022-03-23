@@ -120,6 +120,17 @@ type stratumResponse struct {
 }
 
 //
+//
+//
+func Response(id int, r interface{}) stratumResponse {
+	return stratumResponse{
+		ID:     id,
+		Result: r,
+		Error:  nil,
+	}
+}
+
+//
 // unmarshalMsg() take []byte and translate it into a StratumMsgStruct
 //
 func unmarshalMsg(b []byte) (ret interface{}, err error) {
@@ -404,6 +415,8 @@ func (r *stratumRequest) createRequestMsg() (msg []byte, err error) {
 		return nil, err
 	}
 
+	msg = []byte(string(msg) + "\n")
+
 	return msg, err
 }
 
@@ -561,6 +574,8 @@ func (n *stratumNotice) createNoticeMsg() (msg []byte, err error) {
 		return nil, err
 	}
 
+	msg = []byte(string(msg) + "\n")
+
 	return msg, err
 }
 
@@ -592,6 +607,7 @@ func (n *stratumNotice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
 		return nil, err
 	}
 
+	msg = []byte(string(msg) + "\n")
 	return msg, err
 }
 
@@ -680,6 +696,7 @@ func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 		return nil, err
 	}
 
+	msg = []byte(string(msg) + "\n")
 	return msg, err
 }
 
@@ -767,6 +784,7 @@ func (r *stratumResponse) createResponseMsg() (msg []byte, err error) {
 		return nil, err
 	}
 
+	msg = []byte(string(msg) + "\n")
 	return msg, err
 }
 
@@ -779,6 +797,11 @@ func (r *stratumResponse) createResponseMsg() (msg []byte, err error) {
 // 	Result interface{} `json:"result"`
 // 	Reject interface{} `json:"reject-reason,omitempty"`
 // }
+// {
+//		"id": 1,
+//		"result": [ [ ["mining.set_difficulty", "b4b6693b72a50c7116db18d6497cac52"], ["mining.notify", "ae6812eb4cd7735a302a8a9dd95cf71f"]], "08000002", 4],
+//		"error": null
+//	}\n
 //------------------------------------------------------
 func (r *stratumResponse) createSubscribeResponseMsg() (msg []byte, err error) {
 
@@ -786,10 +809,17 @@ func (r *stratumResponse) createSubscribeResponseMsg() (msg []byte, err error) {
 	// fmt.Printf("Create Stratum Response: %v\n", r)
 
 	msg, err = json.Marshal(r)
+	// _ = msg1
+
+	// msg = []byte("{\"id\": 1, \"result\": [ [ [\"mining.set_difficulty\", \"000ff0000000000000000\"], [\"mining.notify\", \"abcdef01234567890\"]], \"08000002\", 4], \"error\": null }")
+	// msg = []byte("{\"id\": 1, \"result\": [ [ [\"mining.set_difficulty\", \"000ff0000000000000000\"]], \"08000002\", 4], \"error\": null }")
+	// msg = []byte("{\"result\":[[[\"mining.notify\",\"62374f1d\"]],\"1d4f3762\",8],\"id\":1,\"error\":null}")
+
 	if err != nil {
 		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Response Err:%s\n", err)
 		return nil, err
 	}
 
+	msg = []byte(string(msg) + "\n")
 	return msg, err
 }

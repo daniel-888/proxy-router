@@ -96,7 +96,7 @@ func newProtcolConnection(ss *simple.SimpleStruct) {
 
 	// inialize a new ProtocolStruct to gain access to the standard protocol functions
 	// The default Dst should be opened when this returns
-	pls, err := NewProtocol(ss)
+	pls, err := NewProtocol(ss.Ctx(), ss)
 	if err != nil {
 		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Create NewProtocol() failed: %s", err)
 	}
@@ -114,7 +114,7 @@ func (p *ProtocolStruct) goEvent() {
 
 	contextlib.Logf(p.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	for event := range p.GetSimpleEvent() {
+	for event := range p.GetSimpleEventChan() {
 		contextlib.Logf(p.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Got Event %v", event)
 	}
 }
@@ -129,16 +129,11 @@ func newListen(t *testing.T) (pls *ProtocolListenStruct) {
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
 
-	var new = &newProtocolStruct{
-		funcptr: NewProtocolFunc,
-	}
-
 	ctx := context.Background()
 	cs := &contextlib.ContextStruct{}
 	cs.SetMsgBus(ps)
 	cs.SetSrc(src)
 	cs.SetDst(dst)
-	cs.SetProtocol(new)
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
 	pls, e := NewListen(ctx)
