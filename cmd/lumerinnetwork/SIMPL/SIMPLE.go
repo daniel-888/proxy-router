@@ -26,7 +26,7 @@ https://titanind.atlassian.net/wiki/spaces/PR/pages/5570561/Lumerin+Node
 
 //type SimpleStructProtocolFunc func(*SimpleStruct) chan *SimpleEvent
 
-type ConnUniqueID uint
+type ConnUniqueID int
 type URL string
 type MsgType string
 type ID string
@@ -80,26 +80,26 @@ type SimpleEvent struct {
 }
 
 type SimpleConnReadEvent struct {
-	index int
-	data  []byte
-	count int
-	err   error
+	uniqueID ConnUniqueID
+	data     []byte
+	count    int
+	err      error
 }
 
 type SimpleConnOpenEvent struct {
 	requestID int
-	uniqueID  int
+	uniqueID  ConnUniqueID
 	err       error
 }
 
-func (s *SimpleConnReadEvent) Index() int   { return s.index }
-func (s *SimpleConnReadEvent) Data() []byte { return s.data }
-func (s *SimpleConnReadEvent) Count() int   { return s.count }
-func (s *SimpleConnReadEvent) Err() error   { return s.err }
+func (s *SimpleConnReadEvent) UniqueID() ConnUniqueID { return s.uniqueID }
+func (s *SimpleConnReadEvent) Data() []byte           { return s.data }
+func (s *SimpleConnReadEvent) Count() int             { return s.count }
+func (s *SimpleConnReadEvent) Err() error             { return s.err }
 
-func (s *SimpleConnOpenEvent) RequestID() int { return s.requestID }
-func (s *SimpleConnOpenEvent) UniqueID() int  { return s.uniqueID }
-func (s *SimpleConnOpenEvent) Err() error     { return s.err }
+func (s *SimpleConnOpenEvent) UniqueID() ConnUniqueID { return s.uniqueID }
+func (s *SimpleConnOpenEvent) RequestID() int         { return s.requestID }
+func (s *SimpleConnOpenEvent) Err() error             { return s.err }
 
 type SimpleMsgBusEvent struct {
 	EventType msgbus.EventType
@@ -329,7 +329,7 @@ FORLOOP:
 			//
 			// Grossly inefficient... will fix later...
 			scre := &SimpleConnReadEvent{}
-			scre.index = comm.Index()
+			scre.uniqueID = ConnUniqueID(comm.Index())
 			scre.data = comm.Data()
 			scre.count = comm.Count()
 			scre.err = comm.Err()
@@ -437,7 +437,7 @@ func (s *SimpleStruct) AsyncDial(id int, dst net.Addr) error {
 
 		open := &SimpleConnOpenEvent{
 			requestID: id,
-			uniqueID:  uid,
+			uniqueID:  ConnUniqueID(uid),
 			err:       e,
 		}
 
@@ -465,8 +465,11 @@ func (s *SimpleStruct) GetConnBasedOnConnUniqueID(x ConnUniqueID) *lumerinconnec
 func (s *SimpleStruct) Redial(u ConnUniqueID) {}
 
 // Used later to direct the default route
-func (s *SimpleStruct) SetRoute(u int) error {
-	return s.ConnectionStruct.SetRoute(u)
+func (s *SimpleStruct) SetRoute(u ConnUniqueID) error {
+	if u < 0 {
+		contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index out of range:%d", u)
+	}
+	return s.ConnectionStruct.SetRoute(int(u))
 }
 
 // Used later to direct the default route
@@ -490,7 +493,7 @@ func (s *SimpleStruct) SetDefaultReadHandler() {}
 func (s *SimpleStruct) SetReadHandler() {}
 
 // Writes buffer to the specified connection
-func (s *SimpleStruct) Write(i int, msg []byte) (count int, e error) {
+func (s *SimpleStruct) Write(i ConnUniqueID, msg []byte) (count int, e error) {
 	if i < 0 {
 		count, e = s.ConnectionStruct.SrcWrite(msg)
 		// Need to so some error checking here, if src is closed, then the whole thing needs to be shutdown.
@@ -499,7 +502,7 @@ func (s *SimpleStruct) Write(i int, msg []byte) (count int, e error) {
 		}
 
 	} else {
-		count, e = s.ConnectionStruct.IdxWrite(i, msg)
+		count, e = s.ConnectionStruct.IdxWrite(int(i), msg)
 	}
 
 	return count, e

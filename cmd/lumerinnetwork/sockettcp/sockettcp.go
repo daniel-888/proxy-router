@@ -23,7 +23,7 @@ import (
 const TCPAcceptChannelLen int = 2
 const TCPReadChannelLen int = 10
 
-const TCPReadBufferSize int = 1024
+const TCPReadBufferSize int = 4096
 
 var ErrSocTCPClosed = errors.New("socket TCP: socket closed")
 var ErrSocTCPBadNetwork = errors.New("socket TCP: bad network protocol")
@@ -68,8 +68,8 @@ type SocketTCPStruct struct {
 	cancel func()
 	//	readready chan bool
 	readchan chan readStruct
-	readbuf  []byte // Way point for read data from the socket
-	status   SocketStatusStruct
+	// readbuf  []byte // Way point for read data from the socket
+	status SocketStatusStruct
 }
 
 type readStruct struct {
@@ -336,7 +336,7 @@ func createNewSocket(ctx context.Context, conn net.Conn) (soc *SocketTCPStruct) 
 		ctx:      ctx,
 		cancel:   cancel,
 		readchan: rc,
-		readbuf:  make([]byte, 0, TCPReadBufferSize),
+		// readbuf:  make([]byte, 0, TCPReadBufferSize),
 		status: SocketStatusStruct{
 			bytesRead:    0,
 			bytesWritten: 0,

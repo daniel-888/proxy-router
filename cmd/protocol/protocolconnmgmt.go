@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 
+	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
@@ -39,7 +40,7 @@ type ProtocolConnectionStruct struct {
 	cancel func()
 	addr   net.Addr
 	state  ConnectionState
-	uID    int
+	uID    simple.ConnUniqueID
 	err    error
 }
 
@@ -114,7 +115,7 @@ func (p *ProtocolDstStruct) Cancel(index int) (e error) {
 //
 // GetUID()
 //
-func (p *ProtocolDstStruct) GetUID(index int) (uid int, e error) {
+func (p *ProtocolDstStruct) GetUID(index int) (uid simple.ConnUniqueID, e error) {
 	if p.conn[index] == nil {
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
 	} else {
@@ -126,7 +127,7 @@ func (p *ProtocolDstStruct) GetUID(index int) (uid int, e error) {
 //
 // SetUID()
 //
-func (p *ProtocolDstStruct) SetUID(index int, uid int) (e error) {
+func (p *ProtocolDstStruct) SetUID(index int, uid simple.ConnUniqueID) (e error) {
 	if p.conn[index] == nil {
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
 	} else {
@@ -222,14 +223,14 @@ func (p *ProtocolConnectionStruct) Cancel() {
 //
 // GetUID()
 //
-func (p *ProtocolConnectionStruct) GetUID() int {
+func (p *ProtocolConnectionStruct) GetUID() simple.ConnUniqueID {
 	return p.uID
 }
 
 //
 // SetUID()
 //
-func (p *ProtocolConnectionStruct) SetUID(uid int) {
+func (p *ProtocolConnectionStruct) SetUID(uid simple.ConnUniqueID) {
 	p.uID = uid
 }
 

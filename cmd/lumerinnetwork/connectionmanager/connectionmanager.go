@@ -14,7 +14,7 @@ import (
 
 const DefaultDstSlots int = 8
 const MaxDstSlots int = 16
-const DefaultReadBufSize = 1024
+const DefaultReadBufSize = 4096
 
 // const DefaultReadEventChanSize = 10
 const DefaultReadEventChanSize = 0

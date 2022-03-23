@@ -239,27 +239,41 @@ func (svs *StratumV1Struct) handleConnReadEvent(scre *simple.SimpleConnReadEvent
 	e = scre.Err()
 	if nil != e {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" scre had an error:%s", e)
+		// Set Error state
 		return e
 	}
 
-	// count := scre.Count()
-	index := scre.Index()
+	UID := scre.UniqueID()
+
+	// Translate the UniqueID to the index
+
+	// Validate the index is good
+
 	data := scre.Data()
+	// Buffer data locally
+	// If there is a '\n' in the message, extract the message
+	// Adjust the buffer accordingly
+
+	// Process the message
+
+	if UID == 0 {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc())
+	}
 
 	ret, e := unmarshalMsg(data)
 
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Called")
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Called data:%s", data)
 		return e
 	}
 
 	switch ret := ret.(type) {
 	case *stratumRequest:
-		e = svs.handleRequest(index, ret)
+		e = svs.handleRequest(UID, ret)
 	case *stratumResponse:
-		e = svs.handleResponse(index, ret)
+		e = svs.handleResponse(UID, ret)
 	case *stratumNotice:
-		e = svs.handleNotice(index, ret)
+		e = svs.handleNotice(UID, ret)
 	default:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Called")
 	}
@@ -279,6 +293,7 @@ func (svs *StratumV1Struct) handleConnOpenEvent(scoe *simple.SimpleConnOpenEvent
 	e = scoe.Err()
 	if nil != e {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" scre had an error:%s", e)
+		return e
 	}
 
 	UID := scoe.UniqueID()
@@ -293,7 +308,29 @@ func (svs *StratumV1Struct) handleConnOpenEvent(scoe *simple.SimpleConnOpenEvent
 	dstconn.SetState(protocol.ConnStateReady)
 	dstconn.SetUID(UID)
 
-	// Send initialization message here
+	// Send initialization subscribe message here
+	// Set state to DstStateSubscribing
+
+	request := svs.srcSubscribeRequest
+
+	msg, e := request.createRequestMsg()
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDstConn() bad index:%d", ID)
+	}
+
+	msgsize := len(msg)
+	if e == nil {
+		count, e := svs.protocol.WriteDst(UID, msg)
+		if e != nil {
+			svs.SetDstStateIdx(ID, DstStateError)
+		}
+
+		if count != msgsize {
+			svs.SetDstStateIdx(ID, DstStateError)
+		}
+
+		svs.SetDstStateIdx(ID, DstStateSubscribing)
+	}
 
 	return e
 }
@@ -337,7 +374,7 @@ func (svs *StratumV1Struct) handleErrorEvent(event *simple.SimpleEvent) {
 // handleRequest()
 // index: -1 = SRC, 0 = default, >0 = Dst
 //
-func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) (e error) {
+func (svs *StratumV1Struct) handleRequest(index simple.ConnUniqueID, request *stratumRequest) (e error) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called Index: %d Method: %s", index, request.Method)
 
@@ -380,7 +417,6 @@ func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) (e
 		default:
 			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Bad Destination Message Type Recieved")
 		}
-
 	}
 
 	return e
@@ -390,7 +426,7 @@ func (svs *StratumV1Struct) handleRequest(index int, request *stratumRequest) (e
 // handleResponse()
 // index: -1 = SRC, 0 = default, >0 = Dst
 //
-func (svs *StratumV1Struct) handleResponse(index int, request *stratumResponse) (e error) {
+func (svs *StratumV1Struct) handleResponse(index simple.ConnUniqueID, request *stratumResponse) (e error) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
@@ -401,7 +437,7 @@ func (svs *StratumV1Struct) handleResponse(index int, request *stratumResponse) 
 // handleNotice()
 // index: -1 = SRC, 0 = default, >0 = Dst
 //
-func (svs *StratumV1Struct) handleNotice(index int, notice *stratumNotice) (e error) {
+func (svs *StratumV1Struct) handleNotice(index simple.ConnUniqueID, notice *stratumNotice) (e error) {
 
 	if index < 0 {
 		switch notice.Method {
@@ -434,7 +470,7 @@ func (svs *StratumV1Struct) handleNotice(index int, notice *stratumNotice) (e er
 //
 func (svs *StratumV1Struct) handleSrcAuthorize(request *stratumRequest) (e error) {
 
-	if svs.srcAuthRequest == nil {
+	if svs.srcAuthRequest.Method == "" {
 		svs.srcAuthRequest = request
 	}
 
@@ -442,6 +478,11 @@ func (svs *StratumV1Struct) handleSrcAuthorize(request *stratumRequest) (e error
 	if e != nil {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" getID() returned error:%s ", e)
 		return e
+	}
+
+	dst := contextlib.GetDst(svs.Ctx())
+	if dst == nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDst() returned nil")
 	}
 
 	// Move this to JSON file
@@ -470,6 +511,18 @@ func (svs *StratumV1Struct) handleSrcAuthorize(request *stratumRequest) (e error
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
 		return e
+	}
+
+	// Fire up the default destination connction here
+	// If it does not alread exist
+	_, err := svs.GetDstState(0)
+	if err != nil {
+		index, err := svs.protocol.AsyncDial(dst)
+		if err != nil {
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" AsyncDial returned error:%s", e)
+		}
+		svs.SetDstStateIdx(index, DstStateSubscribing)
+
 	}
 
 	return nil
@@ -508,7 +561,7 @@ func (svs *StratumV1Struct) handleSrcExtranonce(request *stratumRequest) {
 //
 func (svs *StratumV1Struct) handleSrcSubscribe(request *stratumRequest) (e error) {
 
-	if svs.srcSubscribeRequest == nil {
+	if svs.srcSubscribeRequest.Method == "" {
 		svs.srcSubscribeRequest = request
 	}
 
@@ -516,6 +569,11 @@ func (svs *StratumV1Struct) handleSrcSubscribe(request *stratumRequest) (e error
 	if e != nil {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" getID() error:%s", e)
 		return e
+	}
+
+	dst := contextlib.GetDst(svs.Ctx())
+	if dst == nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDst() returned nil")
 	}
 
 	// Move this to JSON file
@@ -587,7 +645,7 @@ func (svs *StratumV1Struct) handleSrcSuggestTarget(request *stratumRequest) {
 //
 //
 //
-func (svs *StratumV1Struct) handleDstGetVersion(index int, request *stratumRequest) {
+func (svs *StratumV1Struct) handleDstGetVersion(UID simple.ConnUniqueID, request *stratumRequest) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
@@ -596,7 +654,7 @@ func (svs *StratumV1Struct) handleDstGetVersion(index int, request *stratumReque
 //
 //
 //
-func (svs *StratumV1Struct) handleDstPing(index int, request *stratumRequest) {
+func (svs *StratumV1Struct) handleDstPing(UID simple.ConnUniqueID, request *stratumRequest) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
@@ -605,7 +663,7 @@ func (svs *StratumV1Struct) handleDstPing(index int, request *stratumRequest) {
 //
 //
 //
-func (svs *StratumV1Struct) handleDstReconnect(index int, request *stratumRequest) {
+func (svs *StratumV1Struct) handleDstReconnect(UID simple.ConnUniqueID, request *stratumRequest) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
@@ -614,7 +672,7 @@ func (svs *StratumV1Struct) handleDstReconnect(index int, request *stratumReques
 //
 //
 //
-func (svs *StratumV1Struct) handleDstShowMessage(index int, request *stratumRequest) {
+func (svs *StratumV1Struct) handleDstShowMessage(UID simple.ConnUniqueID, request *stratumRequest) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
@@ -623,7 +681,7 @@ func (svs *StratumV1Struct) handleDstShowMessage(index int, request *stratumRequ
 //
 //
 //
-func (svs *StratumV1Struct) handleDstSetExtranonce(index int, request *stratumRequest) {
+func (svs *StratumV1Struct) handleDstSetExtranonce(UID simple.ConnUniqueID, request *stratumRequest) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
@@ -632,7 +690,7 @@ func (svs *StratumV1Struct) handleDstSetExtranonce(index int, request *stratumRe
 //
 //
 //
-func (svs *StratumV1Struct) handleDstSetGoal(index int, request *stratumRequest) {
+func (svs *StratumV1Struct) handleDstSetGoal(UID simple.ConnUniqueID, request *stratumRequest) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index is not the default dst, this is not handled yet")
 
@@ -646,7 +704,7 @@ func (svs *StratumV1Struct) handleDstSetGoal(index int, request *stratumRequest)
 // handleDstNotify()
 // passes new work from the destination pool to the source miner
 //
-func (svs *StratumV1Struct) handleDstNotify(index int, request *stratumNotice) {
+func (svs *StratumV1Struct) handleDstNotify(index simple.ConnUniqueID, request *stratumNotice) {
 
 	// is index the current default destination?
 	// If not, store the notify?
@@ -673,7 +731,7 @@ func (svs *StratumV1Struct) handleDstNotify(index int, request *stratumNotice) {
 // handleDstSetDifficulty()
 // handles incomin set difficulty message from a pool connection
 //
-func (svs *StratumV1Struct) handleDstSetDifficulty(index int, request *stratumNotice) {
+func (svs *StratumV1Struct) handleDstSetDifficulty(index simple.ConnUniqueID, request *stratumNotice) {
 
 	// is index the current default destination?
 	// If not, store the notify?

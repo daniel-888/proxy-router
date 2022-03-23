@@ -29,7 +29,7 @@ type ProtocolStruct struct {
 	srcconn   *ProtocolConnectionStruct
 	dstconn   *ProtocolDstStruct
 	msgbus    *ProtocolMsgBusStruct
-	defRoute  int
+	defRoute  simple.ConnUniqueID
 }
 
 //
@@ -188,12 +188,6 @@ func NewProtocol(ctx context.Context, s *simple.SimpleStruct) (ps *ProtocolStruc
 
 	ps = NewProtocolStruct(ctx, s)
 
-	// Fire up the default destination here
-	index, e := ps.AsyncDial(dst)
-	if index != 0 {
-		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" AsyncDial returned non-zero for the default dest")
-	}
-
 	return ps, e
 }
 
@@ -301,9 +295,9 @@ func (ps *ProtocolStruct) AsyncDial(dst net.Addr) (index int, e error) {
 // SetDefaultRoute()
 // Set the SIMPL layer default route
 //
-func (ps *ProtocolStruct) SetDefaultRouteIndex(index int) (e error) {
+func (ps *ProtocolStruct) SetDefaultRouteIndex(index simple.ConnUniqueID) (e error) {
 
-	slot, ok := ps.dstconn.conn[index]
+	slot, ok := ps.dstconn.conn[int(index)]
 	if !ok {
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+" bad index: %d", index)
 	} else if ConnStateReady == slot.GetState() {
@@ -335,7 +329,7 @@ func (ps *ProtocolStruct) GetDstConn(index int) (pcs *ProtocolConnectionStruct, 
 // GetDefaultRouteIndex()
 // get the  SIMPL layer default route
 //
-func (ps *ProtocolStruct) GetDefaultRouteIndex() int {
+func (ps *ProtocolStruct) GetDefaultRouteIndex() simple.ConnUniqueID {
 	return ps.defRoute
 }
 
@@ -346,7 +340,7 @@ func (ps *ProtocolStruct) Write(msg []byte) (count int, e error) {
 	count = 0
 
 	index := ps.defRoute
-	state := ps.dstconn.conn[index].GetState()
+	state := ps.dstconn.conn[int(index)].GetState()
 	if ConnStateReady != state {
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+" Connection state:%s", state)
 	} else {
@@ -369,7 +363,7 @@ func (ps *ProtocolStruct) WriteSrc(msg []byte) (count int, e error) {
 //
 // WriteDst()
 //
-func (ps *ProtocolStruct) WriteDst(index int, msg []byte) (count int, e error) {
+func (ps *ProtocolStruct) WriteDst(index simple.ConnUniqueID, msg []byte) (count int, e error) {
 	count, e = ps.simple.Write(index, msg)
 	return count, e
 }

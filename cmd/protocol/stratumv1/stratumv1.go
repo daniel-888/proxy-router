@@ -17,14 +17,27 @@ import (
 //
 //
 
-type newStratumV1Func func(*simple.SimpleStruct)
+// type newStratumV1Func func(*simple.SimpleStruct)
 
-type newStratumV1Struct struct {
-	funcptr newStratumV1Func
-}
+// type newStratumV1Struct struct {
+// 	funcptr newStratumV1Func
+// }
+
+type DstState string
+
+const DstStateError DstState = "stateError"
+const DstStateNew DstState = "stateNew"
+const DstStateOpen DstState = "stateOpen"
+const DstStateSubscribing DstState = "stateSubscribing"
+const DstStateAuthorizing DstState = "stateAuthorizing"
+const DstStateAuthorized DstState = "stateAuthorized"
 
 type StratumV1ListenStruct struct {
 	protocollisten *protocol.ProtocolListenStruct
+}
+
+type StratumDstStateStruct struct {
+	state DstState
 }
 
 type StratumV1Struct struct {
@@ -34,13 +47,42 @@ type StratumV1Struct struct {
 	minerRec            *msgbus.Miner
 	srcSubscribeRequest *stratumRequest // Copy of recieved Subscribe Request from Source
 	srcAuthRequest      *stratumRequest // Copy of recieved Authorize Request from Source
+	dstState            map[int]*StratumDstStateStruct
+
 	// Add in stratum state information here
 }
 
 //
 //
 //
-func NewListener(ctx context.Context, src net.Addr, dst net.Addr, proto ...*newStratumV1Struct) (sls *StratumV1ListenStruct, e error) {
+func NewDstStateStruct() (d *StratumDstStateStruct) {
+	d = &StratumDstStateStruct{
+		state: DstStateNew,
+	}
+	return d
+}
+
+//
+//
+//
+func (s *StratumDstStateStruct) SetState(state DstState) (e error) {
+	s.state = state
+	return nil
+}
+
+//
+//
+//
+func (s *StratumDstStateStruct) GetState() (state DstState) {
+	state = s.state
+	return state
+}
+
+//
+//
+//
+// func NewListener(ctx context.Context, src net.Addr, dst net.Addr, proto ...*newStratumV1Struct) (sls *StratumV1ListenStruct, e error) {
+func NewListener(ctx context.Context, src net.Addr, dst net.Addr) (sls *StratumV1ListenStruct, e error) {
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -102,6 +144,7 @@ FORLOOP:
 //
 func NewStratumStruct(ctx context.Context, l *protocol.ProtocolStruct) (n *StratumV1Struct) {
 	ctx, cancel := context.WithCancel(ctx)
+	ds := make(map[int]*StratumDstStateStruct)
 	n = &StratumV1Struct{
 		ctx:                 ctx,
 		cancel:              cancel,
@@ -109,6 +152,7 @@ func NewStratumStruct(ctx context.Context, l *protocol.ProtocolStruct) (n *Strat
 		minerRec:            nil,
 		srcSubscribeRequest: &stratumRequest{},
 		srcAuthRequest:      &stratumRequest{},
+		dstState:            ds,
 	}
 	return n
 }
@@ -186,9 +230,9 @@ func (s *StratumV1Struct) goEvent() {
 		if event == nil {
 			s.Cancel()
 			contextlib.Logf(s.Ctx(), contextlib.LevelFatal, lumerinlib.FileLineFunc()+" event:%v", event)
-
 		}
-		contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" event:%v", event)
+
+		contextlib.Logf(s.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" event:%v", event)
 		e := s.eventHandler(event)
 
 		if e != nil {
@@ -219,6 +263,33 @@ func (s *StratumV1Struct) Cancel() {
 	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	s.protocol.Cancel()
+}
+
+//
+//
+//
+func (s *StratumV1Struct) SetDstStateIdx(index int, state DstState) {
+	_, ok := s.dstState[index]
+	if !ok {
+		contextlib.Logf(s.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" dstState index:%d not ok, create a new one", index)
+		s.dstState[index] = NewDstStateStruct()
+	}
+	s.dstState[index].SetState(state)
+
+}
+
+//
+//
+//
+func (s *StratumV1Struct) GetDstState(index int) (state DstState, e error) {
+	_, ok := s.dstState[index]
+	if !ok {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+	} else {
+		state = s.dstState[index].GetState()
+	}
+
+	return state, e
 }
 
 //

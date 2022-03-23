@@ -415,6 +415,8 @@ func (r *stratumRequest) createRequestMsg() (msg []byte, err error) {
 		return nil, err
 	}
 
+	msg = []byte(string(msg) + "\n")
+
 	return msg, err
 }
 
@@ -572,6 +574,8 @@ func (n *stratumNotice) createNoticeMsg() (msg []byte, err error) {
 		return nil, err
 	}
 
+	msg = []byte(string(msg) + "\n")
+
 	return msg, err
 }
 
@@ -603,6 +607,7 @@ func (n *stratumNotice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
 		return nil, err
 	}
 
+	msg = []byte(string(msg) + "\n")
 	return msg, err
 }
 
@@ -691,6 +696,7 @@ func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 		return nil, err
 	}
 
+	msg = []byte(string(msg) + "\n")
 	return msg, err
 }
 
