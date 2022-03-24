@@ -23,21 +23,28 @@ import (
 // 	funcptr newStratumV1Func
 // }
 
+type SrcState string
 type DstState string
 
-const DstStateError DstState = "stateError"
+//
+// New->Subscribed->Authorized->??
+//
+const SrcStateNew SrcState = "stateNew"
+const SrcStateSubscribed SrcState = "stateSubscribed"
+const SrcStateAuthorized SrcState = "stateAuthorized"
+const SrcStateError SrcState = "stateError"
+
+//
+// New->Subscribed->Authorized->??
+//
 const DstStateNew DstState = "stateNew"
 const DstStateOpen DstState = "stateOpen"
 const DstStateSubscribing DstState = "stateSubscribing"
 const DstStateAuthorizing DstState = "stateAuthorizing"
-const DstStateAuthorized DstState = "stateAuthorized"
+const DstStateError DstState = "stateError"
 
 type StratumV1ListenStruct struct {
 	protocollisten *protocol.ProtocolListenStruct
-}
-
-type StratumDstStateStruct struct {
-	state DstState
 }
 
 type StratumV1Struct struct {
@@ -47,35 +54,10 @@ type StratumV1Struct struct {
 	minerRec            *msgbus.Miner
 	srcSubscribeRequest *stratumRequest // Copy of recieved Subscribe Request from Source
 	srcAuthRequest      *stratumRequest // Copy of recieved Authorize Request from Source
-	dstState            map[int]*StratumDstStateStruct
+	srcState            SrcState
+	dstState            map[simple.ConnUniqueID]DstState
 
 	// Add in stratum state information here
-}
-
-//
-//
-//
-func NewDstStateStruct() (d *StratumDstStateStruct) {
-	d = &StratumDstStateStruct{
-		state: DstStateNew,
-	}
-	return d
-}
-
-//
-//
-//
-func (s *StratumDstStateStruct) SetState(state DstState) (e error) {
-	s.state = state
-	return nil
-}
-
-//
-//
-//
-func (s *StratumDstStateStruct) GetState() (state DstState) {
-	state = s.state
-	return state
 }
 
 //
@@ -144,7 +126,7 @@ FORLOOP:
 //
 func NewStratumStruct(ctx context.Context, l *protocol.ProtocolStruct) (n *StratumV1Struct) {
 	ctx, cancel := context.WithCancel(ctx)
-	ds := make(map[int]*StratumDstStateStruct)
+	ds := make(map[simple.ConnUniqueID]DstState)
 	n = &StratumV1Struct{
 		ctx:                 ctx,
 		cancel:              cancel,
@@ -152,6 +134,7 @@ func NewStratumStruct(ctx context.Context, l *protocol.ProtocolStruct) (n *Strat
 		minerRec:            nil,
 		srcSubscribeRequest: &stratumRequest{},
 		srcAuthRequest:      &stratumRequest{},
+		srcState:            SrcStateNew,
 		dstState:            ds,
 	}
 	return n
@@ -268,28 +251,29 @@ func (s *StratumV1Struct) Cancel() {
 //
 //
 //
-func (s *StratumV1Struct) SetDstStateIdx(index int, state DstState) {
-	_, ok := s.dstState[index]
-	if !ok {
-		contextlib.Logf(s.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" dstState index:%d not ok, create a new one", index)
-		s.dstState[index] = NewDstStateStruct()
-	}
-	s.dstState[index].SetState(state)
-
+func (s *StratumV1Struct) SetDstStateUid(uid simple.ConnUniqueID, state DstState) {
+	s.dstState[uid] = state
 }
 
 //
 //
 //
-func (s *StratumV1Struct) GetDstState(index int) (state DstState, e error) {
-	_, ok := s.dstState[index]
-	if !ok {
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
-	} else {
-		state = s.dstState[index].GetState()
-	}
+func (s *StratumV1Struct) GetDstStateUid(uid simple.ConnUniqueID) (state DstState) {
+	return s.dstState[uid]
+}
 
-	return state, e
+//
+//
+//
+func (s *StratumV1Struct) SetSrcState(state SrcState) {
+	s.srcState = state
+}
+
+//
+//
+//
+func (s *StratumV1Struct) GetSrcState() (state SrcState) {
+	return s.srcState
 }
 
 //

@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -40,13 +41,14 @@ type ProtocolConnectionStruct struct {
 	cancel func()
 	addr   net.Addr
 	state  ConnectionState
-	uID    simple.ConnUniqueID
 	err    error
+	buffer []byte
+	//uID    simple.ConnUniqueID
 }
 
 type ProtocolDstStruct struct {
 	ctx  context.Context
-	conn map[int]*ProtocolConnectionStruct
+	conn map[simple.ConnUniqueID]*ProtocolConnectionStruct
 }
 
 //
@@ -61,9 +63,9 @@ func NewProtocolConnectionStruct(ctx context.Context, addr net.Addr) (pcs *Proto
 		ctx:    ctx,
 		cancel: cancel,
 		addr:   addr,
-		uID:    -1,
 		state:  ConnStateNew,
 		err:    nil,
+		buffer: make([]byte, 0, 1024),
 	}
 
 	return pcs
@@ -72,24 +74,19 @@ func NewProtocolConnectionStruct(ctx context.Context, addr net.Addr) (pcs *Proto
 //
 // New() finds or creates an open slot and starts to open a connection to the dst address
 //
-func (p *ProtocolDstStruct) NewProtocolDstStruct(dst net.Addr) (index int, e error) {
+func (p *ProtocolDstStruct) NewProtocolDstStruct(osce *simple.SimpleConnOpenEvent) (e error) {
 
 	contextlib.Logf(p.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	pcs := NewProtocolConnectionStruct(p.ctx, dst)
-
-	var i int
-	length := len(p.conn)
-	for i = 0; i < length; i++ {
-		if p.conn[i] == nil {
-			p.conn[i] = pcs
-		}
-	}
-	if i == length {
-		p.conn[i] = pcs
+	_, nok := p.conn[osce.UniqueID()]
+	if nok {
+		contextlib.Logf(p.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" called")
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" UniqueID:%d is already used", osce.UniqueID())
 	}
 
-	return i, e
+	p.conn[osce.UniqueID()] = NewProtocolConnectionStruct(p.ctx, osce.Dst())
+
+	return e
 }
 
 //
@@ -102,50 +99,24 @@ func (p *ProtocolDstStruct) NewProtocolDstStruct(dst net.Addr) (index int, e err
 //
 // Cancel()
 //
-func (p *ProtocolDstStruct) Cancel(index int) (e error) {
-	if p.conn[index] == nil {
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+func (p *ProtocolDstStruct) Cancel(uid simple.ConnUniqueID) (e error) {
+	if p.conn[uid] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", uid)
 	} else {
-		p.conn[index].cancel()
+		p.conn[uid].cancel()
 	}
 
 	return e
-}
-
-//
-// GetUID()
-//
-func (p *ProtocolDstStruct) GetUID(index int) (uid simple.ConnUniqueID, e error) {
-	if p.conn[index] == nil {
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
-	} else {
-		uid = p.conn[index].uID
-	}
-	return uid, e
-}
-
-//
-// SetUID()
-//
-func (p *ProtocolDstStruct) SetUID(index int, uid simple.ConnUniqueID) (e error) {
-	if p.conn[index] == nil {
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
-	} else {
-		p.conn[index].uID = uid
-	}
-
-	return e
-
 }
 
 //
 // GetAddr()
 //
-func (p *ProtocolDstStruct) GetAddr(index int) (addr net.Addr, e error) {
-	if p.conn[index] == nil {
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+func (p *ProtocolDstStruct) GetAddr(uid simple.ConnUniqueID) (addr net.Addr, e error) {
+	if p.conn[uid] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", uid)
 	} else {
-		addr = p.conn[index].addr
+		addr = p.conn[uid].addr
 	}
 
 	return addr, e
@@ -154,11 +125,11 @@ func (p *ProtocolDstStruct) GetAddr(index int) (addr net.Addr, e error) {
 //
 // GetState()
 //
-func (p *ProtocolDstStruct) GetState(index int) (state ConnectionState, e error) {
-	if p.conn[index] == nil {
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+func (p *ProtocolDstStruct) GetState(uid simple.ConnUniqueID) (state ConnectionState, e error) {
+	if p.conn[uid] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", uid)
 	} else {
-		state = p.conn[index].state
+		state = p.conn[uid].state
 	}
 
 	return state, e
@@ -167,11 +138,11 @@ func (p *ProtocolDstStruct) GetState(index int) (state ConnectionState, e error)
 //
 // SetState()
 //
-func (p *ProtocolDstStruct) SetState(index int, s ConnectionState) (e error) {
-	if p.conn[index] == nil {
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+func (p *ProtocolDstStruct) SetState(uid simple.ConnUniqueID, s ConnectionState) (e error) {
+	if p.conn[uid] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", uid)
 	} else {
-		p.conn[index].state = s
+		p.conn[uid].state = s
 	}
 
 	return e
@@ -180,11 +151,11 @@ func (p *ProtocolDstStruct) SetState(index int, s ConnectionState) (e error) {
 //
 //
 //
-func (p *ProtocolDstStruct) GetError(index int) (err error, e error) {
-	if p.conn[index] == nil {
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+func (p *ProtocolDstStruct) GetError(uid simple.ConnUniqueID) (err error, e error) {
+	if p.conn[uid] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", uid)
 	} else {
-		err = p.conn[index].err
+		err = p.conn[uid].err
 	}
 
 	return err, e
@@ -193,11 +164,11 @@ func (p *ProtocolDstStruct) GetError(index int) (err error, e error) {
 //
 //
 //
-func (p *ProtocolDstStruct) SetError(index int, err error) (e error) {
-	if p.conn[index] == nil {
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+func (p *ProtocolDstStruct) SetError(uid simple.ConnUniqueID, err error) (e error) {
+	if p.conn[uid] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", uid)
 	} else {
-		p.conn[index].err = err
+		p.conn[uid].err = err
 	}
 
 	return e
@@ -218,20 +189,6 @@ func (p *ProtocolConnectionStruct) Ctx() context.Context {
 //
 func (p *ProtocolConnectionStruct) Cancel() {
 	p.cancel()
-}
-
-//
-// GetUID()
-//
-func (p *ProtocolConnectionStruct) GetUID() simple.ConnUniqueID {
-	return p.uID
-}
-
-//
-// SetUID()
-//
-func (p *ProtocolConnectionStruct) SetUID(uid simple.ConnUniqueID) {
-	p.uID = uid
 }
 
 //
@@ -267,4 +224,39 @@ func (p *ProtocolConnectionStruct) GetError() error {
 //
 func (p *ProtocolConnectionStruct) SetError(e error) {
 	p.err = e
+}
+
+//
+//
+//
+func (p *ProtocolConnectionStruct) AddBuf(buf []byte) {
+	if p == nil {
+		panic(lumerinlib.FileLineFunc())
+	}
+	p.buffer = append(p.buffer, buf...)
+}
+
+//
+//
+//
+func (p *ProtocolConnectionStruct) GetLineTermData() (buf []byte, e error) {
+	if p == nil {
+		panic(lumerinlib.FileLineFunc())
+	}
+
+	buf = make([]byte, 0)
+	if len(p.buffer) > 0 {
+
+		// idx = -1, no data, idx = 0, 1 byte ('\n')
+		idx := bytes.Index(p.buffer, []byte("\n"))
+
+		if idx == 0 {
+			p.buffer = p.buffer[1:]
+		} else if idx > 0 {
+			idx++
+			buf = append(buf, p.buffer[:idx]...)
+			p.buffer = p.buffer[idx:]
+		}
+	}
+	return buf, e
 }

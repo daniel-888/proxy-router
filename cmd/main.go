@@ -130,7 +130,7 @@ func main() {
 	//
 	// Fire up schedule manager
 	//
-	if !configs.DisableSchedule {
+	if !configs.DisableSchedule && false {
 		cs, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
 		if err != nil {
 			l.Logf(log.LevelPanic, "Schedule manager failed: %v", err)
@@ -144,7 +144,7 @@ func main() {
 	//
 	// Fire up contract manager
 	//
-	if !configs.DisableContract {
+	if !configs.DisableContract && false {
 		var contractManagerConfig msgbus.ContractManagerConfig
 
 		contractManagerConfig.ID = msgbus.ContractManagerConfigID(msgbus.GetRandomIDString())
@@ -175,7 +175,7 @@ func main() {
 	//
 	//Fire up external api
 	//
-	if !configs.DisableApi {
+	if !configs.DisableApi && false {
 		api := externalapi.New(ps)
 		go api.Run(configs.ApiPort, l)
 	}

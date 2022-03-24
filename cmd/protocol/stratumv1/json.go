@@ -95,21 +95,22 @@ type noticeMiningSetDifficulty struct {
 }
 
 type noticeMiningNotifyParams struct {
-	jobID          string
-	prevBlockHash  string
-	gen1           string
-	gen2           string
-	merkelBranches []string
-	blockVersion   string
-	nBits          string
-	nTime          string
-	CleanJob       bool
+	JobID          string   `json:","`
+	PrevBlockHash  string   `json:","`
+	Gen1           string   `json:","`
+	Gen2           string   `json:","`
+	MerkelBranches []string `json:","`
+	BlockVersion   string   `json:","`
+	NBits          string   `json:","`
+	NTime          string   `json:","`
+	CleanJob       bool     `json:","`
 }
 type noticeMiningNotify struct {
-	ID      *string                  `json:"id"`
-	Jsonrpc *string                  `json:"jsonrpc"`
-	Method  string                   `json:"method"`
-	Params  noticeMiningNotifyParams `json:"params"`
+	ID      *string `json:"id"`
+	Jsonrpc *string `json:"jsonrpc,omitempty"`
+	Method  string  `json:"method"`
+	// Params  noticeMiningNotifyParams `json:"params"`
+	Params [9]interface{} `json:"params"`
 }
 
 type stratumResponse struct {
@@ -406,9 +407,6 @@ func (r *stratumRequest) getMiningNotifyJobID() (jobid string, err error) {
 //------------------------------------------------------
 func (r *stratumRequest) createRequestMsg() (msg []byte, err error) {
 
-	err = nil
-	// fmt.Printf("Create Stratum Request: %v\n", r)
-
 	msg, err = json.Marshal(r)
 	if err != nil {
 		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Request Err:%s\n", err)
@@ -423,54 +421,65 @@ func (r *stratumRequest) createRequestMsg() (msg []byte, err error) {
 //------------------------------------------------------
 //
 //------------------------------------------------------
-func (r *stratumRequest) createNoticeMiningNotifyStruct() (nsd noticeMiningNotify, err error) {
-
-	fmt.Printf(lumerinlib.Funcname()+": %v\n", r)
-
-	err = nil
-
-	// nsd.ID = r.ID
-	nsd.Method = r.Method
-
-	params := r.Params
-
-	if len(params) != 9 {
-		panic(fmt.Sprintf(lumerinlib.FileLineFunc() + " Not enough parameter for Notify\n"))
-	}
-
-	for i, v := range params {
-		switch i {
-		case 0:
-			nsd.Params.jobID = v.(string)
-		case 1:
-			nsd.Params.prevBlockHash = v.(string)
-		case 2:
-			nsd.Params.gen1 = v.(string)
-			fallthrough
-		case 3:
-			nsd.Params.gen2 = v.(string)
-
-		case 4:
-			nsd.Params.merkelBranches = make([]string, 0)
-			if len(v.([]interface{})) > 0 {
-				for _, w := range v.([]interface{}) {
-					nsd.Params.merkelBranches = append(nsd.Params.merkelBranches, w.(string))
-				}
-			}
-
-		case 5:
-			nsd.Params.blockVersion = v.(string)
-		case 6:
-			nsd.Params.nBits = v.(string)
-		case 7:
-			nsd.Params.nTime = v.(string)
-		case 8:
-			nsd.Params.CleanJob = (v == "true")
-		}
-	}
-
-	return nsd, err
-}
+//func (r *stratumRequest) createNoticeMiningNotifyStruct() (nsd noticeMiningNotify, err error) {
+//
+//	fmt.Printf(lumerinlib.Funcname()+": %v\n", r)
+//
+//	err = nil
+//
+//	// nsd.ID = r.ID
+//	nsd.Method = r.Method
+//
+//	params := r.Params
+//
+//	if len(params) != 9 {
+//		panic(fmt.Sprintf(lumerinlib.FileLineFunc() + " Not enough parameter for Notify\n"))
+//	}
+//
+//	for i, v := range params {
+//		switch i {
+//		case 0:
+//			//nsd.Params.JobID = v.(string)
+//			nsd.Params[0] = v.(string)
+//		case 1:
+//			// nsd.Params.PrevBlockHash = v.(string)
+//			nsd.Params[1] = v.(string)
+//		case 2:
+//			// nsd.Params.Gen1 = v.(string)
+//			nsd.Params[2] = v.(string)
+//			fallthrough
+//		case 3:
+//			// nsd.Params.Gen2 = v.(string)
+//			nsd.Params[3] = v.(string)
+//
+//		case 4:
+//			// nsd.Params.MerkelBranches = make([]string, 0)
+//			var merkel []string
+//			if len(v.([]interface{})) > 0 {
+//				for _, w := range v.([]interface{}) {
+//					// nsd.Params.MerkelBranches = append(nsd.Params.MerkelBranches, w.(string))
+//					merkel = append( merkel, w.(string))
+//				}
+//			}
+//			nsd.Params[4] = merkel
+//
+//		case 5:
+//			// nsd.Params.BlockVersion = v.(string)
+//			nsd.Params[5] = v.(string)
+//		case 6:
+//			// nsd.Params.NBits = v.(string)
+//			nsd.Params[6] = v.(string)
+//		case 7:
+//			// nsd.Params.NTime = v.(string)
+//			nsd.Params[7] = v.(string)
+//		case 8:
+//			//nsd.Params.CleanJob = (v == "true")
+//			nsd.Params[8] = (v == "true")
+//		}
+//	}
+//
+//	return nsd, err
+//}
 
 // ---------------------------------------------------------------------------------------
 //                   *StratumNotice
@@ -646,8 +655,6 @@ func (n *stratumNotice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
 //------------------------------------------------------
 func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 
-	err = nil
-
 	var nsd noticeMiningNotify
 	nsd.ID = n.ID
 	nsd.Method = n.Method
@@ -656,37 +663,46 @@ func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 		panic("")
 	}
 
-	// nsd.Params = make(noticeMiningNotifyParams)
+	// nsd.Params = &noticeMiningNotifyParams{}
 
-	// nsd.Params = append(nsd.Params, a)
 	for i, v := range n.Params.([]interface{}) {
 		switch i {
 		case 0:
-			nsd.Params.jobID = v.(string)
+			// nsd.Params.JobID = v.(string)
+			nsd.Params[i] = v.(string)
 		case 1:
-			nsd.Params.prevBlockHash = v.(string)
+			// nsd.Params.PrevBlockHash = v.(string)
+			nsd.Params[i] = v.(string)
 		case 2:
-			nsd.Params.gen1 = v.(string)
-			fallthrough
+			// nsd.Params.Gen1 = v.(string)
+			nsd.Params[i] = v.(string)
 		case 3:
-			nsd.Params.gen2 = v.(string)
+			// nsd.Params.Gen2 = v.(string)
+			nsd.Params[i] = v.(string)
 
 		case 4:
-			nsd.Params.merkelBranches = make([]string, 0)
+			var merkel []string
+			// nsd.Params.MerkelBranches = make([]string, 0)
 			if len(v.([]interface{})) > 0 {
 				for _, w := range v.([]interface{}) {
-					nsd.Params.merkelBranches = append(nsd.Params.merkelBranches, w.(string))
+					// nsd.Params.MerkelBranches = append(nsd.Params.MerkelBranches, w.(string))
+					merkel = append(merkel, w.(string))
 				}
 			}
+			nsd.Params[4] = merkel
 
 		case 5:
-			nsd.Params.blockVersion = v.(string)
+			// nsd.Params.BlockVersion = v.(string)
+			nsd.Params[i] = v.(string)
 		case 6:
-			nsd.Params.nBits = v.(string)
+			// nsd.Params.NBits = v.(string)
+			nsd.Params[i] = v.(string)
 		case 7:
-			nsd.Params.nTime = v.(string)
+			// nsd.Params.NTime = v.(string)
+			nsd.Params[i] = v.(string)
 		case 8:
-			nsd.Params.CleanJob = (v == "true")
+			// nsd.Params.CleanJob = (v == "true")
+			nsd.Params[i] = (v == "true")
 		}
 	}
 
@@ -703,53 +719,53 @@ func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 //------------------------------------------------------
 //
 //------------------------------------------------------
-func (n *stratumNotice) createNoticeMiningNotifyStruct() (nsd noticeMiningNotify, err error) {
-
-	fmt.Printf(lumerinlib.Funcname()+": %v\n", n)
-
-	err = nil
-
-	nsd.Method = n.Method
-
-	params := n.Params.([]interface{})
-
-	if len(params) != 9 {
-		panic(fmt.Sprintf(lumerinlib.FileLineFunc() + " Not enough parameter for Notify\n"))
-	}
-
-	for i, v := range params {
-		switch i {
-		case 0:
-			nsd.Params.jobID = v.(string)
-		case 1:
-			nsd.Params.prevBlockHash = v.(string)
-		case 2:
-			nsd.Params.gen1 = v.(string)
-			fallthrough
-		case 3:
-			nsd.Params.gen2 = v.(string)
-
-		case 4:
-			nsd.Params.merkelBranches = make([]string, 0)
-			if len(v.([]interface{})) > 0 {
-				for _, w := range v.([]interface{}) {
-					nsd.Params.merkelBranches = append(nsd.Params.merkelBranches, w.(string))
-				}
-			}
-
-		case 5:
-			nsd.Params.blockVersion = v.(string)
-		case 6:
-			nsd.Params.nBits = v.(string)
-		case 7:
-			nsd.Params.nTime = v.(string)
-		case 8:
-			nsd.Params.CleanJob = (v == "true")
-		}
-	}
-
-	return nsd, err
-}
+//func (n *stratumNotice) createNoticeMiningNotifyStruct() (nsd noticeMiningNotify, err error) {
+//
+//	fmt.Printf(lumerinlib.Funcname()+": %v\n", n)
+//
+//	err = nil
+//
+//	nsd.Method = n.Method
+//
+//	params := n.Params.([]interface{})
+//
+//	if len(params) != 9 {
+//		panic(fmt.Sprintf(lumerinlib.FileLineFunc() + " Not enough parameter for Notify\n"))
+//	}
+//
+//	for i, v := range params {
+//		switch i {
+//		case 0:
+//			nsd.Params.JobID = v.(string)
+//		case 1:
+//			nsd.Params.PrevBlockHash = v.(string)
+//		case 2:
+//			nsd.Params.Gen1 = v.(string)
+//			fallthrough
+//		case 3:
+//			nsd.Params.Gen2 = v.(string)
+//
+//		case 4:
+//			nsd.Params.MerkelBranches = make([]string, 0)
+//			if len(v.([]interface{})) > 0 {
+//				for _, w := range v.([]interface{}) {
+//					nsd.Params.MerkelBranches = append(nsd.Params.MerkelBranches, w.(string))
+//				}
+//			}
+//
+//		case 5:
+//			nsd.Params.BlockVersion = v.(string)
+//		case 6:
+//			nsd.Params.NBits = v.(string)
+//		case 7:
+//			nsd.Params.NTime = v.(string)
+//		case 8:
+//			nsd.Params.CleanJob = (v == "true")
+//		}
+//	}
+//
+//	return nsd, err
+//}
 
 // ---------------------------------------------------------------------------------------
 //                   *StratumResponse

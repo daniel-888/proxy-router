@@ -213,13 +213,7 @@ func newContextStruct(ctx context.Context, srcstr string, dststr string) (ret co
 //
 // newConnection()
 //
-func newStratumConnection(t *testing.T, ctx context.Context, src string, dst string, proto ...*newStratumV1Struct) (sls *StratumV1ListenStruct) {
-
-	if len(proto) > 0 {
-		ctx = newContextStruct(ctx, src, dst, proto[0])
-	} else {
-		ctx = newContextStruct(ctx, src, dst)
-	}
+func newStratumConnection(t *testing.T, ctx context.Context, src string, dst string) (sls *StratumV1ListenStruct) {
 
 	cs := contextlib.GetContextStruct(ctx)
 	srcaddr := cs.GetSrc()

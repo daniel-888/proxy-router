@@ -14,7 +14,7 @@ import (
 
 const DefaultDstSlots int = 8
 const MaxDstSlots int = 16
-const DefaultReadBufSize = 4096
+const DefaultReadBufSize = 2048
 
 // const DefaultReadEventChanSize = 10
 const DefaultReadEventChanSize = 0
@@ -184,6 +184,7 @@ func (cls *ConnectionListenStruct) Cancel() {
 
 //
 // func (cs *ConnectionStruct) goRead()
+// Reads from the lumerinconnection socket, packages it up and passes it to the readChan
 //
 func (cs *ConnectionStruct) goRead(index int) {
 
@@ -233,6 +234,15 @@ FORLOOP:
 			err:   e,
 		}
 
+		select {
+		case <-cs.ctx.Done():
+			contextlib.Logf(cs.ctx, contextlib.LevelInfo, fmt.Sprint(lumerinlib.FileLineFunc()+" context closed, exiting"))
+			break FORLOOP
+		default:
+
+		}
+		// Getting panic here about a closed connection.
+		// So there is data coming in, but the readChan has closed...
 		cs.readChan <- cre
 	}
 }
@@ -260,6 +270,8 @@ func (cs *ConnectionStruct) Cancel() {
 		return
 	default:
 	}
+
+	// Close out all of the Lumerin connection HERE??
 
 	close(cs.readChan)
 	cs.cancel()

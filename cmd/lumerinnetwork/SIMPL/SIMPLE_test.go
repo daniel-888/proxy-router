@@ -197,14 +197,14 @@ func TestProtocolDialTheSimpleStruct(t *testing.T) {
 	go func() {
 		simpleStruct = <-simpleListenStruct.accept
 		//initial dial
-		err := simpleStruct.AsyncDial(0, testAddr)
+		err := simpleStruct.AsyncDial(testAddr)
 
 		if err != nil {
 			t.Errorf("error creating a connection: %s", err)
 		}
 
 		//second dial to ensure that the uid increases as expected
-		err = simpleStruct.AsyncDial(1, testAddr)
+		err = simpleStruct.AsyncDial(testAddr)
 
 		if err != nil {
 			t.Errorf("error creating a connection: %s", err)

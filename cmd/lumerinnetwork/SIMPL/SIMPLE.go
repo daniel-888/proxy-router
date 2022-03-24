@@ -80,25 +80,25 @@ type SimpleEvent struct {
 }
 
 type SimpleConnReadEvent struct {
-	uniqueID ConnUniqueID
-	data     []byte
-	count    int
-	err      error
+	uID   ConnUniqueID
+	data  []byte
+	count int
+	err   error
 }
 
 type SimpleConnOpenEvent struct {
-	requestID int
-	uniqueID  ConnUniqueID
-	err       error
+	uID ConnUniqueID
+	dst net.Addr
+	err error
 }
 
-func (s *SimpleConnReadEvent) UniqueID() ConnUniqueID { return s.uniqueID }
+func (s *SimpleConnReadEvent) UniqueID() ConnUniqueID { return s.uID }
 func (s *SimpleConnReadEvent) Data() []byte           { return s.data }
 func (s *SimpleConnReadEvent) Count() int             { return s.count }
 func (s *SimpleConnReadEvent) Err() error             { return s.err }
 
-func (s *SimpleConnOpenEvent) UniqueID() ConnUniqueID { return s.uniqueID }
-func (s *SimpleConnOpenEvent) RequestID() int         { return s.requestID }
+func (s *SimpleConnOpenEvent) UniqueID() ConnUniqueID { return s.uID }
+func (s *SimpleConnOpenEvent) Dst() net.Addr          { return s.dst }
 func (s *SimpleConnOpenEvent) Err() error             { return s.err }
 
 type SimpleMsgBusEvent struct {
@@ -329,7 +329,7 @@ FORLOOP:
 			//
 			// Grossly inefficient... will fix later...
 			scre := &SimpleConnReadEvent{}
-			scre.uniqueID = ConnUniqueID(comm.Index())
+			scre.uID = ConnUniqueID(comm.Index())
 			scre.data = comm.Data()
 			scre.count = comm.Count()
 			scre.err = comm.Err()
@@ -420,7 +420,7 @@ ConnUniqueID is returned from this function
 
 id is the calling ID info, the uid is returned from the connectionmanager layer, and is used to index the connection
 */
-func (s *SimpleStruct) AsyncDial(id int, dst net.Addr) error {
+func (s *SimpleStruct) AsyncDial(dst net.Addr) error {
 
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -436,21 +436,14 @@ func (s *SimpleStruct) AsyncDial(id int, dst net.Addr) error {
 		uid, e := s.ConnectionStruct.Dial(dst)
 
 		open := &SimpleConnOpenEvent{
-			requestID: id,
-			uniqueID:  ConnUniqueID(uid),
-			err:       e,
+			uID: ConnUniqueID(uid),
+			dst: dst,
+			err: e,
 		}
 
 		s.openChan <- open
 	}()
 
-	// conn, err := lumerinconnection.Dial(s.ctx, dst) //creates a new net.Conn object
-	//gets the current index value and asssigns to connection in mapping
-	// var uID ConnUniqueID = s.connectionIndex
-	// s.connectionMapping[uID] = conn
-	// s.connectionIndex++ //increase the connectionIndex for the next time a conn is made
-	//consider a mapping of connections and UID's
-	// return uID, err
 	return nil
 }
 

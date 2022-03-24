@@ -208,9 +208,10 @@ func NewProtocolStruct(ctx context.Context, s *simple.SimpleStruct) (n *Protocol
 		srcconn:   pcs,
 		dstconn: &ProtocolDstStruct{
 			ctx:  ctx,
-			conn: make(map[int]*ProtocolConnectionStruct),
+			conn: make(map[simple.ConnUniqueID]*ProtocolConnectionStruct),
 		},
-		msgbus: &ProtocolMsgBusStruct{},
+		msgbus:   &ProtocolMsgBusStruct{},
+		defRoute: -1,
 	}
 
 	return n
@@ -268,7 +269,7 @@ func (ps *ProtocolStruct) GetSimpleEventChan() <-chan *simple.SimpleEvent {
 // opens a new connection to the desitnation
 //
 //
-func (ps *ProtocolStruct) AsyncDial(dst net.Addr) (index int, e error) {
+func (ps *ProtocolStruct) AsyncDial(dst net.Addr) (e error) {
 
 	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -283,53 +284,63 @@ func (ps *ProtocolStruct) AsyncDial(dst net.Addr) (index int, e error) {
 		contextlib.Logf(ps.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" simple struct CoonectionStruct is nil")
 	}
 
-	index, e = ps.dstconn.NewProtocolDstStruct(dst)
-	if e == nil {
-		e = ps.simple.AsyncDial(index, dst)
-	}
+	e = ps.simple.AsyncDial(dst)
 
-	return index, e
+	return e
 }
 
 //
-// SetDefaultRoute()
+// SetDefaultRouteUID()
 // Set the SIMPL layer default route
 //
-func (ps *ProtocolStruct) SetDefaultRouteIndex(index simple.ConnUniqueID) (e error) {
+func (ps *ProtocolStruct) SetDefaultRouteUID(uid simple.ConnUniqueID) (e error) {
 
-	slot, ok := ps.dstconn.conn[int(index)]
-	if !ok {
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+" bad index: %d", index)
-	} else if ConnStateReady == slot.GetState() {
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+" connection state not ready: %s", slot.GetState())
-	} else if ps.defRoute == index {
-		contextlib.Logf(ps.ctx, contextlib.LevelWarn, lumerinlib.FileLineFunc()+" default route already set to index: %d", index)
+	if ps.defRoute == uid {
+		contextlib.Logf(ps.ctx, contextlib.LevelWarn, lumerinlib.FileLineFunc()+" default route already set to UID: %d", uid)
 	} else {
-		uid := slot.GetUID()
 		ps.simple.SetRoute(uid) // Are we going to keep this, or just assume that the protocol layer will know the default route?
-		ps.defRoute = index
+		ps.defRoute = uid
 	}
 
 	return e
 }
 
 //
+// GetDstStruct()
+//
+func (ps *ProtocolStruct) GetDstStruct() (pds *ProtocolDstStruct) {
+	return ps.dstconn
+}
+
+//
 // DstConn()
 //
-func (ps *ProtocolStruct) GetDstConn(index int) (pcs *ProtocolConnectionStruct, e error) {
-	if ps.dstconn.conn[index] == nil {
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", index)
+func (ps *ProtocolStruct) GetDstConn(uid simple.ConnUniqueID) (pcs *ProtocolConnectionStruct, e error) {
+	if ps.dstconn.conn[uid] == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", uid)
 	} else {
-		pcs = ps.dstconn.conn[index]
+		pcs = ps.dstconn.conn[uid]
 	}
 	return pcs, e
 }
 
 //
-// GetDefaultRouteIndex()
+// SrcConn()
+//
+func (ps *ProtocolStruct) GetSrcConn() (pcs *ProtocolConnectionStruct, e error) {
+	if ps.srcconn == nil {
+		e = fmt.Errorf(lumerinlib.FileLineFunc() + "SrcConn does not exist yet")
+	} else {
+		pcs = ps.srcconn
+	}
+	return pcs, e
+}
+
+//
+// GetDefaultRouteUID()
 // get the  SIMPL layer default route
 //
-func (ps *ProtocolStruct) GetDefaultRouteIndex() simple.ConnUniqueID {
+func (ps *ProtocolStruct) GetDefaultRouteUID() simple.ConnUniqueID {
 	return ps.defRoute
 }
 
@@ -339,12 +350,12 @@ func (ps *ProtocolStruct) GetDefaultRouteIndex() simple.ConnUniqueID {
 func (ps *ProtocolStruct) Write(msg []byte) (count int, e error) {
 	count = 0
 
-	index := ps.defRoute
-	state := ps.dstconn.conn[int(index)].GetState()
+	uid := ps.defRoute
+	state := ps.dstconn.conn[uid].GetState()
 	if ConnStateReady != state {
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+" Connection state:%s", state)
 	} else {
-		count, e = ps.simple.Write(index, msg)
+		count, e = ps.simple.Write(uid, msg)
 	}
 
 	return count, e
