@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
@@ -13,6 +14,8 @@ import (
 //
 // Top layer protocol template functions that a new protocol will use to access the SIMPLe layer
 //
+
+var ErrDefaultRouteNotSet = errors.New("Default Route Not Set")
 
 type ProtocolListenStruct struct {
 	ctx          context.Context
@@ -345,13 +348,20 @@ func (ps *ProtocolStruct) GetDefaultRouteUID() simple.ConnUniqueID {
 }
 
 //
-// Write() writes to the default route
+// Write()
+// writes to the default route
 //
 func (ps *ProtocolStruct) Write(msg []byte) (count int, e error) {
 	count = 0
 
 	uid := ps.defRoute
+	if uid < 0 {
+		e = ErrDefaultRouteNotSet
+		return 0, e
+	}
+
 	state := ps.dstconn.conn[uid].GetState()
+
 	if ConnStateReady != state {
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+" Connection state:%s", state)
 	} else {

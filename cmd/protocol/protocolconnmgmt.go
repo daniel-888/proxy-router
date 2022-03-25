@@ -103,7 +103,7 @@ func (p *ProtocolDstStruct) Cancel(uid simple.ConnUniqueID) (e error) {
 	if p.conn[uid] == nil {
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", uid)
 	} else {
-		p.conn[uid].cancel()
+		p.conn[uid].Cancel()
 	}
 
 	return e

@@ -22,9 +22,11 @@ const DefaultReadEventChanSize = 0
 const SrcIdx int = -1
 const DstIdx0 int = 0
 
+var ErrConnMgrClosed = errors.New("CM: Closed")
+var ErrConnDstClosed = errors.New("CM: Destination Closed")
 var ErrConnMgrNoDefIndex = errors.New("CM: no default index")
 var ErrConnMgrBadDefDest = errors.New("CM: bad default destination")
-var ErrConnMgrIDXOutOfRange = errors.New("CM: index out of range")
+var ErrConnMgrBadDest = errors.New("CM: bad destination")
 var ErrConnReadNotReady = errors.New("CM: there is nothing to read")
 
 //
@@ -43,7 +45,7 @@ type ConnectionListenStruct struct {
 // Struct for existing SRC connections and the associated outgoing DST connections
 type ConnectionStruct struct {
 	src      *lumerinconnection.LumerinSocketStruct
-	dst      []*lumerinconnection.LumerinSocketStruct
+	dst      map[int]*lumerinconnection.LumerinSocketStruct
 	defidx   int
 	ctx      context.Context
 	cancel   func()
@@ -58,6 +60,28 @@ type ConnectionReadEvent struct {
 	data  []byte
 	count int
 	err   error
+}
+
+var dstCount chan int
+
+//
+//
+//
+func goDstCounter(c chan int) {
+	counter := 100
+	for {
+		c <- counter
+		counter += 1
+	}
+
+}
+
+//
+//
+//
+func init() {
+	dstCount = make(chan int, 5)
+	go goDstCounter(dstCount)
 }
 
 func (c *ConnectionReadEvent) Index() int   { return c.index }
@@ -127,8 +151,6 @@ func (cls *ConnectionListenStruct) goListenAccept() {
 
 	contextlib.Logf(cls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	defer close(cls.accept)
-
 	lumerinAcceptChan := cls.lumerin.GetAcceptChan()
 
 FORLOOP:
@@ -139,9 +161,10 @@ FORLOOP:
 			break FORLOOP
 		case l := <-lumerinAcceptChan:
 			ctx, cancel := context.WithCancel(cls.ctx)
+			dst := map[int]*lumerinconnection.LumerinSocketStruct{}
 			cs := &ConnectionStruct{
 				src:      l,
-				dst:      []*lumerinconnection.LumerinSocketStruct{},
+				dst:      dst,
 				defidx:   0,
 				ctx:      ctx,
 				cancel:   cancel,
@@ -179,6 +202,13 @@ func (cls *ConnectionListenStruct) Close() (e error) {
 //
 func (cls *ConnectionListenStruct) Cancel() {
 	contextlib.Logf(cls.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" closing down ConnectionListenStruct"))
+
+	if cls.cancel == nil {
+		contextlib.Logf(cls.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" cancel func is nil, struct:%v", cls))
+		return
+	}
+
+	close(cls.accept)
 	cls.cancel()
 }
 
@@ -188,45 +218,71 @@ func (cls *ConnectionListenStruct) Cancel() {
 //
 func (cs *ConnectionStruct) goRead(index int) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" enter"))
-
-	defer cs.Cancel()
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" enter - %d", index))
 
 	var l *lumerinconnection.LumerinSocketStruct
 
+	var name string
 	if index < 0 {
 		l = cs.src
+		name = "SRC"
 	} else {
 		l = cs.dst[index]
+		name = fmt.Sprintf("DST:%d", index)
 	}
 
 	if l == nil {
-		contextlib.Logf(cs.ctx, contextlib.LevelPanic, fmt.Sprint(lumerinlib.FileLineFunc()+" bad index:%d", index))
-	}
-FORLOOP:
-	for {
-		select {
-		case <-cs.ctx.Done():
-			break FORLOOP
-		default:
+		contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" %s bad index:%d", name, index))
+		cre := &ConnectionReadEvent{
+			index: index,
+			data:  nil,
+			count: 0,
+			err:   ErrConnMgrBadDest,
 		}
+
+		// Getting panic here about a closed connection.
+		// So there is data coming in, but the readChan has closed...
+		if !cs.Done() {
+			cs.readChan <- cre
+			cs.Close()
+		} else {
+			contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" we are in it deep now, cant event send an error up the stack"))
+		}
+		return
+	}
+
+FORLOOP:
+	for !cs.Done() {
 
 		data := make([]byte, DefaultReadBufSize)
 		count, e := l.Read(data)
+		data = data[:count]
+
 		if e != nil {
-			if e == io.EOF {
-				contextlib.Logf(cs.ctx, contextlib.LevelInfo, fmt.Sprint(lumerinlib.FileLineFunc()+" Read() returned EOF"))
-			} else {
-				contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" Read() on index returned error:%s\n", e))
+			switch e {
+			case io.EOF:
+				contextlib.Logf(cs.ctx, contextlib.LevelInfo, lumerinlib.FileLineFunc()+" %d - %s Read() returned EOF", index, name)
+			case lumerinconnection.ErrLumConSocketClosed:
+				contextlib.Logf(cs.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" %d - %s Read() on index returned error:%s", index, name, e)
+			default:
+				contextlib.Logf(cs.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" %d - %s Read() on index returned error:%s", index, name, e)
 			}
-			break FORLOOP
+
+			// Src is closed, so shutdown the whole shebang
+			if index < 0 {
+				cs.Close()
+				break FORLOOP
+			}
+
+			// Only the Dst is close, so pass the error up
+			e = ErrConnMgrClosed
+
 		}
 		if count == 0 {
-			contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" Read() on index returned zero count\n"))
+			contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" %s Read() on index returned zero count", name))
 			break FORLOOP
 		}
 
-		data = data[:count]
 		cre := &ConnectionReadEvent{
 			index: index,
 			data:  data,
@@ -234,17 +290,19 @@ FORLOOP:
 			err:   e,
 		}
 
-		select {
-		case <-cs.ctx.Done():
-			contextlib.Logf(cs.ctx, contextlib.LevelInfo, fmt.Sprint(lumerinlib.FileLineFunc()+" context closed, exiting"))
-			break FORLOOP
-		default:
-
-		}
 		// Getting panic here about a closed connection.
 		// So there is data coming in, but the readChan has closed...
-		cs.readChan <- cre
+		if !cs.Done() {
+			cs.readChan <- cre
+		}
+		if e != nil {
+			break FORLOOP
+		}
 	}
+
+	// Something errored or closed, so call close to be sure nothing is hanging
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" Exiting - %d:%s", index, name))
+	cs.Close()
 }
 
 //
@@ -259,19 +317,45 @@ func (cs *ConnectionStruct) GetReadChan() <-chan *ConnectionReadEvent {
 }
 
 //
+// Close() will close out all src and dst connections via the cancel context function
+//
+func (cs *ConnectionStruct) Close() {
+
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
+
+	// Close out all of the Lumerin connections
+	cs.src.Close()
+	for i := 0; i < len(cs.dst); i++ {
+		cs.dst[i].Close()
+	}
+
+	cs.Cancel() // This should close all open src and dst connections
+
+}
+
+//
 //
 //
 func (cs *ConnectionStruct) Cancel() {
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
-	select {
-	case <-cs.ctx.Done():
+	if cs.Done() {
 		contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" called already"))
 		return
-	default:
 	}
 
-	// Close out all of the Lumerin connection HERE??
+	cre := &ConnectionReadEvent{
+		index: -1,
+		data:  nil,
+		count: 0,
+		err:   ErrConnMgrClosed,
+	}
+	cs.readChan <- cre
+
+	if cs.cancel == nil {
+		contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" cancel func it nil, struct:%v", cs))
+		return
+	}
 
 	close(cs.readChan)
 	cs.cancel()
@@ -290,31 +374,19 @@ func (cs *ConnectionStruct) Dial(addr net.Addr) (idx int, e error) {
 
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" called"))
 
-	idx = -1
+	idx = <-dstCount
 
-	// dst, e := lumerinconnection.Dial(ctx, lumerinconnection.TCP, port, ip)
 	dst, e := lumerinconnection.Dial(cs.ctx, addr)
 	if e != nil {
 		return idx, e
 	}
 
-	// find next available dst slot
-
-	for i := 0; i < len(cs.dst); i++ {
-		if cs.dst[i] == nil {
-			idx = i
-			cs.dst[i] = dst
-			if cs.defidx < 0 {
-				cs.defidx = i
-			}
-
-			return idx, e
-		}
+	// Verify the slot is empty
+	if cs.dst[idx] != nil {
+		contextlib.Logf(cs.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" cannot be here, idx:%d", idx)
 	}
 
-	cs.dst = append(cs.dst, dst)
-	idx = len(cs.dst) - 1
-
+	cs.dst[idx] = dst
 	go cs.goRead(idx)
 
 	return idx, nil
@@ -332,30 +404,14 @@ func (cs *ConnectionStruct) ReDialIdx(idx int) (e error) {
 }
 
 //
-// Close() will close out all src and dst connections via the cancel context function
-//
-func (cs *ConnectionStruct) Close() {
-
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
-
-	cs.Cancel() // This should close all open src and dst connections
-
-}
-
-//
 //
 //
 func (cs *ConnectionStruct) SetRoute(idx int) (e error) {
 
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
-	if idx < 0 || idx >= len(cs.dst) {
-		e = ErrConnMgrIDXOutOfRange
-		return e
-	}
-
-	if cs.dst[idx] == nil {
-		e = ErrConnMgrBadDefDest
+	if idx < 0 || cs.dst[idx] == nil {
+		e = ErrConnMgrBadDest
 		return e
 	}
 
@@ -366,26 +422,6 @@ func (cs *ConnectionStruct) SetRoute(idx int) (e error) {
 }
 
 //
-// AnyReadReady() checks all open connections to see if any are ready to read
-//
-//func (cs *ConnectionStruct) AnyReadReady() (r bool) {
-//
-//	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
-//
-//	if cs.src != nil && cs.src.ReadReady() {
-//		return true
-//	}
-//
-//	for i := 0; i < len(cs.dst); i++ {
-//		if cs.dst[i] != nil && cs.dst[i].ReadReady() {
-//			return true
-//		}
-//	}
-//
-//	return false
-//}
-
-//
 //
 //
 func (cs *ConnectionStruct) SrcGetSocket() (s *lumerinconnection.LumerinSocketStruct, e error) {
@@ -394,38 +430,6 @@ func (cs *ConnectionStruct) SrcGetSocket() (s *lumerinconnection.LumerinSocketSt
 
 	return cs.src, nil
 }
-
-//
-//
-//
-//func (cs *ConnectionStruct) SrcReadReady() (r bool) {
-//
-//	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
-//
-//	return cs.src.ReadReady()
-//}
-
-//
-//
-//
-//func (cs *ConnectionStruct) SrcReadStruct() (c *ConnectionSrcDataStruct, e error) {
-//
-//	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
-//
-//	if !cs.SrcReadReady() {
-//		return nil, ErrConnReadNotReady
-//	}
-//
-//	c = &ConnectionSrcDataStruct{
-//		data: []byte{},
-//	}
-//
-//	count, e := cs.SrcRead(c.data)
-//	c.count = count
-//	c.err = e
-//
-//	return c, nil
-//}
 
 //
 //
@@ -594,71 +598,13 @@ func (cs *ConnectionStruct) IdxGetSocket(idx int) (s *lumerinconnection.LumerinS
 		return nil, e
 	}
 
-	if idx >= len(cs.dst) {
-		e = ErrConnMgrIDXOutOfRange
+	if cs.dst[idx] == nil {
+		e = ErrConnMgrBadDest
 		return nil, e
 	}
 
 	return cs.dst[idx], e
 }
-
-//
-//
-//
-//func (cs *ConnectionStruct) AnyIdxReadReady() (idx int, r bool) {
-//
-//	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
-//
-//	for idx = 0; idx < len(cs.dst); idx++ {
-//		if cs.dst[idx] != nil && cs.dst[idx].ReadReady() {
-//			return idx, true
-//		}
-//	}
-//	return -1, false
-//
-//}
-
-//
-//
-//
-//func (cs *ConnectionStruct) IdxReadReady(idx int) (r bool) {
-//
-//	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
-//
-//	if idx >= 0 &&
-//		idx < len(cs.dst) &&
-//		cs.dst[idx] != nil &&
-//		cs.dst[idx].ReadReady() {
-//		return true
-//	}
-//	return false
-//
-//}
-
-//
-// Read the default Destination
-//
-//func (cs *ConnectionStruct) IdxReadStruct(idx int) (d *ConnectionDstDataStruct, e error) {
-//
-//	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
-//
-//	if !cs.IdxReadReady(idx) {
-//		return nil, ErrConnReadNotReady
-//	}
-//
-//	d = &ConnectionDstDataStruct{
-//		index: idx,
-//		data:  []byte{},
-//		count: 0,
-//		err:   nil,
-//	}
-//
-//	count, e := cs.IdxRead(idx, d.data)
-//	d.count = count
-//	d.err = e
-//
-//	return d, nil
-//}
 
 //
 //
@@ -672,15 +618,9 @@ func (cs *ConnectionStruct) IdxRead(idx int, buf []byte) (count int, e error) {
 		return 0, e
 	}
 
-	if idx >= len(cs.dst) {
-		e = ErrConnMgrIDXOutOfRange
-		return 0, e
-	}
-
 	if cs.dst[idx] == nil {
-		e = ErrConnMgrBadDefDest
+		e = ErrConnMgrBadDest
 		return 0, e
-
 	}
 
 	return cs.dst[idx].Read(buf)
@@ -692,15 +632,10 @@ func (cs *ConnectionStruct) IdxRead(idx int, buf []byte) (count int, e error) {
 //
 func (cs *ConnectionStruct) IdxWrite(idx int, buf []byte) (count int, e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called on idx: %d", idx))
 
 	if idx < 0 {
 		e = ErrConnMgrNoDefIndex
-		return 0, e
-	}
-
-	if idx >= len(cs.dst) {
-		e = ErrConnMgrIDXOutOfRange
 		return 0, e
 	}
 
@@ -726,11 +661,6 @@ func (cs *ConnectionStruct) IdxClose(idx int) (e error) {
 		return e
 	}
 
-	if idx >= len(cs.dst) {
-		e = ErrConnMgrIDXOutOfRange
-		return e
-	}
-
 	if cs.dst[idx] == nil {
 		e = ErrConnMgrBadDefDest
 		return e
@@ -741,4 +671,16 @@ func (cs *ConnectionStruct) IdxClose(idx int) (e error) {
 	cs.dst[idx] = nil
 
 	return e
+}
+
+//
+//
+//
+func (cs *ConnectionStruct) Done() bool {
+	select {
+	case <-cs.ctx.Done():
+		return true
+	default:
+		return false
+	}
 }

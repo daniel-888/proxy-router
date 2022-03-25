@@ -98,7 +98,15 @@ func TestTCPSetupListenerAccept(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial Test Failed: %s", e))
 	}
 
-	fmt.Printf(lumerinlib.FileLine()+" Dial completed L:%s R:%s\n", client.LocalAddrString(), client.RemoteAddrString())
+	local, e := client.LocalAddrString()
+	if e != nil {
+		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial Test Failed: %s", e))
+	}
+	remote, e := client.RemoteAddrString()
+	if e != nil {
+		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial Test Failed: %s", e))
+	}
+	fmt.Printf(lumerinlib.FileLine()+" Dial completed L:%s R:%s\n", local, remote)
 
 	server := <-l.GetAcceptChan()
 
@@ -132,7 +140,15 @@ func TestTCPSetupListenerWrite(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial Test Failed: %s", e))
 	}
 
-	fmt.Printf(lumerinlib.FileLine()+" Dial completed L:%s R:%s\n", client.LocalAddrString(), client.RemoteAddrString())
+	local, e := client.LocalAddrString()
+	if e != nil {
+		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial Test Failed: %s", e))
+	}
+	remote, e := client.RemoteAddrString()
+	if e != nil {
+		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial Test Failed: %s", e))
+	}
+	fmt.Printf(lumerinlib.FileLine()+" Dial completed L:%s R:%s\n", local, remote)
 
 	accept := <-l.GetAcceptChan()
 	server := accept.(*SocketTCPStruct)
@@ -198,7 +214,15 @@ func test_TCPSetupListenerReadWrite(t *testing.T, teststring string, buflen int,
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial Test Failed: %s", e))
 	}
 
-	fmt.Printf(lumerinlib.FileLine()+" Dial completed L:%s R:%s\n", client.LocalAddrString(), client.RemoteAddrString())
+	local, e := client.LocalAddrString()
+	if e != nil {
+		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial Test Failed: %s", e))
+	}
+	remote, e := client.RemoteAddrString()
+	if e != nil {
+		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial Test Failed: %s", e))
+	}
+	fmt.Printf(lumerinlib.FileLine()+" Dial completed L:%s R:%s\n", local, remote)
 
 	accept := <-l.GetAcceptChan()
 	server := accept.(*SocketTCPStruct)
@@ -268,7 +292,15 @@ func TestTCPSetupListenerReadReady(t *testing.T) {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial Test Failed: %s", e))
 	}
 
-	fmt.Printf(lumerinlib.FileLine()+" Dial completed L:%s R:%s\n", client.LocalAddrString(), client.RemoteAddrString())
+	local, e := client.LocalAddrString()
+	if e != nil {
+		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial Test Failed: %s", e))
+	}
+	remote, e := client.RemoteAddrString()
+	if e != nil {
+		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Dial Test Failed: %s", e))
+	}
+	fmt.Printf(lumerinlib.FileLine()+" Dial completed L:%s R:%s\n", local, remote)
 
 	accept := <-l.GetAcceptChan()
 	server := accept.(*SocketTCPStruct)

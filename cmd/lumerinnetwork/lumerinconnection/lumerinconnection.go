@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 
@@ -23,6 +24,7 @@ const LumerinAcceptChannelLen int = 2
 const LumerinReadChannelLen int = 10
 
 var ErrLumConListenClosed = errors.New("Lumerin Connection Listen Socket closed")
+var ErrLumConSocketClosed = errors.New("Lumerin Connection Listen Socket closed")
 
 type LumProto string
 
@@ -59,6 +61,7 @@ type LumerinListenStruct struct {
 
 type LumerinSocketStruct struct {
 	ctx    context.Context
+	cancel func()
 	socket interface{}
 }
 
@@ -167,8 +170,6 @@ func (ll *LumerinListenStruct) goListenAccept() {
 
 	contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	defer close(ll.accept)
-
 	acceptChan := ll.listener.GetAcceptChan()
 FORLOOP:
 	for {
@@ -214,14 +215,6 @@ func (ll *LumerinListenStruct) GetAcceptChan() <-chan *LumerinSocketStruct {
 //
 //
 //
-func (ll *LumerinListenStruct) Cancel() {
-	contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-	ll.cancel()
-}
-
-//
-//
-//
 func (ll *LumerinListenStruct) Close() (e error) {
 
 	contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
@@ -232,7 +225,39 @@ func (ll *LumerinListenStruct) Close() (e error) {
 	default:
 		contextlib.Logf(ll.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", ll.listener)
 	}
+
+	ll.cancel()
 	return e
+}
+
+//
+//
+//
+func (ll *LumerinListenStruct) Cancel() {
+	contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	if ll.Done() {
+		contextlib.Logf(ll.ctx, contextlib.LevelInfo, lumerinlib.FileLineFunc()+" already called")
+		return
+	}
+
+	if ll.cancel == nil {
+		contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" cancel function is nil, struct:%v", ll)
+	}
+
+	close(ll.accept)
+	ll.cancel()
+}
+
+//
+//
+//
+func (ll *LumerinListenStruct) Done() bool {
+	select {
+	case <-ll.ctx.Done():
+		return true
+	default:
+		return false
+	}
 }
 
 // ---------------------------------------------------------------------------------
@@ -281,8 +306,10 @@ func Dial(ctx context.Context, addr net.Addr) (lci *LumerinSocketStruct, e error
 			contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Dial() error returned: %s", e)
 			return nil, e
 		}
+		ctx, cancel := context.WithCancel(ctx)
 		lci = &LumerinSocketStruct{
 			ctx:    ctx,
+			cancel: cancel,
 			socket: tcp,
 		}
 
@@ -315,11 +342,23 @@ func (l *LumerinSocketStruct) Read(buf []byte) (count int, e error) {
 
 	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
+	if l.Done() {
+		return 0, ErrLumConSocketClosed
+	}
+
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:
 		count, e = l.socket.(*sockettcp.SocketTCPStruct).Read(buf)
 		if e != nil {
-			contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Read() returned error: %s", e)
+			switch e {
+			case io.EOF:
+			case io.ErrUnexpectedEOF:
+			case sockettcp.ErrSocTCPClosed:
+			default:
+				contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Read() returned unexpected error: %s", e)
+			}
+			l.Close()
+			return 0, ErrLumConSocketClosed
 		}
 	default:
 		contextlib.Logf(l.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", l.socket)
@@ -335,11 +374,24 @@ func (l *LumerinSocketStruct) Write(buf []byte) (count int, e error) {
 
 	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
+	if l.Done() {
+		return 0, ErrLumConSocketClosed
+	}
+
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:
 		count, e = l.socket.(*sockettcp.SocketTCPStruct).Write(buf)
 		if e != nil {
-			contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Write() returned error: %s", e)
+			switch e {
+			case io.EOF:
+			case io.ErrUnexpectedEOF:
+			case sockettcp.ErrSocTCPClosed:
+			case sockettcp.ErrSocTCPEmtpyWriteBuf:
+			default:
+				contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Write() returned unexpected error: %s", e)
+			}
+			l.Close()
+			return 0, ErrLumConSocketClosed
 		}
 	default:
 		contextlib.Logf(l.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", l.socket)
@@ -351,9 +403,13 @@ func (l *LumerinSocketStruct) Write(buf []byte) (count int, e error) {
 //
 //
 //
-func (l *LumerinSocketStruct) Status() (stat LumerinConnectionStatusStruct, e error) {
+func (l *LumerinSocketStruct) Status() (stat *LumerinConnectionStatusStruct, e error) {
 
 	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	if l.Done() {
+		return nil, ErrLumConSocketClosed
+	}
 
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:
@@ -363,7 +419,7 @@ func (l *LumerinSocketStruct) Status() (stat LumerinConnectionStatusStruct, e er
 			contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Status() returned error: %s", e)
 		}
 		// Fill in here
-		stat = LumerinConnectionStatusStruct{}
+		stat = &LumerinConnectionStatusStruct{}
 
 	default:
 		contextlib.Logf(l.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", l.socket)
@@ -377,7 +433,15 @@ func (l *LumerinSocketStruct) Status() (stat LumerinConnectionStatusStruct, e er
 //
 func (l *LumerinSocketStruct) Close() (e error) {
 
+	if l == nil {
+		return errors.New(lumerinlib.FileLineFunc() + " nil pointer ")
+	}
+
 	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	if l.Done() {
+		return ErrLumConSocketClosed
+	}
 
 	switch l.socket.(type) {
 	case *sockettcp.SocketTCPStruct:
@@ -386,5 +450,39 @@ func (l *LumerinSocketStruct) Close() (e error) {
 		contextlib.Logf(l.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", l.socket)
 	}
 
+	l.Cancel()
+
 	return e
+}
+
+//
+//
+//
+func (l *LumerinSocketStruct) Cancel() {
+
+	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	if l.Done() {
+		contextlib.Logf(l.ctx, contextlib.LevelInfo, lumerinlib.FileLineFunc()+" already called")
+		return
+	}
+
+	if l.cancel == nil {
+		contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" cancel function is nul, struct:%v", l)
+		return
+	}
+
+	l.cancel()
+}
+
+//
+// Done()
+// return socket closed error if the context shows done
+//
+func (l *LumerinSocketStruct) Done() bool {
+	select {
+	case <-l.ctx.Done():
+		return true
+	default:
+		return false
+	}
 }

@@ -13,19 +13,6 @@ import (
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
-/*
-The purpose of the simple layer is to accept any messages from the
-protocol layer and pass messages to;
-lower down the stack
-to the message bus
-It is also designed to return messages from the msg bus to the protocol
-layer.
-Refer to proxy router document
-https://titanind.atlassian.net/wiki/spaces/PR/pages/5570561/Lumerin+Node
-*/
-
-//type SimpleStructProtocolFunc func(*SimpleStruct) chan *SimpleEvent
-
 type ConnUniqueID int
 type URL string
 type MsgType string
@@ -34,13 +21,6 @@ type Data string
 type EventHandler string
 type SearchString string
 
-/*
-The simple listen struct is used to establish a Listen port
-(TCP, UDP, or TRUNK) and accept connections. The accepted
-connections create a SimpleStruct{}, and are passed up to the
-protocol layer where the connection is initialized with a new
-context, which contains a protocol structure that allows for event handling.
-*/
 type SimpleListenStruct struct {
 	ctx              context.Context
 	cancel           func()
@@ -54,19 +34,13 @@ of a connection manager and MsgBus. The structure ties these
 to a protocol struct where events are directed to be handled.
 */
 type SimpleStruct struct {
-	ctx    context.Context
-	cancel func() //it might make sense to use the WithCancel function instead
-	//the event handler portion can be removed since the
-	//EventHandler method in implemented on the SimpleStruct
-	//eventHandler      interface{}                                             //this is the event handler function
-	eventChan  chan *SimpleEvent  // Channle to get
-	msgbusChan chan *msgbus.Event //
-	openChan   chan *SimpleConnOpenEvent
-	//protocolChan      chan SimpleEvent                                        //channel for protocol to receive simple events
-	// maxMessageSize    uint                                                    //this value is not initially set so defaults to 0
+	ctx               context.Context
+	cancel            func()             //it might make sense to use the WithCancel function instead
+	eventChan         chan *SimpleEvent  // Channle to get
+	msgbusChan        chan *msgbus.Event //
+	openChan          chan *SimpleConnOpenEvent
 	connectionMapping map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct //mapping of uint to connections
-	//connectionIndex   ConnUniqueID                                            //keeps track of connections in the mapping
-	ConnectionStruct *connectionmanager.ConnectionStruct
+	ConnectionStruct  *connectionmanager.ConnectionStruct
 }
 
 /*
@@ -223,7 +197,7 @@ FORLOOP:
 
 			if connectionStruct == nil {
 				contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Connection Listen Accept returned nil")
-				s.cancel()
+				s.Cancel()
 				break
 			}
 
@@ -258,6 +232,18 @@ func (s *SimpleListenStruct) GetAccept() <-chan *SimpleStruct {
 
 // Calls the listen context cancel function, which closes out the listener routine
 func (s *SimpleListenStruct) Close() {
+	// Close any open structurs here?
+	s.Cancel()
+}
+
+//
+func (s *SimpleListenStruct) Cancel() {
+
+	if s.cancel == nil {
+		contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" cancel function is nul, struct:%v", s)
+		return
+	}
+
 	s.cancel()
 }
 
@@ -380,13 +366,27 @@ FORLOOP:
 	contextlib.Logf(s.ctx, contextlib.LevelWarn, lumerinlib.FileLineFunc()+" exit")
 }
 
-/*
-Calls the connection context cancel function which closes out the
-currently established SRC connection and all of the associated DST connections
-*/
+//
+//
+//
 func (s *SimpleStruct) Close() {
-	_, cancel := context.WithCancel(s.ctx)
-	cancel()
+	s.Cancel()
+}
+
+//
+//
+//
+func (s *SimpleStruct) Cancel() {
+
+	if s.cancel == nil {
+		contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" cancel function is nul, struct:%v", s)
+		return
+	}
+
+	close(s.eventChan)
+	close(s.msgbusChan)
+	close(s.openChan)
+	s.cancel()
 }
 
 // Set IO buffer parameters
@@ -480,14 +480,9 @@ network connection functions
 // Used later to direct the default route
 func (s *SimpleStruct) GetRemoteAddr(ConnUniqueID) {} //return of 1 to appease compiler
 
-func (s *SimpleStruct) SetDefaultReadHandler() {}
-
-// Supply a handler function for incoming data reads for the connection ID
-func (s *SimpleStruct) SetReadHandler() {}
-
 // Writes buffer to the specified connection
-func (s *SimpleStruct) Write(i ConnUniqueID, msg []byte) (count int, e error) {
-	if i < 0 {
+func (s *SimpleStruct) Write(uid ConnUniqueID, msg []byte) (count int, e error) {
+	if uid < 0 {
 		count, e = s.ConnectionStruct.SrcWrite(msg)
 		// Need to so some error checking here, if src is closed, then the whole thing needs to be shutdown.
 		if e != nil {
@@ -495,7 +490,7 @@ func (s *SimpleStruct) Write(i ConnUniqueID, msg []byte) (count int, e error) {
 		}
 
 	} else {
-		count, e = s.ConnectionStruct.IdxWrite(int(i), msg)
+		count, e = s.ConnectionStruct.IdxWrite(int(uid), msg)
 	}
 
 	return count, e
@@ -516,77 +511,37 @@ msg bus functions
 
 */
 
-func (s *SimpleStruct) Pub(MsgType, ID, Data) error            { return errors.New("") }
-func (s *SimpleStruct) Unpub(MsgType, ID) error                { return errors.New("") }
-func (s *SimpleStruct) Sub(MsgType, ID, EventHandler) error    { return errors.New("") }
-func (s *SimpleStruct) Unsub(MsgType, ID, EventHandler) error  { return errors.New("") }
-func (s *SimpleStruct) Get(MsgType, ID, EventHandler) error    { return errors.New("") }
-func (s *SimpleStruct) Set(MsgType, ID, Data) error            { return errors.New("") }
-func (s *SimpleStruct) SearchIP(MsgType, SearchString) error   { return errors.New("") }
-func (s *SimpleStruct) SearchMac(MsgType, SearchString) error  { return errors.New("") }
-func (s *SimpleStruct) SearchName(MsgType, SearchString) error { return errors.New("") }
+func (s *SimpleStruct) Pub(MsgType, ID, Data) error {
+	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+}
+func (s *SimpleStruct) Unpub(MsgType, ID) error {
+	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+}
+func (s *SimpleStruct) Sub(MsgType, ID, EventHandler) error {
+	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+}
+func (s *SimpleStruct) Unsub(MsgType, ID, EventHandler) error {
+	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+}
+func (s *SimpleStruct) Get(MsgType, ID, EventHandler) error {
+	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+}
+func (s *SimpleStruct) Set(MsgType, ID, Data) error {
+	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+}
+func (s *SimpleStruct) SearchIP(MsgType, SearchString) error {
+	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+}
+func (s *SimpleStruct) SearchMac(MsgType, SearchString) error {
+	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+}
+func (s *SimpleStruct) SearchName(MsgType, SearchString) error {
+	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+}
 
+//
+//
+//
 func (s *SimpleStruct) Ctx() context.Context {
 	return s.ctx
 }
-
-func (s *SimpleStruct) Cancel() {
-	s.cancel()
-}
-
-/*
-
-
-event handler related functionality
-
-
-*/
-
-// type EventType string
-//
-//var eventOne EventType = "eventOne"
-//
-////event handler function for the SimpleStruct which is viewable from the protocol layer
-//func (s *SimpleStruct) EventHandler(e SimpleEvent) {
-//	for {
-//		switch e.EventType {
-//		case NoEvent:
-//			fallthrough
-//		case MsgUpdateEvent:
-//			fallthrough
-//		case MsgDeleteEvent:
-//			fallthrough
-//		case MsgGetEvent:
-//			fallthrough
-//		case MsgGetIndexEvent:
-//			fallthrough
-//		case MsgSearchEvent:
-//			fallthrough
-//		case MsgSearchIndexEvent:
-//			fallthrough
-//		case MsgPublishEvent:
-//			fallthrough
-//		case MsgUnpublishEvent:
-//			fallthrough
-//		case MsgSubscribedEvent:
-//			fallthrough
-//		case MsgUnsubscribedEvent:
-//			fallthrough
-//		case MsgRemovedEvent:
-//			fallthrough
-//		case ConnReadEvent:
-//			fallthrough
-//		case ConnEOFEvent:
-//			fallthrough
-//		case ConnErrorEvent:
-//			fallthrough
-//		case ErrorEvent:
-//			fallthrough
-//		case MsgToProtocol:
-//			fallthrough
-//		default:
-//			return
-//		}
-//	}
-//}
-//

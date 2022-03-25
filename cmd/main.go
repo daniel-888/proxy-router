@@ -113,7 +113,8 @@ func main() {
 			lumerinlib.PanicHere("")
 		}
 
-		dst, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "127.0.0.1", "33335"))
+		dst, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "mining.dev.pool.titan.io", "4242"))
+		// dst, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "127.0.0.1", "33335"))
 		if err != nil {
 			lumerinlib.PanicHere("")
 		}
@@ -130,7 +131,7 @@ func main() {
 	//
 	// Fire up schedule manager
 	//
-	if !configs.DisableSchedule && false {
+	if !configs.DisableSchedule {
 		cs, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
 		if err != nil {
 			l.Logf(log.LevelPanic, "Schedule manager failed: %v", err)
@@ -144,7 +145,7 @@ func main() {
 	//
 	// Fire up contract manager
 	//
-	if !configs.DisableContract && false {
+	if !configs.DisableContract {
 		var contractManagerConfig msgbus.ContractManagerConfig
 
 		contractManagerConfig.ID = msgbus.ContractManagerConfigID(msgbus.GetRandomIDString())
@@ -175,7 +176,7 @@ func main() {
 	//
 	//Fire up external api
 	//
-	if !configs.DisableApi && false {
+	if !configs.DisableApi {
 		api := externalapi.New(ps)
 		go api.Run(configs.ApiPort, l)
 	}

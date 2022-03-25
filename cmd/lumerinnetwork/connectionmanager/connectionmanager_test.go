@@ -253,7 +253,7 @@ func testSetupEchoConnection(t *testing.T, l *ConnectionListenStruct) (cs *Conne
 
 	fmt.Printf(lumerinlib.FileLineFunc() + " Connection Accepted\n")
 
-	cs.dst = append(cs.dst, lss)
+	cs.dst[0] = lss
 	cs.defidx = 0
 
 	go cs.goSrcChannelEcho()

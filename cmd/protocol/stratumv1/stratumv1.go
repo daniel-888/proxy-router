@@ -29,18 +29,20 @@ type DstState string
 //
 // New->Subscribed->Authorized->??
 //
-const SrcStateNew SrcState = "stateNew"
-const SrcStateSubscribed SrcState = "stateSubscribed"
-const SrcStateAuthorized SrcState = "stateAuthorized"
+const SrcStateNew SrcState = "stateNew"               // Freshly created Connection
+const SrcStateSubscribed SrcState = "stateSubscribed" // Recieve Subscribe
+const SrcStateAuthorized SrcState = "stateAuthorized" // Recieve Authorize
+const SrcStateRunning SrcState = "stateRunning"       // Sent set_difficulty or work notice
 const SrcStateError SrcState = "stateError"
 
 //
-// New->Subscribed->Authorized->??
+// New->Subscribed->Authorized->Running
 //
 const DstStateNew DstState = "stateNew"
 const DstStateOpen DstState = "stateOpen"
-const DstStateSubscribing DstState = "stateSubscribing"
-const DstStateAuthorizing DstState = "stateAuthorizing"
+const DstStateSubscribing DstState = "stateSubscribing" // Sent Subscribe
+const DstStateAuthorizing DstState = "stateAuthorizing" // Recieved Sub-response and Sent Authorize
+const DstStateRunning DstState = "stateRunning"         // Recieved Auth-response
 const DstStateError DstState = "stateError"
 
 type StratumV1ListenStruct struct {
@@ -63,7 +65,6 @@ type StratumV1Struct struct {
 //
 //
 //
-// func NewListener(ctx context.Context, src net.Addr, dst net.Addr, proto ...*newStratumV1Struct) (sls *StratumV1ListenStruct, e error) {
 func NewListener(ctx context.Context, src net.Addr, dst net.Addr) (sls *StratumV1ListenStruct, e error) {
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
@@ -215,7 +216,6 @@ func (s *StratumV1Struct) goEvent() {
 			contextlib.Logf(s.Ctx(), contextlib.LevelFatal, lumerinlib.FileLineFunc()+" event:%v", event)
 		}
 
-		contextlib.Logf(s.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" event:%v", event)
 		e := s.eventHandler(event)
 
 		if e != nil {

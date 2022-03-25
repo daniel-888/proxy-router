@@ -79,7 +79,7 @@ func TestNewSrcConnection(t *testing.T) {
 
 	t.Logf("TestNewConnection() Listen port: %d", dstport)
 
-	if listener.TestingIsClosed() {
+	if listener.Done() {
 		t.Fatalf("fakelistener is closed")
 	}
 
