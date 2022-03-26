@@ -293,6 +293,14 @@ func (ps *ProtocolStruct) AsyncDial(dst net.Addr) (e error) {
 }
 
 //
+//
+//
+func (ps *ProtocolStruct) AsyncReDial(uid simple.ConnUniqueID) (e error) {
+	e = ps.simple.AsyncReDial(uid)
+	return e
+}
+
+//
 // SetDefaultRouteUID()
 // Set the SIMPL layer default route
 //

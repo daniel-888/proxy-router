@@ -60,9 +60,10 @@ type LumerinListenStruct struct {
 }
 
 type LumerinSocketStruct struct {
-	ctx    context.Context
-	cancel func()
-	socket interface{}
+	ctx        context.Context
+	cancel     func()
+	remoteaddr net.Addr
+	socket     interface{}
 }
 
 //
@@ -182,15 +183,24 @@ FORLOOP:
 				break FORLOOP
 			}
 
+			var addr net.Addr
+			var e error
+
 			switch socket.(type) {
 			case *sockettcp.SocketTCPStruct:
+				addr, e = socket.(*sockettcp.SocketTCPStruct).RemoteAddr()
+				if e != nil {
+					contextlib.Logf(ll.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" RemoteAddr() error:%s", e)
+				}
+
 			default:
 				contextlib.Logf(ll.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" socket type: %t not supported", socket)
 			}
 
 			lci := &LumerinSocketStruct{
-				ctx:    ll.ctx,
-				socket: socket,
+				ctx:        ll.ctx,
+				socket:     socket,
+				remoteaddr: addr,
 			}
 			ll.accept <- lci
 
@@ -308,9 +318,10 @@ func Dial(ctx context.Context, addr net.Addr) (lci *LumerinSocketStruct, e error
 		}
 		ctx, cancel := context.WithCancel(ctx)
 		lci = &LumerinSocketStruct{
-			ctx:    ctx,
-			cancel: cancel,
-			socket: tcp,
+			ctx:        ctx,
+			cancel:     cancel,
+			socket:     tcp,
+			remoteaddr: addr,
 		}
 
 	case UDP:
@@ -453,6 +464,13 @@ func (l *LumerinSocketStruct) Close() (e error) {
 	l.Cancel()
 
 	return e
+}
+
+//
+//
+//
+func (l *LumerinSocketStruct) GetAddr() net.Addr {
+	return l.remoteaddr
 }
 
 //

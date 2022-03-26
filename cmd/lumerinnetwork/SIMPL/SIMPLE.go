@@ -230,12 +230,33 @@ func (s *SimpleListenStruct) GetAccept() <-chan *SimpleStruct {
 	return s.accept
 }
 
+//
+//
+//
+func (s *SimpleListenStruct) Done() bool {
+	select {
+	case <-s.ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
+//
 // Calls the listen context cancel function, which closes out the listener routine
+//
 func (s *SimpleListenStruct) Close() {
+	if s.Done() {
+		return
+	}
+
 	// Close any open structurs here?
+
 	s.Cancel()
 }
 
+//
+//
 //
 func (s *SimpleListenStruct) Cancel() {
 
@@ -244,6 +265,11 @@ func (s *SimpleListenStruct) Cancel() {
 		return
 	}
 
+	if s.Done() {
+		return
+	}
+
+	close(s.accept)
 	s.cancel()
 }
 
@@ -369,7 +395,23 @@ FORLOOP:
 //
 //
 //
+func (s *SimpleStruct) Done() bool {
+	select {
+	case <-s.ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
+//
+//
+//
 func (s *SimpleStruct) Close() {
+	if s.Done() {
+		return
+	}
+
 	s.Cancel()
 }
 
@@ -380,6 +422,10 @@ func (s *SimpleStruct) Cancel() {
 
 	if s.cancel == nil {
 		contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" cancel function is nul, struct:%v", s)
+		return
+	}
+
+	if s.Done() {
 		return
 	}
 
@@ -441,7 +487,40 @@ func (s *SimpleStruct) AsyncDial(dst net.Addr) error {
 			err: e,
 		}
 
-		s.openChan <- open
+		if !s.Done() {
+			s.openChan <- open
+		}
+	}()
+
+	return nil
+}
+
+//
+// AsyncReDial
+// Reconnect dropped connection
+//
+func (s *SimpleStruct) AsyncReDial(uid ConnUniqueID) error {
+
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	if s == nil {
+		return errors.New(lumerinlib.FileLineFunc() + " SimpleStruct == nil ")
+	}
+	if s.ConnectionStruct == nil {
+		return errors.New(lumerinlib.FileLineFunc() + " SimpleStruct.ConnectionStruct == nil ")
+	}
+
+	go func() {
+		e := s.ConnectionStruct.ReDialIdx(int(uid))
+
+		open := &SimpleConnOpenEvent{
+			uID: ConnUniqueID(uid),
+			err: e,
+		}
+
+		if !s.Done() {
+			s.openChan <- open
+		}
 	}()
 
 	return nil
@@ -453,9 +532,6 @@ function to retrieve the connection mapped to a unique id
 func (s *SimpleStruct) GetConnBasedOnConnUniqueID(x ConnUniqueID) *lumerinconnection.LumerinSocketStruct {
 	return s.connectionMapping[x]
 }
-
-// Reconnect dropped connection
-func (s *SimpleStruct) Redial(u ConnUniqueID) {}
 
 // Used later to direct the default route
 func (s *SimpleStruct) SetRoute(u ConnUniqueID) error {

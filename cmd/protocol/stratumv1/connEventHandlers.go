@@ -34,10 +34,18 @@ func (svs *StratumV1Struct) handleConnReadEvent(scre *simple.SimpleConnReadEvent
 
 	e = scre.Err()
 	if nil != e {
-		if e == connectionmanager.ErrConnMgrClosed {
-			contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" Connection Manager Closed, closing down the stratum connection here")
+		switch e {
+		case connectionmanager.ErrConnMgrClosed:
+			contextlib.Logf(svs.Ctx(), contextlib.LevelDebug, lumerinlib.FileLineFunc()+" Connection Manager Closed, closing down the stratum connection here")
 			svs.Cancel()
 			return nil
+		case connectionmanager.ErrConnDstClosed:
+			contextlib.Logf(svs.Ctx(), contextlib.LevelDebug, lumerinlib.FileLineFunc()+" Dest:%d  Closed Reconnecting", uid)
+			svs.SetDstStateUid(uid, DstStateRedialing)
+			e = svs.protocol.AsyncReDial(uid)
+			return e
+		default:
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Dest:%d  Error not handled:%s", uid, e)
 		}
 
 		// Notate it here, but set the err in the connection later

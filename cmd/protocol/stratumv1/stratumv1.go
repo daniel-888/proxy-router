@@ -43,6 +43,7 @@ const DstStateOpen DstState = "stateOpen"
 const DstStateSubscribing DstState = "stateSubscribing" // Sent Subscribe
 const DstStateAuthorizing DstState = "stateAuthorizing" // Recieved Sub-response and Sent Authorize
 const DstStateRunning DstState = "stateRunning"         // Recieved Auth-response
+const DstStateRedialing DstState = "stateRedialing"     // Inactive, in the process of redialing
 const DstStateError DstState = "stateError"
 
 type StratumV1ListenStruct struct {

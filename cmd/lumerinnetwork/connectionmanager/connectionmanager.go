@@ -28,6 +28,7 @@ var ErrConnMgrNoDefIndex = errors.New("CM: no default index")
 var ErrConnMgrBadDefDest = errors.New("CM: bad default destination")
 var ErrConnMgrBadDest = errors.New("CM: bad destination")
 var ErrConnReadNotReady = errors.New("CM: there is nothing to read")
+var ErrConnDstStillOpen = errors.New("CM: Dst Connection is still open")
 
 //
 // Listen Struct for new SRC connections coming in
@@ -65,7 +66,8 @@ type ConnectionReadEvent struct {
 var dstCount chan int
 
 //
-//
+// goDstCounter()
+// Generates a UniqueID for the destination handles
 //
 func goDstCounter(c chan int) {
 	counter := 100
@@ -77,7 +79,8 @@ func goDstCounter(c chan int) {
 }
 
 //
-//
+// init()
+// initializes the DstCounter
 //
 func init() {
 	dstCount = make(chan int, 5)
@@ -274,8 +277,13 @@ FORLOOP:
 				break FORLOOP
 			}
 
-			// Only the Dst is close, so pass the error up
-			e = ErrConnMgrClosed
+			// Src closed = shutdown the whole shebang
+			// if Dst closed pass the error up
+			if index < 0 {
+				e = ErrConnMgrClosed
+			} else {
+				e = ErrConnDstClosed
+			}
 
 		}
 		if count == 0 {
@@ -339,17 +347,18 @@ func (cs *ConnectionStruct) Close() {
 func (cs *ConnectionStruct) Cancel() {
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called"))
 
-	if cs.Done() {
-		contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" called already"))
-		return
-	}
-
 	cre := &ConnectionReadEvent{
 		index: -1,
 		data:  nil,
 		count: 0,
 		err:   ErrConnMgrClosed,
 	}
+
+	if cs.Done() {
+		contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" called already"))
+		return
+	}
+
 	cs.readChan <- cre
 
 	if cs.cancel == nil {
@@ -398,7 +407,30 @@ func (cs *ConnectionStruct) Dial(addr net.Addr) (idx int, e error) {
 //
 func (cs *ConnectionStruct) ReDialIdx(idx int) (e error) {
 
-	contextlib.Logf(cs.ctx, contextlib.LevelPanic, fmt.Sprintf(lumerinlib.FileLineFunc()+" Function Not Implemented Yet.."))
+	if cs == nil {
+		panic("ConnectionStruct is nil...")
+	}
+
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" called"))
+
+	// Verify the slot is NOT empty
+	if cs.dst[idx] == nil {
+		contextlib.Logf(cs.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" cannot be here, idx:%d", idx)
+	}
+
+	if !cs.dst[idx].Done() {
+		contextlib.Logf(cs.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" socket not closed... idx:%d", idx)
+		return ErrConnDstStillOpen
+	}
+
+	addr := cs.dst[idx].GetAddr()
+
+	dst, e := lumerinconnection.Dial(cs.ctx, addr)
+	if e != nil {
+		return e
+	}
+
+	cs.dst[idx] = dst
 
 	return nil
 }

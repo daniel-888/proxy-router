@@ -500,29 +500,33 @@ func (l *ListenTCPStruct) LocalAddr() (host string, port int, e error) {
 //
 // Returns the local address of the socket
 //
-func (s *SocketTCPStruct) LocalAddr() (host string, port int, e error) {
+func (s *SocketTCPStruct) LocalAddr() (addr net.Addr, e error) {
 
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	if s.Done() {
-		return host, port, ErrSocTCPClosed
+		return addr, ErrSocTCPClosed
 	}
 
-	return getAddr(s.ctx, s.socket.LocalAddr().String())
+	addr = s.socket.LocalAddr()
+
+	return addr, e
 }
 
 //
 // Returns the local address of the socket
 //
-func (s *SocketTCPStruct) RemoteAddr() (host string, port int, e error) {
+func (s *SocketTCPStruct) RemoteAddr() (addr net.Addr, e error) {
 
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	if s.Done() {
-		return host, port, ErrSocTCPClosed
+		return addr, ErrSocTCPClosed
 	}
 
-	return getAddr(s.ctx, s.socket.RemoteAddr().String())
+	addr = s.socket.RemoteAddr()
+
+	return addr, e
 }
 
 //
