@@ -584,8 +584,8 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 
 	fmt.Print("\n\n/// Contract purchased and now running ///\n\n\n")
 
-	targetDest := msgbus.Dest {
-		ID: msgbus.DestID(msgbus.GetRandomIDString()),
+	targetDest := msgbus.Dest{
+		ID:     msgbus.DestID(msgbus.GetRandomIDString()),
 		NetUrl: "stratum+tcp://127.0.0.1:55555/",
 	}
 	ps.PubWait(msgbus.DestMsg, msgbus.IDString(targetDest.ID), targetDest)
@@ -603,7 +603,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.ReadyMiners.Exists(string(v.ID)) {
 			t.Errorf("Ready miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -612,7 +612,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.BusyMiners.Exists(string(v.ID)) {
 			t.Errorf("Busy miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != contract1.ID || miner.Dest != contract1.Dest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -640,7 +640,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.ReadyMiners.Exists(string(v.ID)) {
 			t.Errorf("Ready miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -649,7 +649,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.BusyMiners.Exists(string(v.ID)) {
 			t.Errorf("Busy miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != contract1.ID || miner.Dest != contract1.Dest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -670,7 +670,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.ReadyMiners.Exists(string(v.ID)) {
 			t.Errorf("Ready miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -679,7 +679,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.BusyMiners.Exists(string(v.ID)) {
 			t.Errorf("Busy miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != contract1.ID || miner.Dest != contract1.Dest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -735,7 +735,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.ReadyMiners.Exists(string(v.ID)) {
 			t.Errorf("Ready miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -744,7 +744,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.BusyMiners.Exists(string(v.ID)) {
 			t.Errorf("Busy miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != contract2.ID || miner.Dest != contract2.Dest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -766,7 +766,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.ReadyMiners.Exists(string(v.ID)) {
 			t.Errorf("Ready miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -775,7 +775,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.BusyMiners.Exists(string(v.ID)) {
 			t.Errorf("Busy miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != contract2.ID || miner.Dest != contract2.Dest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -797,7 +797,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.ReadyMiners.Exists(string(v.ID)) {
 			t.Errorf("Ready miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -806,7 +806,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.BusyMiners.Exists(string(v.ID)) {
 			t.Errorf("Busy miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != contract2.ID || miner.Dest != contract2.Dest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -827,7 +827,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.ReadyMiners.Exists(string(v.ID)) {
 			t.Errorf("Ready miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != "" || miner.Dest != nodeOperator.DefaultDest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}
@@ -836,7 +836,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		if !cs.BusyMiners.Exists(string(v.ID)) {
 			t.Errorf("Busy miners map not correct")
 		}
-		miner,_ := ps.MinerGetWait(v.ID)
+		miner, _ := ps.MinerGetWait(v.ID)
 		if miner.Contract != contract2.ID || miner.Dest != contract2.Dest {
 			t.Errorf("Miner contract and dest field incorrect")
 		}

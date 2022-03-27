@@ -15,7 +15,7 @@ type ContractManagerConfigJSON struct {
 	AccountIndex        int    `json:"accountIndex"`
 	EthNodeAddr         string `json:"ethNodeAddr"`
 	ClaimFunds          bool   `json:"claimFunds"`
-	TimeThreshold		int	   `json:"timeThreshold"`
+	TimeThreshold       int    `json:"timeThreshold"`
 	CloneFactoryAddress string `json:"cloneFactoryAddress"`
 	LumerinTokenAddress string `json:"lumerinTokenAddress"`
 	ValidatorAddress    string `json:"validatorAddress"`
