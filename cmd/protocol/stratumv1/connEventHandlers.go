@@ -45,6 +45,7 @@ func (svs *StratumV1Struct) handleConnOpenEvent(scoe *simple.SimpleConnOpenEvent
 		return e
 	}
 	svs.dstState[uid] = DstStateNew
+	svs.dstDest[uid] = scoe.Dest()
 
 	dstconn, e := svs.protocol.GetDstConn(uid)
 	if e != nil {
@@ -78,9 +79,9 @@ func (svs *StratumV1Struct) handleConnOpenEvent(scoe *simple.SimpleConnOpenEvent
 	}
 
 	// Set default route if not set already
-	if svs.protocol.GetDefaultRouteUID() < 0 {
-		svs.protocol.SetDefaultRouteUID(uid)
-	}
+	//if svs.protocol.GetDefaultRouteUID() < 0 {
+	//	svs.protocol.SetDefaultRouteUID(uid)
+	// }
 
 	return e
 }
@@ -250,8 +251,6 @@ func (svs *StratumV1Struct) handleRequest(uid simple.ConnUniqueID, request *stra
 			svs.handleDstReqNotify(uid, request)
 		case string(SERVER_GET_VERSION):
 			svs.handleDstReqGetVersion(uid, request)
-		//case string(SERVER_RECONNECT):
-		//	svs.handleDstReqReconnect(uid, request)
 		case string(SERVER_SHOW_MESSAGE):
 			svs.handleDstReqShowMessage(uid, request)
 		case string(SERVER_MINING_PING):
@@ -314,7 +313,10 @@ func (svs *StratumV1Struct) handleResponse(uid simple.ConnUniqueID, response *st
 		// drop the response message
 		//
 		case DstStateAuthorizing:
-			svs.SetDstStateUid(uid, DstStateRunning)
+			svs.SetDstStateUid(uid, DstStateStandBy)
+
+			// Called in case this is the only connection opened.
+			svs.switchDest()
 
 		//
 		// Pass response messages when in Running State
@@ -342,7 +344,14 @@ func (svs *StratumV1Struct) handleResponse(uid simple.ConnUniqueID, response *st
 			}
 
 		case DstStateStandBy:
-			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" state not handled yet:%s", dststate)
+
+			msg, e := response.createResponseMsg()
+			if e != nil {
+				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() error:%s", e)
+			}
+			LogJson(svs.Ctx(), "Response in StandBy - DROPPED:", msg)
+
+			contextlib.Logf(svs.Ctx(), contextlib.LevelDebug, lumerinlib.FileLineFunc()+" state not handled yet:%s", dststate)
 
 		default:
 			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" not handled yet")
@@ -426,9 +435,9 @@ func (svs *StratumV1Struct) handleSrcReqSubscribe(request *stratumRequest) (e er
 		return e
 	}
 
-	dst := contextlib.GetDstID(svs.Ctx())
+	dst := contextlib.GetDest(svs.Ctx())
 	if dst == nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDst() returned nil")
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDest() returned nil")
 	}
 
 	response := &stratumResponse{}
@@ -491,9 +500,9 @@ func (svs *StratumV1Struct) handleSrcReqAuthorize(request *stratumRequest) (e er
 		return e
 	}
 
-	dstID := contextlib.GetDstID(svs.Ctx())
+	dstID := contextlib.GetDest(svs.Ctx())
 	if dstID == nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDst() returned nil")
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDest() returned nil")
 	}
 
 	// Move this to JSON file
@@ -557,6 +566,7 @@ func (svs *StratumV1Struct) handleSrcReqSubmit(request *stratumRequest) (e error
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Got Submit, expecting Authorize")
 		return ErrBadSrcState
 	case SrcStateAuthorized:
+	case SrcStateRunning:
 		// This is what we expect, so skip
 	default:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Src state:%s", state)
@@ -589,6 +599,9 @@ func (svs *StratumV1Struct) handleSrcReqSubmit(request *stratumRequest) (e error
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
 		return e
 	}
+
+	// Call switchDest to change destinations oif needed (happens on a submit)
+	svs.switchDest()
 
 	// Change Destination HERE
 	// Log Submission HERE
@@ -662,7 +675,12 @@ func (svs *StratumV1Struct) handleDstReqNotify(uid simple.ConnUniqueID, request 
 	case DstStateRunning:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" passing notify for state:%s", dststate)
 	case DstStateStandBy:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" state not handled yet:%s", dststate)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelDebug, lumerinlib.FileLineFunc()+" state not handled yet:%s", dststate)
+		msg, e := request.createRequestMsg()
+		if e != nil {
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() error:%s", e)
+		}
+		LogJson(svs.Ctx(), "Request in StandBy - DROPPED:", msg)
 	// case DstStateError:
 	// case DstStateNew:
 	default:
@@ -760,7 +778,13 @@ func (svs *StratumV1Struct) handleDstReqSetDifficulty(uid simple.ConnUniqueID, r
 	case DstStateRunning:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" passing notify for state:%s", dststate)
 	case DstStateStandBy:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" state not handled yet:%s", dststate)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelDebug, lumerinlib.FileLineFunc()+" state not handled yet:%s", dststate)
+		msg, e := request.createRequestMsg()
+		if e != nil {
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() error:%s", e)
+		}
+		LogJson(svs.Ctx(), "Request in StandBy - DROPPED:", msg)
+
 	default:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Dst ReqNotify state:%s not handled", dststate)
 		return ErrDstReqNotSupported

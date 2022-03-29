@@ -54,15 +54,40 @@ type StratumV1Struct struct {
 	srcAuthRequest      *stratumRequest // Copy of recieved Authorize Request from Source
 	srcState            SrcState
 	dstState            map[simple.ConnUniqueID]DstState
-	defaultDestID       msgbus.DestID
+	dstDest             map[simple.ConnUniqueID]*msgbus.Dest
+	switchToDestID      msgbus.DestID
+	// defaultUID          simple.ConnUniqueID -- stored in protocol layer
 
 	// Add in stratum state information here
+}
+
+var MinerCountChan chan int
+
+//
+// init()
+// initializes the DstCounter
+//
+func init() {
+	MinerCountChan = make(chan int, 5)
+	go goMinerCounter(MinerCountChan)
+}
+
+//
+// goDstCounter()
+// Generates a UniqueID for the destination handles
+//
+func goMinerCounter(c chan int) {
+	counter := 10000
+	for {
+		c <- counter
+		counter += 1
+	}
 }
 
 //
 //
 //
-func NewListener(ctx context.Context, src net.Addr, dstID msgbus.DestID) (sls *StratumV1ListenStruct, e error) {
+func NewListener(ctx context.Context, src net.Addr, dest *msgbus.Dest) (sls *StratumV1ListenStruct, e error) {
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -79,7 +104,7 @@ func NewListener(ctx context.Context, src net.Addr, dstID msgbus.DestID) (sls *S
 	}
 
 	cs.SetSrc(src)
-	cs.SetDstID(dstID)
+	cs.SetDest(dest)
 
 	protocollisten, err := protocol.NewListen(ctx)
 	if err != nil {
@@ -125,8 +150,10 @@ FORLOOP:
 func NewStratumV1Struct(ctx context.Context, l *protocol.ProtocolStruct) (n *StratumV1Struct) {
 	ctx, cancel := context.WithCancel(ctx)
 	ds := make(map[simple.ConnUniqueID]DstState)
+	dd := make(map[simple.ConnUniqueID]*msgbus.Dest)
+	id := fmt.Sprintf("MinerID:%d", <-MinerCountChan)
 	miner := &msgbus.Miner{
-		ID:                      "",
+		ID:                      msgbus.MinerID(id),
 		Name:                    "",
 		IP:                      "",
 		MAC:                     "",
@@ -147,8 +174,12 @@ func NewStratumV1Struct(ctx context.Context, l *protocol.ProtocolStruct) (n *Str
 		srcAuthRequest:      &stratumRequest{},
 		srcState:            SrcStateNew,
 		dstState:            ds,
-		defaultDestID:       "",
+		dstDest:             dd,
+		switchToDestID:      "",
 	}
+
+	n.newMinerRecordPub(miner)
+
 	return n
 }
 
@@ -200,7 +231,7 @@ func (s *StratumV1Struct) Run() {
 		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct not in CTX")
 	}
 
-	dst := cs.GetDstID()
+	dst := cs.GetDest()
 	if dst == nil {
 		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct DST not defined")
 	}
@@ -218,13 +249,14 @@ func (s *StratumV1Struct) Run() {
 //
 func (s *StratumV1Struct) openDefaultConnection() (e error) {
 
-	dstID := contextlib.GetContextStruct(s.Ctx()).GetDstID()
-	if dstID == nil {
+	dest := contextlib.GetContextStruct(s.Ctx()).GetDest()
+	if dest == nil {
 		contextlib.Logf(s.Ctx(), contextlib.LevelFatal, lumerinlib.FileLineFunc()+" Context Struct DST not defined")
-		return errors.New("default Dst not defined")
+		return errors.New("default Dest not defined")
 	}
 
-	s.protocol.Get(simple.DestMsg, simple.IDString(*dstID))
+	s.switchToDestID = dest.ID
+	s.protocol.Get(simple.DestMsg, simple.IDString(dest.ID))
 
 	return nil
 }
@@ -245,16 +277,17 @@ func (s *StratumV1Struct) goEvent() {
 		// closed connection
 		if event == nil {
 			contextlib.Logf(s.Ctx(), contextlib.LevelFatal, lumerinlib.FileLineFunc()+"[Closing] event:%v", event)
-			s.Cancel()
+			break
 		}
 
 		e := s.eventHandler(event)
 
 		if e != nil {
 			contextlib.Logf(s.Ctx(), contextlib.LevelFatal, lumerinlib.FileLineFunc()+"[Closing] eventHandler() returned error:%s", e)
-			s.Cancel()
+			break
 		}
 	}
+	s.Cancel()
 }
 
 //
@@ -277,6 +310,8 @@ func (s *StratumV1Struct) Ctx() context.Context {
 func (s *StratumV1Struct) Cancel() {
 
 	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	s.protocol.Unpub(simple.MinerMsg, simple.IDString(s.minerRec.ID))
 
 	s.protocol.Cancel()
 
@@ -305,6 +340,34 @@ func (s *StratumV1Struct) GetDstStateUid(uid simple.ConnUniqueID) (state DstStat
 //
 //
 //
+func (s *StratumV1Struct) SetDsDestUid(uid simple.ConnUniqueID, dest *msgbus.Dest) {
+	s.dstDest[uid] = dest
+}
+
+//
+//
+//
+func (s *StratumV1Struct) GetDstDestUid(uid simple.ConnUniqueID) (dest *msgbus.Dest) {
+	return s.dstDest[uid]
+}
+
+//
+//
+//
+func (s *StratumV1Struct) GetDstUIDDestID(id msgbus.DestID) (uid simple.ConnUniqueID) {
+	uid = -1
+	for u, v := range s.dstDest {
+		if v.ID == id {
+			uid = u
+			break
+		}
+	}
+	return uid
+}
+
+//
+//
+//
 func (s *StratumV1Struct) SetSrcState(state SrcState) {
 	s.srcState = state
 }
@@ -314,6 +377,78 @@ func (s *StratumV1Struct) SetSrcState(state SrcState) {
 //
 func (s *StratumV1Struct) GetSrcState() (state SrcState) {
 	return s.srcState
+}
+
+//
+//
+//
+func (s *StratumV1Struct) newMinerRecordPub(m *msgbus.Miner) {
+
+	_, e := s.protocol.Pub(simple.MinerMsg, simple.IDString(m.ID), m)
+	if e != nil {
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Miner Pub() error:%s ", e)
+	}
+}
+
+//
+// swtichDest()
+// Check if switchtoDestID is set
+// Check if it is set to the current dest
+// Switch active dest if not
+//
+func (s *StratumV1Struct) switchDest() {
+
+	if s.switchToDestID == "" {
+		return
+	}
+
+	currentUID := s.protocol.GetDefaultRouteUID()
+
+	// is the next dest the current dest?
+	if currentUID >= 0 && s.switchToDestID == s.dstDest[currentUID].ID {
+		s.switchToDestID = ""
+		return
+	}
+
+	newUID := s.GetDstUIDDestID(s.switchToDestID)
+	if s.dstState[newUID] == DstStateStandBy {
+
+		if currentUID >= 0 {
+			s.dstState[currentUID] = DstStateStandBy
+		}
+		s.dstState[newUID] = DstStateRunning
+		s.protocol.SetDefaultRouteUID(newUID)
+
+		// Reset the switch to state
+		s.switchToDestID = ""
+
+		// Send set difficulty notice to SRC -  to reset it
+		var params = make([]interface{}, 1)
+		params[0] = 1.0
+		n := &stratumNotice{
+			ID:     nil,
+			Method: string(SERVER_MINING_SET_DIFFICULTY),
+			Params: params,
+		}
+
+		msg, e := n.createNoticeSetDifficultyMsg()
+		if e != nil {
+			contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createNoticeSetDifficulty() error: %s", e)
+		}
+
+		count, e := s.protocol.WriteSrc(msg)
+		if e != nil {
+			contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc() error: %s", e)
+		}
+
+		if count != len(msg) {
+			contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc() count not equal to msg %d != %d", count, len(msg))
+
+		}
+	} else {
+		contextlib.Logf(s.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" next dest not in standby mode ")
+	}
+
 }
 
 //

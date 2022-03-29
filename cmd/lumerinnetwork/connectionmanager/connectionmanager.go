@@ -66,6 +66,15 @@ type ConnectionReadEvent struct {
 var dstCount chan int
 
 //
+// init()
+// initializes the DstCounter
+//
+func init() {
+	dstCount = make(chan int, 5)
+	go goDstCounter(dstCount)
+}
+
+//
 // goDstCounter()
 // Generates a UniqueID for the destination handles
 //
@@ -76,15 +85,6 @@ func goDstCounter(c chan int) {
 		counter += 1
 	}
 
-}
-
-//
-// init()
-// initializes the DstCounter
-//
-func init() {
-	dstCount = make(chan int, 5)
-	go goDstCounter(dstCount)
 }
 
 func (c *ConnectionReadEvent) Index() int   { return c.index }

@@ -14,7 +14,7 @@ import (
 //
 func (svs *StratumV1Struct) handleMsgBusEvent(event *simple.SimpleMsgBusEvent) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called, Request ID:%d", event.RequestID)
 
 	switch event.EventType {
 	case simple.NoEvent:
@@ -55,7 +55,7 @@ func (svs *StratumV1Struct) handleMsgBusEvent(event *simple.SimpleMsgBusEvent) {
 		return
 
 	default:
-		lumerinlib.PanicHere(fmt.Sprintf(lumerinlib.FileLineFunc()+" Default Reached: Event Type:%s", string(event.EventType)))
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
 }
 
@@ -71,31 +71,47 @@ func (svs *StratumV1Struct) handleMsgUpdateEvent(event *simple.SimpleMsgBusEvent
 
 	// Parse Event Msg
 
+	var minerrec msgbus.Miner
 	switch event.Msg {
-	// Miner updates are of interest to me
 	case simple.MinerMsg:
-		// Check that we have the correct miner ID
-		currentRec, ok := event.Data.(msgbus.Miner)
-		if !ok {
+		switch event.Data.(type) {
+		case msgbus.Miner:
+			minerrec = event.Data.(msgbus.Miner)
+		default:
 			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" event.Data is not a msgbus.Miner struct")
 		}
-		if svs.minerRec.ID != currentRec.ID {
+
+		// Check that we recieved the correct miner ID from the msgbus
+		if svs.minerRec.ID != minerrec.ID {
 			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" event.Data records do not match up")
 		}
 
-		// Compare what has changed
+		// Did the Dest ID change?
+		if svs.minerRec.Dest != minerrec.Dest {
+			contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" Miner:%s Dest changed to: %s from %s", minerrec.ID, minerrec.Dest, svs.minerRec.Dest)
 
-		if svs.minerRec.Dest != currentRec.Dest {
-			contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" Miner:%s Dest changed to: %s from %s", currentRec.ID, currentRec.Dest, svs.minerRec.Dest)
 			// Destination has changed...
+			switch_to_uid := svs.GetDstUIDDestID(minerrec.Dest)
 
-			// Start the process of transitioning to a new Dest
+			svs.switchToDestID = minerrec.Dest
 
+			// Is Dest already open and running?
+			// No, open it
+			if switch_to_uid < 0 {
+				// Start the process of transitioning to a new Dest
+				_, e := svs.protocol.Get(simple.DestMsg, simple.IDString(minerrec.Dest))
+				if e != nil {
+					contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Get() error:%s", e)
+				}
+			}
+
+		} else {
+			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Recieved Miner update, but dest did not change:%s:%s", event.EventType, event.ID)
 		}
 
 	// Ignore all others
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -112,7 +128,7 @@ func (svs *StratumV1Struct) handleMsgDeleteEvent(event *simple.SimpleMsgBusEvent
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -128,24 +144,32 @@ func (svs *StratumV1Struct) handleMsgGetEvent(event *simple.SimpleMsgBusEvent) {
 
 	switch event.Msg {
 	case simple.DestMsg:
-		if event.ID == simple.IDString(msgbus.DEFAULT_DEST_ID) {
+		// Recieved a Dest Get()
+		// It would be used to setup the next dest connection
+		if event.ID == simple.IDString(svs.switchToDestID) {
 			// Fire up the default destination connction here
 			// If default is not already set, set it
-			dr := svs.protocol.GetDefaultRouteUID()
-			if dr < 0 {
-				d, ok := event.Data.(msgbus.Dest)
-				if !ok {
-					contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" DestMsg: bad data:%t", event.Data)
-				}
-				dst := &d
-				e := svs.protocol.AsyncDial(dst)
+			var dest *msgbus.Dest
+			switch event.Data.(type) {
+			case *msgbus.Dest:
+				dest = event.Data.(*msgbus.Dest)
+			default:
+				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" DestMsg: bad data:%t", event.Data)
+			}
+
+			if 0 > svs.GetDstUIDDestID(dest.ID) {
+				// Open new Dest
+				e := svs.protocol.AsyncDial(dest)
 				if e != nil {
 					contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" AsyncDial returned error:%s", e)
 				}
 			} else {
-				contextlib.Logf(svs.Ctx(), contextlib.LevelDebug, lumerinlib.FileLineFunc()+" DestMsg recieve, but default already setup")
+				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Dest already opened:%s", event.ID)
 			}
+		} else {
+			contextlib.Logf(svs.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" Recieved Dest Get(), but it does not match next dest, dropping it:%s", event.ID)
 		}
+
 	default:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
@@ -163,7 +187,7 @@ func (svs *StratumV1Struct) handleMsgIndexEvent(event *simple.SimpleMsgBusEvent)
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -179,7 +203,7 @@ func (svs *StratumV1Struct) handleMsgSearchEvent(event *simple.SimpleMsgBusEvent
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -195,7 +219,7 @@ func (svs *StratumV1Struct) handleMsgSearchIndexEvent(event *simple.SimpleMsgBus
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -211,8 +235,16 @@ func (svs *StratumV1Struct) handleMsgPublishEvent(event *simple.SimpleMsgBusEven
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
+	case simple.MinerMsg:
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" event message:%s:%s, subscribe", event.EventType, event.ID)
+
+		_, e := svs.protocol.Sub(simple.MinerMsg, event.ID)
+		if e != nil {
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" event message:%s:%s, subscribe", event.EventType, event.ID)
+		}
+
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -229,7 +261,7 @@ func (svs *StratumV1Struct) handleMsgUnpublishEvent(event *simple.SimpleMsgBusEv
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -245,8 +277,11 @@ func (svs *StratumV1Struct) handleMsgSubscribedEvent(event *simple.SimpleMsgBusE
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
+	case simple.MinerMsg:
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Subscribed event message:%s:%s", event.EventType, event.ID)
+
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -263,7 +298,7 @@ func (svs *StratumV1Struct) handleMsgUnsubscribedEvent(event *simple.SimpleMsgBu
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
 
 }
@@ -281,7 +316,7 @@ func (svs *StratumV1Struct) handleMsgRemovedEvent(event *simple.SimpleMsgBusEven
 
 	switch event.Msg {
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
 
 }

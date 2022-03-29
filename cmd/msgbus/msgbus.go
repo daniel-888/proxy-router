@@ -180,6 +180,15 @@ func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}, ech ...EventCh
 		return requestID, getCommandError(MsgBusErrNoData)
 	}
 
+	var eventchan EventChan = nil
+
+	for _, v := range ech {
+		if v != nil {
+			eventchan = v
+			break
+		}
+	}
+
 	c := cmd{
 		op:        opPub,
 		sync:      false,
@@ -187,7 +196,7 @@ func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}, ech ...EventCh
 		ID:        id,
 		requestID: requestID,
 		data:      data,
-		eventch:   ech[0],
+		eventch:   eventchan,
 	}
 
 	_, err = ps.dispatch(&c)
@@ -645,6 +654,17 @@ func (ps *PubSub) Unpub(msg MsgType, id IDString, ech ...EventChan) (requestID i
 		return requestID, getCommandError(MsgBusErrNoID)
 	}
 
+	panic("")
+
+	var eventchan EventChan = nil
+
+	for _, v := range ech {
+		if v != nil {
+			eventchan = v
+			break
+		}
+	}
+
 	c := cmd{
 		op:        opUnpub,
 		sync:      false,
@@ -652,7 +672,7 @@ func (ps *PubSub) Unpub(msg MsgType, id IDString, ech ...EventChan) (requestID i
 		ID:        id,
 		requestID: requestID,
 		data:      nil,
-		eventch:   ech[0],
+		eventch:   eventchan,
 	}
 
 	_, err = ps.dispatch(&c)

@@ -61,7 +61,7 @@ func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 	if cs.GetSrc() == nil {
 		cs.Logf(contextlib.LevelPanic, "Context Src Addr not defined")
 	}
-	if cs.GetDstID() == nil {
+	if cs.GetDest() == nil {
 		cs.Logf(contextlib.LevelPanic, "Context DstID not defined")
 	}
 
@@ -189,7 +189,7 @@ func NewProtocol(ctx context.Context, s *simple.SimpleStruct) (ps *ProtocolStruc
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	dstID := contextlib.GetDstID(ctx)
+	dstID := contextlib.GetDest(ctx)
 	if dstID == nil {
 		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDst() returned nil")
 	}
@@ -412,7 +412,7 @@ func (ps *ProtocolStruct) WriteDst(index simple.ConnUniqueID, msg []byte) (count
 //
 // Pub() publishes data, and stores the request ID to match the Completion Event
 //
-func (ps *ProtocolStruct) Pub(msgtype simple.MsgType, id simple.IDString, data simple.Data) (rid int, e error) {
+func (ps *ProtocolStruct) Pub(msgtype simple.MsgType, id simple.IDString, data interface{}) (rid int, e error) {
 
 	rid, e = ps.simple.Pub(msgtype, id, data)
 	return rid, e
@@ -432,7 +432,7 @@ func (ps *ProtocolStruct) Unpub(msgtype simple.MsgType, id simple.IDString) (rid
 //
 func (ps *ProtocolStruct) Sub(msgtype simple.MsgType, id simple.IDString) (rid int, e error) {
 
-	rid, e = ps.simple.Unpub(msgtype, id)
+	rid, e = ps.simple.Sub(msgtype, id)
 	return rid, e
 }
 

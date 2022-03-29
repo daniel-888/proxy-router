@@ -41,7 +41,7 @@ type ContextStruct struct {
 	MsgBus *msgbus.PubSub
 	Log    *log.Logger
 	Src    net.Addr
-	DstID  *msgbus.DestID
+	Dest   *msgbus.Dest
 }
 
 func NewContextStruct(proto interface{}, msgbus *msgbus.PubSub, log *log.Logger, src net.Addr, dst net.Addr) (s *ContextStruct) {
@@ -49,7 +49,7 @@ func NewContextStruct(proto interface{}, msgbus *msgbus.PubSub, log *log.Logger,
 		MsgBus: msgbus,
 		Log:    log,
 		Src:    src,
-		DstID:  nil,
+		Dest:   nil,
 	}
 }
 
@@ -73,11 +73,11 @@ func (s *ContextStruct) SetSrc(x net.Addr) {
 //
 //
 //
-func (s *ContextStruct) SetDstID(x msgbus.DestID) {
+func (s *ContextStruct) SetDest(x *msgbus.Dest) {
 
 	// Dst validation here
 
-	s.DstID = &x
+	s.Dest = x
 }
 
 //
@@ -104,8 +104,8 @@ func (s *ContextStruct) GetSrc() (x net.Addr) {
 //
 //
 //
-func (s *ContextStruct) GetDstID() (x *msgbus.DestID) {
-	return s.DstID
+func (s *ContextStruct) GetDest() (x *msgbus.Dest) {
+	return s.Dest
 }
 
 //
@@ -187,8 +187,8 @@ func GetSrc(ctx context.Context) (x net.Addr) {
 //
 //
 //
-func GetDstID(ctx context.Context) (x *msgbus.DestID) {
-	return GetContextStruct(ctx).DstID
+func GetDest(ctx context.Context) (x *msgbus.Dest) {
+	return GetContextStruct(ctx).Dest
 }
 
 //
