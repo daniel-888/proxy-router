@@ -67,6 +67,19 @@ func (ps *PubSub) DestGetWait(id DestID) (dest *Dest, err error) {
 //---------------------------------------------------------------
 //
 //---------------------------------------------------------------
+func (d *Dest) NetAddr() (addr net.Addr, e error) {
+
+	// Assum TCP for the moment.
+
+	tcp, e := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", d.Host(), d.Port()))
+	addr = net.Addr(tcp)
+
+	return addr, e
+}
+
+//---------------------------------------------------------------
+//
+//---------------------------------------------------------------
 func (ps *PubSub) DestExistsWait(id DestID) bool {
 
 	dest, _ := ps.DestGetWait(id)

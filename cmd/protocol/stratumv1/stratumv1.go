@@ -2,6 +2,7 @@ package stratumv1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
@@ -12,16 +13,9 @@ import (
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
-//
-// Need a series of access functions
-//
-//
-
-// type newStratumV1Func func(*simple.SimpleStruct)
-
-// type newStratumV1Struct struct {
-// 	funcptr newStratumV1Func
-// }
+var ErrBadSrcState = errors.New("StratumV1: Bad Src State")
+var ErrSrcReqNotSupported = errors.New("StratumV1: SRC Request Not Supported")
+var ErrDstReqNotSupported = errors.New("StratumV1: DST Request Not Supported")
 
 type SrcState string
 type DstState string
@@ -42,7 +36,8 @@ const DstStateNew DstState = "stateNew"
 const DstStateOpen DstState = "stateOpen"
 const DstStateSubscribing DstState = "stateSubscribing" // Sent Subscribe
 const DstStateAuthorizing DstState = "stateAuthorizing" // Recieved Sub-response and Sent Authorize
-const DstStateRunning DstState = "stateRunning"         // Recieved Auth-response
+const DstStateRunning DstState = "stateRunning"         // Recieved Auth-response (there should only be one dst connection running at any time)
+const DstStateStandBy DstState = "stateStandBy"         // Inactive, not the focus of the Src connection
 const DstStateRedialing DstState = "stateRedialing"     // Inactive, in the process of redialing
 const DstStateError DstState = "stateError"
 
@@ -59,6 +54,7 @@ type StratumV1Struct struct {
 	srcAuthRequest      *stratumRequest // Copy of recieved Authorize Request from Source
 	srcState            SrcState
 	dstState            map[simple.ConnUniqueID]DstState
+	defaultDestID       msgbus.DestID
 
 	// Add in stratum state information here
 }
@@ -66,7 +62,7 @@ type StratumV1Struct struct {
 //
 //
 //
-func NewListener(ctx context.Context, src net.Addr, dst net.Addr) (sls *StratumV1ListenStruct, e error) {
+func NewListener(ctx context.Context, src net.Addr, dstID msgbus.DestID) (sls *StratumV1ListenStruct, e error) {
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -83,7 +79,7 @@ func NewListener(ctx context.Context, src net.Addr, dst net.Addr) (sls *StratumV
 	}
 
 	cs.SetSrc(src)
-	cs.SetDst(dst)
+	cs.SetDstID(dstID)
 
 	protocollisten, err := protocol.NewListen(ctx)
 	if err != nil {
@@ -114,7 +110,7 @@ FORLOOP:
 			contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" context canceled")
 			break FORLOOP
 		case l := <-protocolStructChan:
-			ss := NewStratumStruct(s.Ctx(), l)
+			ss := NewStratumV1Struct(s.Ctx(), l)
 			ss.Run()
 		}
 	}
@@ -126,18 +122,32 @@ FORLOOP:
 //
 //
 //
-func NewStratumStruct(ctx context.Context, l *protocol.ProtocolStruct) (n *StratumV1Struct) {
+func NewStratumV1Struct(ctx context.Context, l *protocol.ProtocolStruct) (n *StratumV1Struct) {
 	ctx, cancel := context.WithCancel(ctx)
 	ds := make(map[simple.ConnUniqueID]DstState)
+	miner := &msgbus.Miner{
+		ID:                      "",
+		Name:                    "",
+		IP:                      "",
+		MAC:                     "",
+		State:                   "",
+		Contract:                "",
+		Dest:                    "",
+		InitialMeasuredHashRate: 0,
+		CurrentHashRate:         0,
+		CsMinerHandlerIgnore:    false,
+	}
+
 	n = &StratumV1Struct{
 		ctx:                 ctx,
 		cancel:              cancel,
 		protocol:            l,
-		minerRec:            nil,
+		minerRec:            miner,
 		srcSubscribeRequest: &stratumRequest{},
 		srcAuthRequest:      &stratumRequest{},
 		srcState:            SrcStateNew,
 		dstState:            ds,
+		defaultDestID:       "",
 	}
 	return n
 }
@@ -174,6 +184,10 @@ func (s *StratumV1ListenStruct) Cancel() {
 	s.protocollisten.Cancel()
 }
 
+// ---------------------------------------------------------------------
+//  StratumV1Struct Functions
+// ---------------------------------------------------------------------
+
 //
 // Run() inialize the stratum running struct
 //
@@ -186,18 +200,34 @@ func (s *StratumV1Struct) Run() {
 		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct not in CTX")
 	}
 
-	dst := cs.GetDst()
+	dst := cs.GetDstID()
 	if dst == nil {
 		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct DST not defined")
 	}
 
 	s.protocol.Run()
 	go s.goEvent()
+
+	s.openDefaultConnection()
+
 }
 
-// ---------------------------------------------------------------------
-//  StratumV1Struct
 //
+// openDefaultConnection()
+// Start the event process to open up a defaut connection
+//
+func (s *StratumV1Struct) openDefaultConnection() (e error) {
+
+	dstID := contextlib.GetContextStruct(s.Ctx()).GetDstID()
+	if dstID == nil {
+		contextlib.Logf(s.Ctx(), contextlib.LevelFatal, lumerinlib.FileLineFunc()+" Context Struct DST not defined")
+		return errors.New("default Dst not defined")
+	}
+
+	s.protocol.Get(simple.DestMsg, simple.IDString(*dstID))
+
+	return nil
+}
 
 //
 // goEvent()
@@ -212,15 +242,17 @@ func (s *StratumV1Struct) goEvent() {
 
 	for event := range simplechan {
 
+		// closed connection
 		if event == nil {
+			contextlib.Logf(s.Ctx(), contextlib.LevelFatal, lumerinlib.FileLineFunc()+"[Closing] event:%v", event)
 			s.Cancel()
-			contextlib.Logf(s.Ctx(), contextlib.LevelFatal, lumerinlib.FileLineFunc()+" event:%v", event)
 		}
 
 		e := s.eventHandler(event)
 
 		if e != nil {
-			contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" eventHandler() returned error:%s ", e)
+			contextlib.Logf(s.Ctx(), contextlib.LevelFatal, lumerinlib.FileLineFunc()+"[Closing] eventHandler() returned error:%s", e)
+			s.Cancel()
 		}
 	}
 }
@@ -247,6 +279,13 @@ func (s *StratumV1Struct) Cancel() {
 	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	s.protocol.Cancel()
+
+	if s.cancel == nil {
+		contextlib.Logf(s.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" cancel func is nil, struct:%v", s))
+		return
+	}
+
+	s.cancel()
 }
 
 //
@@ -294,7 +333,7 @@ func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) (e error) {
 
 	case simple.MsgBusEvent:
 		msg := event.MsgBusEvent
-		svs.decodeMsgBusEvent(msg)
+		svs.handleMsgBusEvent(msg)
 		return
 
 	case simple.ConnReadEvent:
@@ -334,54 +373,4 @@ func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) (e error) {
 	}
 
 	return e
-}
-
-//
-//
-//
-func (svs *StratumV1Struct) decodeMsgBusEvent(event *simple.SimpleMsgBusEvent) {
-
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
-
-	switch event.EventType {
-	case msgbus.NoEvent:
-		fmt.Printf(lumerinlib.Funcname() + " NoEvent received, returning\n")
-		return
-	case msgbus.UpdateEvent:
-		svs.handleMsgUpdateEvent(event)
-		return
-	case msgbus.DeleteEvent:
-		svs.handleMsgDeleteEvent(event)
-		return
-	case msgbus.GetEvent:
-		svs.handleMsgGetEvent(event)
-		return
-	case msgbus.GetIndexEvent:
-		svs.handleMsgIndexEvent(event)
-		return
-	case msgbus.SearchEvent:
-		svs.handleMsgSearchEvent(event)
-		return
-	case msgbus.SearchIndexEvent:
-		svs.handleMsgSearchIndexEvent(event)
-		return
-	case msgbus.PublishEvent:
-		svs.handleMsgPublishEvent(event)
-		return
-	case msgbus.UnpublishEvent:
-		svs.handleMsgUnpublishEvent(event)
-		return
-	case msgbus.SubscribedEvent:
-		svs.handleMsgSubscribedEvent(event)
-		return
-	case msgbus.UnsubscribedEvent:
-		svs.handleMsgUnsubscribedEvent(event)
-		return
-	case msgbus.RemovedEvent:
-		svs.handleMsgRemovedEvent(event)
-		return
-
-	default:
-		lumerinlib.PanicHere(fmt.Sprintf(lumerinlib.FileLineFunc()+" Default Reached: Event Type:%s", string(event.EventType)))
-	}
 }

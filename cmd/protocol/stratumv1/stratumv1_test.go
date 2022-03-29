@@ -175,7 +175,7 @@ func TestNewSrcConnection(t *testing.T) {
 // ---------------------------------------------------------------------------
 //
 //
-func newContextStruct(ctx context.Context, srcstr string, dststr string) (ret context.Context) {
+func newContextStruct(ctx context.Context, srcstr string, dstID msgbus.DestID) (ret context.Context) {
 
 	cs := &contextlib.ContextStruct{}
 
@@ -191,7 +191,7 @@ func newContextStruct(ctx context.Context, srcstr string, dststr string) (ret co
 	}
 	if dststr != "" {
 		dst := lumerinlib.NewNetAddr(lumerinlib.TCP, dststr)
-		cs.SetDst(dst)
+		cs.SetDstID(dst)
 	}
 
 	//

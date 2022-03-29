@@ -113,13 +113,13 @@ func main() {
 			lumerinlib.PanicHere("")
 		}
 
-		dst, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "mining.dev.pool.titan.io", "4242"))
+		// dst, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "mining.dev.pool.titan.io", "4242"))
 		// dst, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "127.0.0.1", "33335"))
 		if err != nil {
 			lumerinlib.PanicHere("")
 		}
 
-		stratum, err := stratumv1.NewListener(mainContext, src, dst)
+		stratum, err := stratumv1.NewListener(mainContext, src, dest.ID)
 		if err != nil {
 			panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
 		}

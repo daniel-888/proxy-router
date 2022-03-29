@@ -62,7 +62,7 @@ type Event struct {
 	Err       error
 }
 
-type EventChan chan Event
+type EventChan chan *Event
 
 type Subscribers struct {
 	eventchan map[EventChan]int
@@ -77,7 +77,7 @@ type IDIndex []IDString
 
 type registry struct {
 	data   map[MsgType]map[IDString]registryData
-	notify map[MsgType]map[chan Event]interface{}
+	notify map[MsgType]map[chan *Event]interface{}
 }
 
 // PubSub is a collection of topics.
@@ -165,7 +165,7 @@ func GetRandomIDString() (i IDString) {
 }
 
 // Pub publishes a message/command to its subscribers, asynchronously.
-func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}) (requestID int, err error) {
+func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}, ech ...EventChan) (requestID int, err error) {
 	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
@@ -187,7 +187,7 @@ func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}) (requestID int
 		ID:        id,
 		requestID: requestID,
 		data:      data,
-		eventch:   nil,
+		eventch:   ech[0],
 	}
 
 	_, err = ps.dispatch(&c)
@@ -196,7 +196,7 @@ func (ps *PubSub) Pub(msg MsgType, id IDString, data interface{}) (requestID int
 }
 
 // PubWait publishes a message/command to its subscribers, synchronously.
-func (ps *PubSub) PubWait(msg MsgType, id IDString, data interface{}) (e Event, err error) {
+func (ps *PubSub) PubWait(msg MsgType, id IDString, data interface{}) (e *Event, err error) {
 
 	if msg == NoMsg {
 		return e, getCommandError(MsgBusErrNoMsg)
@@ -252,7 +252,7 @@ func (ps *PubSub) Sub(msg MsgType, id IDString, ech EventChan) (requestID int, e
 }
 
 // SubWait subscribes to a message/command, synchronously.
-func (ps *PubSub) SubWait(msg MsgType, id IDString, ech EventChan) (e Event, err error) {
+func (ps *PubSub) SubWait(msg MsgType, id IDString, ech EventChan) (e *Event, err error) {
 
 	if msg == NoMsg {
 		return e, getCommandError(MsgBusErrNoMsg)
@@ -306,7 +306,7 @@ func (ps *PubSub) Get(msg MsgType, id IDString, ech EventChan) (requestID int, e
 
 // GetWait retrieves a record by ID or, if no ID, then all
 // record IDs associated with the given message type, synchronously.
-func (ps *PubSub) GetWait(msg MsgType, id IDString) (e Event, err error) {
+func (ps *PubSub) GetWait(msg MsgType, id IDString) (e *Event, err error) {
 
 	if msg == NoMsg {
 		return e, getCommandError(MsgBusErrNoMsg)
@@ -362,7 +362,7 @@ func (ps *PubSub) SearchIP(msg MsgType, ip string, ech EventChan) (requestID int
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) SearchIPWait(msg MsgType, ip string) (e Event, err error) {
+func (ps *PubSub) SearchIPWait(msg MsgType, ip string) (e *Event, err error) {
 
 	if msg == NoMsg {
 		return e, getCommandError(MsgBusErrNoMsg)
@@ -422,7 +422,7 @@ func (ps *PubSub) SearchMAC(msg MsgType, mac string, ech EventChan) (requestID i
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) SearchMACWait(msg MsgType, mac string) (e Event, err error) {
+func (ps *PubSub) SearchMACWait(msg MsgType, mac string) (e *Event, err error) {
 
 	if msg == NoMsg {
 		return e, getCommandError(MsgBusErrNoMsg)
@@ -482,7 +482,7 @@ func (ps *PubSub) SearchName(msg MsgType, name string, ech EventChan) (requestID
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) SearchNameWait(msg MsgType, name string) (e Event, err error) {
+func (ps *PubSub) SearchNameWait(msg MsgType, name string) (e *Event, err error) {
 
 	if msg == NoMsg {
 		return e, getCommandError(MsgBusErrNoMsg)
@@ -541,7 +541,7 @@ func (ps *PubSub) Set(msg MsgType, id IDString, data interface{}) (requestID int
 //--------------------------------------------------------------------------------
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) SetWait(msg MsgType, id IDString, data interface{}) (e Event, err error) {
+func (ps *PubSub) SetWait(msg MsgType, id IDString, data interface{}) (e *Event, err error) {
 
 	if msg == NoMsg {
 		return e, getCommandError(MsgBusErrNoMsg)
@@ -604,7 +604,7 @@ func (ps *PubSub) Unsub(msg MsgType, id IDString, ech EventChan) (requestID int,
 //--------------------------------------------------------------------------------
 // Request removal of events for the topic
 //--------------------------------------------------------------------------------
-func (ps *PubSub) UnsubWait(msg MsgType, id IDString, ech EventChan) (e Event, err error) {
+func (ps *PubSub) UnsubWait(msg MsgType, id IDString, ech EventChan) (e *Event, err error) {
 
 	if msg == NoMsg {
 		return e, getCommandError(MsgBusErrNoMsg)
@@ -634,7 +634,7 @@ func (ps *PubSub) UnsubWait(msg MsgType, id IDString, ech EventChan) (e Event, e
 //--------------------------------------------------------------------------------
 // Request removal of the topic
 //--------------------------------------------------------------------------------
-func (ps *PubSub) Unpub(msg MsgType, id IDString) (requestID int, err error) {
+func (ps *PubSub) Unpub(msg MsgType, id IDString, ech ...EventChan) (requestID int, err error) {
 	requestID = <-ps.requestIDChan
 
 	if msg == NoMsg {
@@ -652,7 +652,7 @@ func (ps *PubSub) Unpub(msg MsgType, id IDString) (requestID int, err error) {
 		ID:        id,
 		requestID: requestID,
 		data:      nil,
-		eventch:   nil,
+		eventch:   ech[0],
 	}
 
 	_, err = ps.dispatch(&c)
@@ -663,7 +663,7 @@ func (ps *PubSub) Unpub(msg MsgType, id IDString) (requestID int, err error) {
 //--------------------------------------------------------------------------------
 // Request removal of the topic
 //--------------------------------------------------------------------------------
-func (ps *PubSub) UnpubWait(msg MsgType, id IDString) (e Event, err error) {
+func (ps *PubSub) UnpubWait(msg MsgType, id IDString) (e *Event, err error) {
 
 	if msg == NoMsg {
 		return e, getCommandError(MsgBusErrNoMsg)
@@ -714,7 +714,7 @@ func (ps *PubSub) RemoveAndCloseEventChan(ech EventChan) (requestID int, err err
 //--------------------------------------------------------------------------------
 // Request update events for the topic
 //--------------------------------------------------------------------------------
-func (ps *PubSub) RemoveAndCloseEventChanWait(ech EventChan) (e Event, err error) {
+func (ps *PubSub) RemoveAndCloseEventChanWait(ech EventChan) (e *Event, err error) {
 
 	if ech == nil {
 		return e, getCommandError(MsgBusErrNoEventChan)
@@ -761,7 +761,7 @@ func (ps *PubSub) Shutdown() (requestID int, err error) {
 // Shutdown closes all subscribed channels and terminates the goroutine.
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) ShutdownWait() (e Event, err error) {
+func (ps *PubSub) ShutdownWait() (e *Event, err error) {
 
 	c := cmd{
 		op:      opShutdown,
@@ -781,7 +781,7 @@ func (ps *PubSub) ShutdownWait() (e Event, err error) {
 //
 //
 //--------------------------------------------------------------------------------
-func (ps *PubSub) dispatch(c *cmd) (event Event, e error) {
+func (ps *PubSub) dispatch(c *cmd) (event *Event, e error) {
 
 	e = nil
 
@@ -826,7 +826,7 @@ func (ps *PubSub) start() {
 
 	reg := registry{
 		data:   make(map[MsgType]map[IDString]registryData),
-		notify: make(map[MsgType]map[chan Event]interface{}),
+		notify: make(map[MsgType]map[chan *Event]interface{}),
 	}
 
 	reg.data[ConfigMsg] = make(map[IDString]registryData)
@@ -837,13 +837,13 @@ func (ps *PubSub) start() {
 	reg.data[MinerMsg] = make(map[IDString]registryData)
 	reg.data[ConnectionMsg] = make(map[IDString]registryData)
 
-	reg.notify[ConfigMsg] = make(map[chan Event]interface{})
-	reg.notify[ContractManagerConfigMsg] = make(map[chan Event]interface{})
-	reg.notify[DestMsg] = make(map[chan Event]interface{})
-	reg.notify[NodeOperatorMsg] = make(map[chan Event]interface{})
-	reg.notify[ContractMsg] = make(map[chan Event]interface{})
-	reg.notify[MinerMsg] = make(map[chan Event]interface{})
-	reg.notify[ConnectionMsg] = make(map[chan Event]interface{})
+	reg.notify[ConfigMsg] = make(map[chan *Event]interface{})
+	reg.notify[ContractManagerConfigMsg] = make(map[chan *Event]interface{})
+	reg.notify[DestMsg] = make(map[chan *Event]interface{})
+	reg.notify[NodeOperatorMsg] = make(map[chan *Event]interface{})
+	reg.notify[ContractMsg] = make(map[chan *Event]interface{})
+	reg.notify[MinerMsg] = make(map[chan *Event]interface{})
+	reg.notify[ConnectionMsg] = make(map[chan *Event]interface{})
 
 loop:
 	for cmdptr := range ps.cmdChan {
@@ -903,9 +903,9 @@ loop:
 //-----------------------------------------
 func (event *Event) send(e EventChan) {
 
-	go func(e EventChan) {
-		e <- *event
-	}(e)
+	go func(e EventChan, event *Event) {
+		e <- event
+	}(e, event)
 
 }
 

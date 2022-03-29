@@ -9,11 +9,14 @@ package stratumv1
 //
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 type stratumMethods string
@@ -766,17 +769,33 @@ func (r *stratumResponse) createResponseMsg() (msg []byte, err error) {
 //		"error": null
 //	}\n
 //------------------------------------------------------
-func (r *stratumResponse) createSubscribeResponseMsg() (msg []byte, err error) {
+func (r *stratumResponse) createSrcSubscribeResponseMsg(id int) (msg []byte, err error) {
 
-	err = nil
-	// fmt.Printf("Create Stratum Response: %v\n", r)
+	// Move this to JSON file
 
-	msg, err = json.Marshal(r)
-	// _ = msg1
+	extranonce := "1"
+	extranonce2 := 1 // 0 will result in subscribe erroring out
 
-	// msg = []byte("{\"id\": 1, \"result\": [ [ [\"mining.set_difficulty\", \"000ff0000000000000000\"], [\"mining.notify\", \"abcdef01234567890\"]], \"08000002\", 4], \"error\": null }")
-	// msg = []byte("{\"id\": 1, \"result\": [ [ [\"mining.set_difficulty\", \"000ff0000000000000000\"]], \"08000002\", 4], \"error\": null }")
-	// msg = []byte("{\"result\":[[[\"mining.notify\",\"62374f1d\"]],\"1d4f3762\",8],\"id\":1,\"error\":null}")
+	subscriptions := make([]string, 2)
+	subscriptions[0] = string(SERVER_MINING_NOTIFY)
+	subscriptions[1] = "0"
+
+	sub2 := make([][]string, 1)
+	sub2[0] = subscriptions
+
+	result := make([]interface{}, 3)
+	result[0] = sub2
+	result[1] = extranonce
+	result[2] = extranonce2
+
+	response := &stratumResponse{
+		ID:     id,
+		Error:  nil,
+		Result: result,
+		Reject: nil,
+	}
+
+	msg, err = json.Marshal(response)
 
 	if err != nil {
 		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Response Err:%s\n", err)
@@ -785,4 +804,21 @@ func (r *stratumResponse) createSubscribeResponseMsg() (msg []byte, err error) {
 
 	msg = []byte(string(msg) + "\n")
 	return msg, err
+}
+
+//
+//
+//
+func LogJson(ctx context.Context, direction string, msg []byte) {
+
+	prefix := ">"
+	indent := " "
+	var buf bytes.Buffer
+	e := json.Indent(&buf, msg, prefix, indent)
+	if e != nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, "Indent() error:%s", e)
+	}
+
+	contextlib.Logf(ctx, contextlib.LevelDebug, "%s\n%s%s", direction, prefix, buf)
+
 }

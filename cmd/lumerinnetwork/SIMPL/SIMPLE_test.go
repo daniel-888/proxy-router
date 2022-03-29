@@ -2,6 +2,7 @@ package simple
 
 import (
 	"context"
+	"fmt"
 	_ "fmt"
 	"net"
 	_ "reflect"
@@ -30,12 +31,31 @@ can be quickly implemented
 func TestTemplate(t *testing.T) {
 }
 */
+
+func getDefaultDest(host string, port string) (dest *msgbus.Dest) {
+
+	dest = &msgbus.Dest{
+		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
+		NetUrl: msgbus.DestNetUrl(configs.DefaultPoolAddr),
+	}
+
+	event, err := ps.PubWait(msgbus.DestMsg, msgbus.IDString(msgbus.DEFAULT_DEST_ID), dest)
+	if err != nil {
+		panic(fmt.Sprintf("Adding Default Dest Failed: %s", err))
+	}
+	if event.Err != nil {
+		panic(fmt.Sprintf("Adding Default Dest Failed: %s", event.Err))
+	}
+
+	return dest
+}
+
 func generateTestContext() context.Context {
 	//create a ContextStruct and add into :tab
 	ctx := context.Background()
 	cs := &lumerincontext.ContextStruct{}
 	cs.Src = generateTestAddr()
-	cs.Dst = generateTestAddr()
+	cs.DstID = generateTestAddr("127.0.0.1", "3333")
 	ctx = context.WithValue(ctx, lumerincontext.ContextKey, cs)
 	return ctx
 }

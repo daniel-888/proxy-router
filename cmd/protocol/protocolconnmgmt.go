@@ -8,6 +8,7 @@ import (
 	"net"
 
 	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
@@ -39,7 +40,7 @@ const ConnStateError ConnectionState = "Error"
 type ProtocolConnectionStruct struct {
 	ctx    context.Context
 	cancel func()
-	addr   net.Addr
+	dest   *msgbus.Dest
 	state  ConnectionState
 	err    error
 	buffer []byte
@@ -54,7 +55,7 @@ type ProtocolDstStruct struct {
 //
 //
 //
-func NewProtocolConnectionStruct(ctx context.Context, addr net.Addr) (pcs *ProtocolConnectionStruct) {
+func NewProtocolConnectionStruct(ctx context.Context, dest *msgbus.Dest) (pcs *ProtocolConnectionStruct) {
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -62,7 +63,7 @@ func NewProtocolConnectionStruct(ctx context.Context, addr net.Addr) (pcs *Proto
 	pcs = &ProtocolConnectionStruct{
 		ctx:    ctx,
 		cancel: cancel,
-		addr:   addr,
+		dest:   dest,
 		state:  ConnStateNew,
 		err:    nil,
 		buffer: make([]byte, 0, 1024),
@@ -84,7 +85,7 @@ func (p *ProtocolDstStruct) NewProtocolDstStruct(osce *simple.SimpleConnOpenEven
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+" UniqueID:%d is already used", osce.UniqueID())
 	}
 
-	p.conn[osce.UniqueID()] = NewProtocolConnectionStruct(p.ctx, osce.Dst())
+	p.conn[osce.UniqueID()] = NewProtocolConnectionStruct(p.ctx, osce.Dest())
 
 	return e
 }
@@ -116,7 +117,7 @@ func (p *ProtocolDstStruct) GetAddr(uid simple.ConnUniqueID) (addr net.Addr, e e
 	if p.conn[uid] == nil {
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", uid)
 	} else {
-		addr = p.conn[uid].addr
+		addr, e = p.conn[uid].dest.NetAddr()
 	}
 
 	return addr, e
@@ -194,8 +195,9 @@ func (p *ProtocolConnectionStruct) Cancel() {
 //
 // GetAddr()
 //
-func (p *ProtocolConnectionStruct) GetAddr() net.Addr {
-	return p.addr
+func (p *ProtocolConnectionStruct) GetAddr() (addr net.Addr) {
+	addr, _ = p.dest.NetAddr()
+	return addr
 }
 
 //

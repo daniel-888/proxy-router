@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/connectionmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
@@ -15,17 +16,33 @@ import (
 
 type ConnUniqueID int
 type URL string
-type MsgType string
 type ID string
 type Data string
 type EventHandler string
 type SearchString string
+
+type IDString msgbus.IDString
+type MsgType msgbus.MsgType
+
+const (
+	NoMsg                    MsgType = MsgType(msgbus.NoMsg)
+	ConfigMsg                MsgType = MsgType(msgbus.ConfigMsg)
+	ContractManagerConfigMsg MsgType = MsgType(msgbus.ContractManagerConfigMsg)
+	DestMsg                  MsgType = MsgType(msgbus.DestMsg)
+	NodeOperatorMsg          MsgType = MsgType(msgbus.NodeOperatorMsg)
+	ContractMsg              MsgType = MsgType(msgbus.ContractMsg)
+	MinerMsg                 MsgType = MsgType(msgbus.MinerMsg)
+	ConnectionMsg            MsgType = MsgType(msgbus.ConnectionMsg)
+	LogMsg                   MsgType = MsgType(msgbus.LogMsg)
+)
 
 type SimpleListenStruct struct {
 	ctx              context.Context
 	cancel           func()
 	accept           chan *SimpleStruct //channel to accept simple structs and process their message
 	connectionListen *connectionmanager.ConnectionListenStruct
+	msgbus           *msgbus.PubSub
+	logger           *log.Logger
 }
 
 /*
@@ -41,6 +58,8 @@ type SimpleStruct struct {
 	openChan          chan *SimpleConnOpenEvent
 	connectionMapping map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct //mapping of uint to connections
 	ConnectionStruct  *connectionmanager.ConnectionStruct
+	msgbus            *msgbus.PubSub
+	logger            *log.Logger
 }
 
 /*
@@ -61,9 +80,9 @@ type SimpleConnReadEvent struct {
 }
 
 type SimpleConnOpenEvent struct {
-	uID ConnUniqueID
-	dst net.Addr
-	err error
+	uID  ConnUniqueID
+	dest *msgbus.Dest
+	err  error
 }
 
 func (s *SimpleConnReadEvent) UniqueID() ConnUniqueID { return s.uID }
@@ -72,13 +91,13 @@ func (s *SimpleConnReadEvent) Count() int             { return s.count }
 func (s *SimpleConnReadEvent) Err() error             { return s.err }
 
 func (s *SimpleConnOpenEvent) UniqueID() ConnUniqueID { return s.uID }
-func (s *SimpleConnOpenEvent) Dst() net.Addr          { return s.dst }
+func (s *SimpleConnOpenEvent) Dest() *msgbus.Dest     { return s.dest }
 func (s *SimpleConnOpenEvent) Err() error             { return s.err }
 
 type SimpleMsgBusEvent struct {
-	EventType msgbus.EventType
-	Msg       msgbus.MsgType
-	ID        msgbus.IDString
+	EventType EventType
+	Msg       MsgType
+	ID        IDString
 	RequestID int
 	Data      interface{}
 	Err       error
@@ -94,17 +113,17 @@ type EventType string
 const NoEvent EventType = "noevent"
 const MsgBusEvent EventType = "msgbus"
 
-//const MsgUpdateEvent EventType = "msgupdate"
-//const MsgDeleteEvent EventType = "msgdelete"
-//const MsgGetEvent EventType = "msgget"
-//const MsgGetIndexEvent EventType = "msgindex"
-//const MsgSearchEvent EventType = "msgsearch"
-//const MsgSearchIndexEvent EventType = "msgsearchindex"
-//const MsgPublishEvent EventType = "msgpublish"
-//const MsgUnpublishEvent EventType = "msgunpublish"
-//const MsgSubscribedEvent EventType = "msgsubscribe"
-//const MsgUnsubscribedEvent EventType = "msgunsubscribe"
-//const MsgRemovedEvent EventType = "msgremoved"
+const MsgUpdateEvent EventType = EventType(msgbus.UpdateEvent)
+const MsgDeleteEvent EventType = EventType(msgbus.DeleteEvent)
+const MsgGetEvent EventType = EventType(msgbus.GetEvent)
+const MsgGetIndexEvent EventType = EventType(msgbus.GetIndexEvent)
+const MsgSearchEvent EventType = EventType(msgbus.SearchEvent)
+const MsgSearchIndexEvent EventType = EventType(msgbus.SearchIndexEvent)
+const MsgPublishEvent EventType = EventType(msgbus.PublishEvent)
+const MsgUnpublishEvent EventType = EventType(msgbus.UnpublishEvent)
+const MsgSubscribedEvent EventType = EventType(msgbus.SubscribedEvent)
+const MsgUnsubscribedEvent EventType = EventType(msgbus.UnsubscribedEvent)
+const MsgRemovedEvent EventType = EventType(msgbus.RemovedEvent)
 const ConnOpenEvent EventType = "connopen"
 const ConnReadEvent EventType = "connread"
 const ConnEOFEvent EventType = "conneof"
@@ -112,14 +131,11 @@ const ConnErrorEvent EventType = "connerror"
 const ErrorEvent EventType = "error"
 const MsgToProtocol EventType = "msgUp"
 
-/*
-create and return a struct with channels to listen to
-call goroutine embedded in the struct
-//assuming that the context being passed in will contain a ContextStruct in the value
-*/
+// ----------------------------------------------------------------------
+//  SimpleListenStruct Functions
+// ----------------------------------------------------------------------
+
 func NewListen(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
-	//myContext may be used in the future
-	//myContext := ctx.Value("ContextKey")
 
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -137,6 +153,14 @@ func NewListen(ctx context.Context, listen net.Addr) (SimpleListenStruct, error)
 		cs.Logf(contextlib.LevelPanic, "Context Src Addr not defined")
 	}
 
+	if cs.GetMsgBus() == nil {
+		cs.Logf(contextlib.LevelPanic, "Context MsgBus not defined")
+	}
+
+	if cs.GetLog() == nil {
+		cs.Logf(contextlib.LevelPanic, "Context Logger not defined")
+	}
+
 	cls, e := connectionmanager.NewListen(ctx)
 	if e != nil {
 		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Lumerin Listen() returne error:%s", e)
@@ -147,6 +171,8 @@ func NewListen(ctx context.Context, listen net.Addr) (SimpleListenStruct, error)
 		cancel:           cancel,
 		accept:           make(chan *SimpleStruct),
 		connectionListen: cls,
+		msgbus:           cs.GetMsgBus(),
+		logger:           cs.GetLog(),
 	}
 	// determine if a more robust error message is needed
 	return myStruct, nil
@@ -214,6 +240,8 @@ FORLOOP:
 				openChan:          make(chan *SimpleConnOpenEvent),
 				connectionMapping: map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct{},
 				ConnectionStruct:  connectionStruct,
+				msgbus:            s.msgbus,
+				logger:            s.logger,
 			}
 
 			s.accept <- newSimpleStruct
@@ -273,6 +301,13 @@ func (s *SimpleListenStruct) Cancel() {
 	s.cancel()
 }
 
+// ----------------------------------------------------------------------
+//  SimpleStruct Functions
+// ----------------------------------------------------------------------
+
+//
+//
+//
 func (s *SimpleStruct) GetEventChan() <-chan *SimpleEvent {
 
 	if s.eventChan == nil {
@@ -282,19 +317,9 @@ func (s *SimpleStruct) GetEventChan() <-chan *SimpleEvent {
 	return s.eventChan
 }
 
-/*
-Start a new go routine to handle the new connection context
-after initialization by the protocol layer. There will be a
-variable in the context that points to the protocol structure
-containing all of the pertinent data for the state of the protocol
-and event handler routines
-All of the SimpleStruct functions that follow can be called
-before and after Run() is called
-It is assumed that Run() can only be called once
-*/
-/*
-TODO pass context to SimpleListenStruct's designated connection layer
-*/
+//
+//
+//
 func (s *SimpleStruct) Run() {
 	contextlib.Logf(s.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" enter")
 
@@ -374,10 +399,11 @@ FORLOOP:
 			}
 			smbe := &SimpleMsgBusEvent{}
 			smbe.Data = msg.Data
-			smbe.Err = msg.Err
-			smbe.EventType = msg.EventType
-			smbe.ID = msg.ID
+			smbe.Msg = MsgType(msg.Msg)
+			smbe.EventType = EventType(msg.EventType)
+			smbe.ID = IDString(msg.ID)
 			smbe.RequestID = msg.RequestID
+			smbe.Err = msg.Err
 
 			ev := &SimpleEvent{
 				EventType:     MsgBusEvent,
@@ -466,7 +492,7 @@ ConnUniqueID is returned from this function
 
 id is the calling ID info, the uid is returned from the connectionmanager layer, and is used to index the connection
 */
-func (s *SimpleStruct) AsyncDial(dst net.Addr) error {
+func (s *SimpleStruct) AsyncDial(dest *msgbus.Dest) (e error) {
 
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -477,14 +503,19 @@ func (s *SimpleStruct) AsyncDial(dst net.Addr) error {
 		return fmt.Errorf(lumerinlib.FileLineFunc() + " SimpleStruct.ConnectionStruct == nil ")
 	}
 
+	addr, e := dest.NetAddr()
+	if e != nil {
+		return e
+	}
+
 	go func() {
 
-		uid, e := s.ConnectionStruct.Dial(dst)
+		uid, e := s.ConnectionStruct.Dial(addr)
 
 		open := &SimpleConnOpenEvent{
-			uID: ConnUniqueID(uid),
-			dst: dst,
-			err: e,
+			uID:  ConnUniqueID(uid),
+			dest: dest,
+			err:  e,
 		}
 
 		if !s.Done() {
@@ -553,8 +584,12 @@ network connection functions
 
 */
 
-// Used later to direct the default route
-func (s *SimpleStruct) GetRemoteAddr(ConnUniqueID) {} //return of 1 to appease compiler
+//
+//
+//
+func (s *SimpleStruct) GetRemoteAddr(uid ConnUniqueID) {
+
+}
 
 // Writes buffer to the specified connection
 func (s *SimpleStruct) Write(uid ConnUniqueID, msg []byte) (count int, e error) {
@@ -581,38 +616,90 @@ func (s *SimpleStruct) Flush() {}
 // Reads low level connection status information
 func (s *SimpleStruct) Status() {}
 
-/*
+//
+// Message Bus Functions
+// Pass through to the msgbus package
+//
+func (s *SimpleStruct) Pub(msgtype MsgType, id IDString, data interface{}) (rid int, e error) {
 
-msg bus functions
+	//
+	// MsgType validation here
+	//
 
-*/
+	rid, e = s.msgbus.Pub(msgbus.MsgType(msgtype), msgbus.IDString(id), data, s.msgbusChan)
+	return rid, e
+}
 
-func (s *SimpleStruct) Pub(MsgType, ID, Data) error {
-	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+//
+//
+//
+func (s *SimpleStruct) Unpub(msgtype MsgType, id IDString) (rid int, e error) {
+
+	rid, e = s.msgbus.Unpub(msgbus.MsgType(msgtype), msgbus.IDString(id))
+	return rid, e
 }
-func (s *SimpleStruct) Unpub(MsgType, ID) error {
-	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+
+//
+//
+//
+func (s *SimpleStruct) Sub(msgtype MsgType, id IDString) (rid int, e error) {
+
+	rid, e = s.msgbus.Sub(msgbus.MsgType(msgtype), msgbus.IDString(id), s.msgbusChan)
+	return rid, e
 }
-func (s *SimpleStruct) Sub(MsgType, ID, EventHandler) error {
-	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+
+//
+//
+//
+func (s *SimpleStruct) Unsub(msgtype MsgType, id IDString) (rid int, e error) {
+
+	rid, e = s.msgbus.Unsub(msgbus.MsgType(msgtype), msgbus.IDString(id), s.msgbusChan)
+	return rid, e
 }
-func (s *SimpleStruct) Unsub(MsgType, ID, EventHandler) error {
-	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+
+//
+//
+//
+func (s *SimpleStruct) Get(msgtype MsgType, id IDString) (rid int, e error) {
+
+	rid, e = s.msgbus.Get(msgbus.MsgType(msgtype), msgbus.IDString(id), s.msgbusChan)
+	return rid, e
 }
-func (s *SimpleStruct) Get(MsgType, ID, EventHandler) error {
-	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+
+//
+//
+//
+func (s *SimpleStruct) Set(msgtype MsgType, id IDString, data interface{}) (rid int, e error) {
+
+	rid, e = s.msgbus.Set(msgbus.MsgType(msgtype), msgbus.IDString(id), data)
+	return rid, e
 }
-func (s *SimpleStruct) Set(MsgType, ID, Data) error {
-	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+
+//
+//
+//
+func (s *SimpleStruct) SearchIP(msgtype MsgType, search SearchString) (rid int, e error) {
+
+	rid, e = s.msgbus.SearchIP(msgbus.MsgType(msgtype), string(search), s.msgbusChan)
+	return rid, e
 }
-func (s *SimpleStruct) SearchIP(MsgType, SearchString) error {
-	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+
+//
+//
+//
+func (s *SimpleStruct) SearchMac(msgtype MsgType, search SearchString) (rid int, e error) {
+
+	rid, e = s.msgbus.SearchMAC(msgbus.MsgType(msgtype), string(search), s.msgbusChan)
+	return rid, e
 }
-func (s *SimpleStruct) SearchMac(MsgType, SearchString) error {
-	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
-}
-func (s *SimpleStruct) SearchName(MsgType, SearchString) error {
-	return errors.New(lumerinlib.FileLineFunc() + "Not Implemented yet")
+
+//
+//
+//
+func (s *SimpleStruct) SearchName(msgtype MsgType, name SearchString) (rid int, e error) {
+
+	rid, e = s.msgbus.SearchName(msgbus.MsgType(msgtype), string(name), s.msgbusChan)
+	return rid, e
 }
 
 //

@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 
 	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
@@ -61,8 +61,8 @@ func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 	if cs.GetSrc() == nil {
 		cs.Logf(contextlib.LevelPanic, "Context Src Addr not defined")
 	}
-	if cs.GetDst() == nil {
-		cs.Logf(contextlib.LevelPanic, "Context Dst Addr not defined")
+	if cs.GetDstID() == nil {
+		cs.Logf(contextlib.LevelPanic, "Context DstID not defined")
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -106,6 +106,11 @@ func (p *ProtocolListenStruct) Ctx() context.Context {
 func (pls *ProtocolListenStruct) Cancel() {
 
 	contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	if pls.cancel == nil {
+		contextlib.Logf(pls.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" cancel func is nil, struct:%v", pls))
+		return
+	}
 
 	pls.cancel()
 }
@@ -184,8 +189,8 @@ func NewProtocol(ctx context.Context, s *simple.SimpleStruct) (ps *ProtocolStruc
 
 	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	dst := contextlib.GetDst(ctx)
-	if dst == nil {
+	dstID := contextlib.GetDstID(ctx)
+	if dstID == nil {
 		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDst() returned nil")
 	}
 
@@ -197,10 +202,10 @@ func NewProtocol(ctx context.Context, s *simple.SimpleStruct) (ps *ProtocolStruc
 func NewProtocolStruct(ctx context.Context, s *simple.SimpleStruct) (n *ProtocolStruct) {
 
 	ctx, cancel := context.WithCancel(s.Ctx())
-	cs := contextlib.GetContextStruct(s.Ctx())
-	src := cs.GetSrc()
+	// cs := contextlib.GetContextStruct(s.Ctx())
+	// src := cs.GetSrc()
 	eventchan := make(chan *simple.SimpleEvent)
-	pcs := NewProtocolConnectionStruct(ctx, src)
+	pcs := NewProtocolConnectionStruct(ctx, nil)
 	pcs.SetState(ConnStateReady)
 
 	n = &ProtocolStruct{
@@ -237,7 +242,14 @@ func (ps *ProtocolStruct) Cancel() {
 	if ps == nil {
 		panic(lumerinlib.FileLineFunc() + "ProtocolStruct is nil")
 	}
+
 	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	if ps.cancel == nil {
+		contextlib.Logf(ps.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" cancel func is nil, struct:%v", ps))
+		return
+	}
+
 	ps.cancel()
 }
 
@@ -272,7 +284,7 @@ func (ps *ProtocolStruct) GetSimpleEventChan() <-chan *simple.SimpleEvent {
 // opens a new connection to the desitnation
 //
 //
-func (ps *ProtocolStruct) AsyncDial(dst net.Addr) (e error) {
+func (ps *ProtocolStruct) AsyncDial(dst *msgbus.Dest) (e error) {
 
 	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
@@ -400,74 +412,80 @@ func (ps *ProtocolStruct) WriteDst(index simple.ConnUniqueID, msg []byte) (count
 //
 // Pub() publishes data, and stores the request ID to match the Completion Event
 //
-func (ps *ProtocolStruct) Pub(msgtype simple.MsgType, id simple.ID, data simple.Data) (rID int, e error) {
+func (ps *ProtocolStruct) Pub(msgtype simple.MsgType, id simple.IDString, data simple.Data) (rid int, e error) {
 
-	// rID, e = ps.simple.Pub(msgtype, id, data)
-	e = ps.simple.Pub(msgtype, id, data)
-
-	return 0, e
+	rid, e = ps.simple.Pub(msgtype, id, data)
+	return rid, e
 }
 
 //
 //
 //
-func (ps *ProtocolStruct) Unpub(msgtype simple.MsgType, id simple.ID) (rID int, e error) {
+func (ps *ProtocolStruct) Unpub(msgtype simple.MsgType, id simple.IDString) (rid int, e error) {
 
-	return 0, nil
+	rid, e = ps.simple.Unpub(msgtype, id)
+	return rid, e
 }
 
 //
 //
 //
-func (ps *ProtocolStruct) Sub(msgtype simple.MsgType, id simple.ID, eh func()) (rID int, e error) {
+func (ps *ProtocolStruct) Sub(msgtype simple.MsgType, id simple.IDString) (rid int, e error) {
 
-	return 0, nil
+	rid, e = ps.simple.Unpub(msgtype, id)
+	return rid, e
 }
 
 //
 //
 //
-func (ps *ProtocolStruct) Unsub(msgtype simple.MsgType, id simple.ID, eh func()) (rID int, e error) {
+func (ps *ProtocolStruct) Unsub(msgtype simple.MsgType, id simple.IDString) (rid int, e error) {
 
-	return 0, nil
+	rid, e = ps.simple.Unsub(msgtype, id)
+	return rid, e
 }
 
 //
 //
 //
-func (ps *ProtocolStruct) Get(msgtype simple.MsgType, id simple.ID, eh func()) (rID int, e error) {
+func (ps *ProtocolStruct) Get(msgtype simple.MsgType, id simple.IDString) (rid int, e error) {
 
-	return 0, nil
+	rid, e = ps.simple.Get(msgtype, id)
+	return rid, e
 }
 
 //
 //
 //
-func (ps *ProtocolStruct) Set(msgtype simple.MsgType, id simple.ID, data interface{}) (rID int, e error) {
+func (ps *ProtocolStruct) Set(msgtype simple.MsgType, id simple.IDString, data interface{}) (rid int, e error) {
 
-	return 0, nil
+	rid, e = ps.simple.Set(msgtype, id, data)
+	return rid, e
 }
 
 //
 //
 //
-func (ps *ProtocolStruct) SearchIP(msgtype simple.MsgType, search string) (rID int, e error) {
+func (ps *ProtocolStruct) SearchIP(msgtype simple.MsgType, search string) (rid int, e error) {
 
-	return 0, nil
+	rid, e = ps.simple.SearchIP(msgtype, simple.SearchString(search))
+	return rid, e
 }
 
 //
 //
 //
-func (ps *ProtocolStruct) SearchMac(msgtype simple.MsgType, search string) (rID int, e error) {
+func (ps *ProtocolStruct) SearchMac(msgtype simple.MsgType, search string) (rid int, e error) {
 
-	return 0, nil
+	rid, e = ps.simple.SearchMac(msgtype, simple.SearchString(search))
+	return rid, e
 }
 
 //
 //
 //
-func (ps *ProtocolStruct) SearchName(msgtype simple.MsgType, search string) (rID int, e error) {
+func (ps *ProtocolStruct) SearchName(msgtype simple.MsgType, search string) (rid int, e error) {
 
-	return 0, nil
+	rid, e = ps.simple.SearchName(msgtype, simple.SearchString(search))
+	return rid, e
 }

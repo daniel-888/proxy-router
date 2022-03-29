@@ -1,11 +1,63 @@
 package stratumv1
 
 import (
+	"fmt"
+
 	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
+
+//
+//
+//
+func (svs *StratumV1Struct) handleMsgBusEvent(event *simple.SimpleMsgBusEvent) {
+
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	switch event.EventType {
+	case simple.NoEvent:
+		fmt.Printf(lumerinlib.Funcname() + " NoEvent received, returning\n")
+		return
+	case simple.MsgUpdateEvent:
+		svs.handleMsgUpdateEvent(event)
+		return
+	case simple.MsgDeleteEvent:
+		svs.handleMsgDeleteEvent(event)
+		return
+	case simple.MsgGetEvent:
+		svs.handleMsgGetEvent(event)
+		return
+	case simple.MsgGetIndexEvent:
+		svs.handleMsgIndexEvent(event)
+		return
+	case simple.MsgSearchEvent:
+		svs.handleMsgSearchEvent(event)
+		return
+	case simple.MsgSearchIndexEvent:
+		svs.handleMsgSearchIndexEvent(event)
+		return
+	case simple.MsgPublishEvent:
+		svs.handleMsgPublishEvent(event)
+		return
+	case simple.MsgUnpublishEvent:
+		svs.handleMsgUnpublishEvent(event)
+		return
+	case simple.MsgSubscribedEvent:
+		svs.handleMsgSubscribedEvent(event)
+		return
+	case simple.MsgUnsubscribedEvent:
+		svs.handleMsgUnsubscribedEvent(event)
+		return
+	case simple.MsgRemovedEvent:
+		svs.handleMsgRemovedEvent(event)
+		return
+
+	default:
+		lumerinlib.PanicHere(fmt.Sprintf(lumerinlib.FileLineFunc()+" Default Reached: Event Type:%s", string(event.EventType)))
+	}
+}
 
 //
 // handleMsgUpdateEvent()
@@ -21,7 +73,7 @@ func (svs *StratumV1Struct) handleMsgUpdateEvent(event *simple.SimpleMsgBusEvent
 
 	switch event.Msg {
 	// Miner updates are of interest to me
-	case msgbus.MinerMsg:
+	case simple.MinerMsg:
 		// Check that we have the correct miner ID
 		currentRec, ok := event.Data.(msgbus.Miner)
 		if !ok {
@@ -75,8 +127,27 @@ func (svs *StratumV1Struct) handleMsgGetEvent(event *simple.SimpleMsgBusEvent) {
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	switch event.Msg {
+	case simple.DestMsg:
+		if event.ID == simple.IDString(msgbus.DEFAULT_DEST_ID) {
+			// Fire up the default destination connction here
+			// If default is not already set, set it
+			dr := svs.protocol.GetDefaultRouteUID()
+			if dr < 0 {
+				d, ok := event.Data.(msgbus.Dest)
+				if !ok {
+					contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" DestMsg: bad data:%t", event.Data)
+				}
+				dst := &d
+				e := svs.protocol.AsyncDial(dst)
+				if e != nil {
+					contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" AsyncDial returned error:%s", e)
+				}
+			} else {
+				contextlib.Logf(svs.Ctx(), contextlib.LevelDebug, lumerinlib.FileLineFunc()+" DestMsg recieve, but default already setup")
+			}
+		}
 	default:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" ignoring update to: %s:%s", event.EventType, event.ID)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
 	}
 
 }
