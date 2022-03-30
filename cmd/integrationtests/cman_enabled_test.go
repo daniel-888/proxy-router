@@ -77,7 +77,6 @@ func LoadEnabledTestConfiguration(filePath string) (configs EnabledConfig, err e
 	configs.ClaimFunds = contConfigData["claimFunds"].(bool)
 	configs.TimeThreshold = int(contConfigData["timeThreshold"].(float64))
 	configs.ValidatorAddress = contConfigData["validatorAddress"].(string)
-	configs.ProxyAddress = contConfigData["proxyAddress"].(string)
 
 	schedConfigData := data["schedule"].(map[string]interface{})
 	configs.SchedulePassthrough = schedConfigData["passthrough"].(bool)
@@ -253,7 +252,7 @@ func TestEnabled(t *testing.T) {
 	// subcribe to creation events emitted by clonefactory contract
 	cfLogs, cfSub, _ := contractmanager.SubscribeToContractEvents(cm.EthClient, cm.CloneFactoryAddress)
 	// create event signature to parse out creation, purchase, and close event
-	contractCreatedSig := []byte("contractCreated(address)")
+	contractCreatedSig := []byte("contractCreated(address,string)")
 	contractCreatedSigHash := crypto.Keccak256Hash(contractCreatedSig)
 	clonefactoryContractPurchasedSig := []byte("clonefactoryContractPurchased(address)")
 	clonefactoryContractPurchasedSigHash := crypto.Keccak256Hash(clonefactoryContractPurchasedSig)

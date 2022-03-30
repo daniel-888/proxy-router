@@ -333,7 +333,7 @@ func (seller *SellerContractManager) watchContractCreation(cfLogs chan types.Log
 	defer cfSub.Unsubscribe()
 
 	// create event signature to parse out creation event
-	contractCreatedSig := []byte("contractCreated(address)")
+	contractCreatedSig := []byte("contractCreated(address,string)")
 	contractCreatedSigHash := crypto.Keccak256Hash(contractCreatedSig)
 	for {
 		select {

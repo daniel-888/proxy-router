@@ -67,7 +67,7 @@ func LoadTestConfiguration(pkg string, filePath string) (map[string]interface{},
 func DeployContract(client *ethclient.Client,
 	fromAddress common.Address,
 	privateKeyString string,
-	constructorParams [5]common.Address,
+	constructorParams [4]common.Address,
 	contract string) (common.Address, *types.Transaction) {
 	privateKey, err := crypto.HexToECDSA(privateKeyString)
 	if err != nil {
@@ -110,7 +110,6 @@ func DeployContract(client *ethclient.Client,
 
 	lmnAddress := constructorParams[0]
 	ValidatorAddress := constructorParams[1]
-	ProxyAddress := constructorParams[2]
 
 	switch contract {
 	case "LumerinToken":
@@ -120,7 +119,7 @@ func DeployContract(client *ethclient.Client,
 		}
 		return address, ltransaction
 	case "CloneFactory":
-		address, cftransaction, _, err := clonefactory.DeployClonefactory(auth, client, lmnAddress, ValidatorAddress, ProxyAddress)
+		address, cftransaction, _, err := clonefactory.DeployClonefactory(auth, client, lmnAddress, ValidatorAddress)
 		if err != nil {
 			log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
 		}
@@ -180,7 +179,7 @@ func CreateHashrateContract(client *ethclient.Client,
 	limit := big.NewInt(int64(_limit))
 	speed := big.NewInt(int64(_speed))
 	length := big.NewInt(int64(_length))
-	tx, err := instance.SetCreateNewRentalContract(auth, price, limit, speed, length, _validator)
+	tx, err := instance.SetCreateNewRentalContract(auth, price, limit, speed, length, _validator, "")
 	if err != nil {
 		log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
 	}
@@ -381,7 +380,7 @@ func CreateNewGanacheBlock(ts TestSetup, account common.Address, privateKey stri
 }
 
 func BeforeEach(configPath string) (ts TestSetup, ltransaction *types.Transaction, cftransaction *types.Transaction) {
-	var constructorParams [5]common.Address
+	var constructorParams [4]common.Address
 	configData, err := LoadTestConfiguration("contract", configPath)
 	if err != nil {
 		log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
@@ -400,13 +399,11 @@ func BeforeEach(configPath string) (ts TestSetup, ltransaction *types.Transactio
 
 	ts.EthClient = client
 	ts.ValidatorAddress = common.HexToAddress(configData["validatorAddress"].(string)) // dummy address
-	ts.ProxyAddress = common.HexToAddress(configData["proxyAddress"].(string))         // dummy address
 	ts.LumerinAddress, ltransaction = DeployContract(ts.EthClient, ts.NodeEthereumAccount, ts.NodeEthereumPrivateKey, constructorParams, "LumerinToken")
 	fmt.Println("Lumerin Token Contract Address: ", ts.LumerinAddress)
 
 	constructorParams[0] = ts.LumerinAddress
 	constructorParams[1] = ts.ValidatorAddress
-	constructorParams[2] = ts.ProxyAddress
 
 	ts.CloneFactoryAddress, cftransaction = DeployContract(ts.EthClient, ts.NodeEthereumAccount, ts.NodeEthereumPrivateKey, constructorParams, "CloneFactory")
 	fmt.Println("Clone Factory Contract Address: ", ts.CloneFactoryAddress)

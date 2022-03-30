@@ -114,7 +114,7 @@ func TestSellerRoutine(t *testing.T) {
 	// subcribe to creation events emitted by clonefactory contract
 	cfLogs, cfSub, _ := SubscribeToContractEvents(ts.EthClient, ts.CloneFactoryAddress)
 	// create event signature to parse out creation, purchase, and close event
-	contractCreatedSig := []byte("contractCreated(address)")
+	contractCreatedSig := []byte("contractCreated(address,string)")
 	contractCreatedSigHash := crypto.Keccak256Hash(contractCreatedSig)
 	clonefactoryContractPurchasedSig := []byte("clonefactoryContractPurchased(address)")
 	clonefactoryContractPurchasedSigHash := crypto.Keccak256Hash(clonefactoryContractPurchasedSig)
