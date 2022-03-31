@@ -10,6 +10,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	"gitlab.com/TitanInd/lumerin/lumerinlib/testinglib"
 )
 
 type newProtocolFunc func(*simple.SimpleStruct) chan *simple.SimpleEvent
@@ -17,11 +18,10 @@ type newProtocolStruct struct {
 	funcptr newProtocolFunc
 }
 
-var port int = 12345
-var ip string = "127.0.0.1"
-
 func TestNewProto(t *testing.T) {
-	pls := newListen(t)
+	ip := "127.0.0.1"
+	port := testinglib.GetRandPort()
+	pls := newListen(t, ip, port)
 	pls.Run()
 	pls.Cancel()
 	select {
@@ -36,17 +36,30 @@ func TestNewProto(t *testing.T) {
 //
 func TestNewConnection(t *testing.T) {
 
-	var testString = "This is a test string\n"
+	ip := "127.0.0.1"
+	port := testinglib.GetRandPort()
+	testString := "This is a test string\n"
 
-	pls := newListen(t)
-
+	pls := newListen(t, ip, port)
 	pls.Run()
 
-	s, e := connect(t, pls.Ctx())
+	//
+	// Establish a new connection
+	//
+	s, e := connect(t, pls.Ctx(), ip, port)
 	if e != nil {
 		t.Errorf(lumerinlib.FileLineFunc()+" error:%s", e)
 	}
 
+	//
+	// Receive the new connection
+	//
+	ps := <-pls.GetAccept()
+	ps.Run()
+
+	//
+	// Write data into the origin
+	//
 	count, e := s.Write([]byte(testString))
 	if e != nil {
 		t.Errorf(lumerinlib.FileLineFunc()+" error:%s", e)
@@ -55,7 +68,23 @@ func TestNewConnection(t *testing.T) {
 		t.Errorf(lumerinlib.FileLineFunc()+" count is wrong,sent:%d, recv:%d", len(testString), count)
 	}
 
-	// Need to read the data from the event handler here
+	//
+	// Wait for Read Event
+	//
+	event := <-ps.GetSimpleEventChan()
+	switch event.EventType {
+	case simple.ConnReadEvent:
+	default:
+		t.Errorf(lumerinlib.FileLineFunc()+" GetSimpleEvent returned unexpected event:%s", event.EventType)
+	}
+
+	readbuf := event.ConnReadEvent.Data()
+	if len(readbuf) != len(testString) {
+		t.Errorf(lumerinlib.FileLineFunc()+" Read Event data count i not correct: %d:%d", len(readbuf), len(testString))
+	}
+	t.Logf(lumerinlib.FileLineFunc()+" Read returned:%s", readbuf)
+
+	// s.Close()
 
 	pls.Cancel()
 	select {
@@ -89,8 +118,8 @@ func newProtcolConnection(ss *simple.SimpleStruct) {
 		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct not in CTX")
 	}
 
-	dst := cs.GetDst()
-	if dst == nil {
+	dest := cs.GetDest()
+	if dest == nil {
 		contextlib.Logf(ss.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Struct DST not defined")
 	}
 
@@ -122,18 +151,23 @@ func (p *ProtocolStruct) goEvent() {
 //
 //
 //
-func newListen(t *testing.T) (pls *ProtocolListenStruct) {
+func newListen(t *testing.T, ip string, port int) (pls *ProtocolListenStruct) {
 
 	ps := msgbus.New(1, nil)
 	addr := fmt.Sprintf("%s:%d", ip, port)
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
-	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
+
+	poolurl := "stratum+tcp://username.worker:passw0rd@mining.dev.pool.titan.io:4242/"
+	dest := &msgbus.Dest{
+		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
+		NetUrl: msgbus.DestNetUrl(poolurl),
+	}
 
 	ctx := context.Background()
 	cs := &contextlib.ContextStruct{}
 	cs.SetMsgBus(ps)
 	cs.SetSrc(src)
-	cs.SetDst(dst)
+	cs.SetDest(dest)
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
 	pls, e := NewListen(ctx)
@@ -147,7 +181,7 @@ func newListen(t *testing.T) (pls *ProtocolListenStruct) {
 //
 //
 //
-func connect(t *testing.T, ctx context.Context) (*sockettcp.SocketTCPStruct, error) {
+func connect(t *testing.T, ctx context.Context, ip string, port int) (*sockettcp.SocketTCPStruct, error) {
 	_ = t
 	return sockettcp.Dial(ctx, "tcp", fmt.Sprintf("%s:%d", ip, port))
 }

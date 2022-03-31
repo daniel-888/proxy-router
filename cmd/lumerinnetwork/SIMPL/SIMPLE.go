@@ -15,11 +15,11 @@ import (
 )
 
 type ConnUniqueID int
-type URL string
-type ID string
-type Data string
-type EventHandler string
-type SearchString string
+
+// type ID string
+// type Data string
+// type EventHandler string
+// type SearchString string
 
 type IDString msgbus.IDString
 type MsgType msgbus.MsgType
@@ -678,27 +678,27 @@ func (s *SimpleStruct) Set(msgtype MsgType, id IDString, data interface{}) (rid 
 //
 //
 //
-func (s *SimpleStruct) SearchIP(msgtype MsgType, search SearchString) (rid int, e error) {
+func (s *SimpleStruct) SearchIP(msgtype MsgType, search string) (rid int, e error) {
 
-	rid, e = s.msgbus.SearchIP(msgbus.MsgType(msgtype), string(search), s.msgbusChan)
+	rid, e = s.msgbus.SearchIP(msgbus.MsgType(msgtype), search, s.msgbusChan)
 	return rid, e
 }
 
 //
 //
 //
-func (s *SimpleStruct) SearchMac(msgtype MsgType, search SearchString) (rid int, e error) {
+func (s *SimpleStruct) SearchMac(msgtype MsgType, search string) (rid int, e error) {
 
-	rid, e = s.msgbus.SearchMAC(msgbus.MsgType(msgtype), string(search), s.msgbusChan)
+	rid, e = s.msgbus.SearchMAC(msgbus.MsgType(msgtype), search, s.msgbusChan)
 	return rid, e
 }
 
 //
 //
 //
-func (s *SimpleStruct) SearchName(msgtype MsgType, name SearchString) (rid int, e error) {
+func (s *SimpleStruct) SearchName(msgtype MsgType, name string) (rid int, e error) {
 
-	rid, e = s.msgbus.SearchName(msgbus.MsgType(msgtype), string(name), s.msgbusChan)
+	rid, e = s.msgbus.SearchName(msgbus.MsgType(msgtype), name, s.msgbusChan)
 	return rid, e
 }
 

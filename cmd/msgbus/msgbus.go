@@ -654,8 +654,6 @@ func (ps *PubSub) Unpub(msg MsgType, id IDString, ech ...EventChan) (requestID i
 		return requestID, getCommandError(MsgBusErrNoID)
 	}
 
-	panic("")
-
 	var eventchan EventChan = nil
 
 	for _, v := range ech {

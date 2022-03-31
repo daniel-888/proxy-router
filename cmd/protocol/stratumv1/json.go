@@ -819,6 +819,6 @@ func LogJson(ctx context.Context, direction string, msg []byte) {
 		contextlib.Logf(ctx, contextlib.LevelPanic, "Indent() error:%s", e)
 	}
 
-	contextlib.Logf(ctx, contextlib.LevelDebug, "%s\n%s%s", direction, prefix, buf)
+	contextlib.Logf(ctx, contextlib.LevelDebug, "%s\n%s%s", direction, prefix, buf.String())
 
 }

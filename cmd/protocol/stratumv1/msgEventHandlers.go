@@ -75,6 +75,9 @@ func (svs *StratumV1Struct) handleMsgUpdateEvent(event *simple.SimpleMsgBusEvent
 	switch event.Msg {
 	case simple.MinerMsg:
 		switch event.Data.(type) {
+		case *msgbus.Miner:
+			minerrecptr := event.Data.(*msgbus.Miner)
+			minerrec = *minerrecptr
 		case msgbus.Miner:
 			minerrec = event.Data.(msgbus.Miner)
 		default:
@@ -141,6 +144,16 @@ func (svs *StratumV1Struct) handleMsgDeleteEvent(event *simple.SimpleMsgBusEvent
 func (svs *StratumV1Struct) handleMsgGetEvent(event *simple.SimpleMsgBusEvent) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
+
+	if event.Err != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Event Err:%s", event.Err)
+		return
+	}
+
+	if event.Data == nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Event Data is nil")
+		return
+	}
 
 	switch event.Msg {
 	case simple.DestMsg:

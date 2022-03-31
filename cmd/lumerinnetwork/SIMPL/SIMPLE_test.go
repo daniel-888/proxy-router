@@ -1,16 +1,9 @@
 package simple
 
 import (
-	"context"
-	"fmt"
 	_ "fmt"
-	"net"
 	_ "reflect"
 	"testing"
-
-	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	lumerincontext "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 /*
@@ -25,69 +18,44 @@ The Stratum layer, lower level layers, and MSG are not being tested in this
 testing suite, however their messages may either be used or simulated for testing purposes
 */
 
-/*
-this is just a cookie cutter placehodler so new tests
-can be quickly implemented
-func TestTemplate(t *testing.T) {
-}
-*/
-
-func getDefaultDest(host string, port string) (dest *msgbus.Dest) {
-
-	dest = &msgbus.Dest{
-		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
-		NetUrl: msgbus.DestNetUrl(configs.DefaultPoolAddr),
-	}
-
-	event, err := ps.PubWait(msgbus.DestMsg, msgbus.IDString(msgbus.DEFAULT_DEST_ID), dest)
-	if err != nil {
-		panic(fmt.Sprintf("Adding Default Dest Failed: %s", err))
-	}
-	if event.Err != nil {
-		panic(fmt.Sprintf("Adding Default Dest Failed: %s", event.Err))
-	}
-
-	return dest
-}
-
-func generateTestContext() context.Context {
-	//create a ContextStruct and add into :tab
-	ctx := context.Background()
-	cs := &lumerincontext.ContextStruct{}
-	cs.Src = generateTestAddr()
-	cs.DstID = generateTestAddr("127.0.0.1", "3333")
-	ctx = context.WithValue(ctx, lumerincontext.ContextKey, cs)
-	return ctx
-}
-
-func generateTestAddr() net.Addr {
-	conn, _ := net.Dial("tcp", "golang.org:http")
-	return conn.RemoteAddr()
-}
-
+//func generateTestContext() context.Context {
+//	//create a ContextStruct and add into :tab
+//	ctx := context.Background()
+//	cs := &lumerincontext.ContextStruct{}
+//	cs.Src = generateTestAddr()
+//	cs.DstID = generateTestAddr("127.0.0.1", "3333")
+//	ctx = context.WithValue(ctx, lumerincontext.ContextKey, cs)
+//	return ctx
+//}
+//
+//func generateTestAddr() net.Addr {
+//	conn, _ := net.Dial("tcp", "golang.org:http")
+//	return conn.RemoteAddr()
+//}
+//
 //generate a SimpleStruct for testing purposes
-func generateSimpleStruct() SimpleStruct {
-	myContext := generateTestContext()
-	mySimpleStruct := SimpleStruct{
-		ctx: myContext,
-		// cancel: dummyFunc,
-		// eventHandler:      0,
-		eventChan:  make(chan *SimpleEvent),
-		msgbusChan: make(chan *msgbus.Event),
-		// protocolChan:      make(chan *SimpleEvent),
-		// commChan:          make(chan []byte),
-		connectionMapping: make(map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct),
-	}
-	return mySimpleStruct
-}
+//func generateSimpleStruct() SimpleStruct {
+//	myContext := generateTestContext()
+//	mySimpleStruct := SimpleStruct{
+//		ctx: myContext,
+//		// cancel: dummyFunc,
+//		// eventHandler:      0,
+//		eventChan:  make(chan *SimpleEvent),
+//		msgbusChan: make(chan *msgbus.Event),
+//		// protocolChan:      make(chan *SimpleEvent),
+//		// commChan:          make(chan []byte),
+//		connectionMapping: make(map[ConnUniqueID]*lumerinconnection.LumerinSocketStruct),
+//	}
+//	return mySimpleStruct
+//}
 
 //generate a SimpleListenStruct for testing purposes
-func generateSimpleListenStruct() SimpleListenStruct {
-	myContext := generateTestContext()
-	myAddr := generateTestAddr()
-	myStruct, _ := NewListen(myContext, myAddr)
-	return myStruct
-}
+//func generateSimpleListenStruct() SimpleListenStruct {
+//	myContext := generateTestContext()
+//	myAddr := generateTestAddr()
+//	myStruct, _ := NewListen(myContext, myAddr)
+//	return myStruct
+//}
 
 /*
 test steps

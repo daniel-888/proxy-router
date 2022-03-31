@@ -152,6 +152,10 @@ func NewStratumV1Struct(ctx context.Context, l *protocol.ProtocolStruct) (n *Str
 	ds := make(map[simple.ConnUniqueID]DstState)
 	dd := make(map[simple.ConnUniqueID]*msgbus.Dest)
 	id := fmt.Sprintf("MinerID:%d", <-MinerCountChan)
+	defdest := contextlib.GetContextStruct(ctx).GetDest()
+	if defdest == nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDest() return nil")
+	}
 	miner := &msgbus.Miner{
 		ID:                      msgbus.MinerID(id),
 		Name:                    "",
@@ -159,7 +163,7 @@ func NewStratumV1Struct(ctx context.Context, l *protocol.ProtocolStruct) (n *Str
 		MAC:                     "",
 		State:                   "",
 		Contract:                "",
-		Dest:                    "",
+		Dest:                    defdest.ID,
 		InitialMeasuredHashRate: 0,
 		CurrentHashRate:         0,
 		CsMinerHandlerIgnore:    false,
@@ -384,7 +388,8 @@ func (s *StratumV1Struct) GetSrcState() (state SrcState) {
 //
 func (s *StratumV1Struct) newMinerRecordPub(m *msgbus.Miner) {
 
-	_, e := s.protocol.Pub(simple.MinerMsg, simple.IDString(m.ID), m)
+	mcopy := *m
+	_, e := s.protocol.Pub(simple.MinerMsg, simple.IDString(m.ID), mcopy)
 	if e != nil {
 		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Miner Pub() error:%s ", e)
 	}

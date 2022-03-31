@@ -468,7 +468,7 @@ func (ps *ProtocolStruct) Set(msgtype simple.MsgType, id simple.IDString, data i
 //
 func (ps *ProtocolStruct) SearchIP(msgtype simple.MsgType, search string) (rid int, e error) {
 
-	rid, e = ps.simple.SearchIP(msgtype, simple.SearchString(search))
+	rid, e = ps.simple.SearchIP(msgtype, search)
 	return rid, e
 }
 
@@ -477,7 +477,7 @@ func (ps *ProtocolStruct) SearchIP(msgtype simple.MsgType, search string) (rid i
 //
 func (ps *ProtocolStruct) SearchMac(msgtype simple.MsgType, search string) (rid int, e error) {
 
-	rid, e = ps.simple.SearchMac(msgtype, simple.SearchString(search))
+	rid, e = ps.simple.SearchMac(msgtype, search)
 	return rid, e
 }
 
@@ -486,6 +486,6 @@ func (ps *ProtocolStruct) SearchMac(msgtype simple.MsgType, search string) (rid 
 //
 func (ps *ProtocolStruct) SearchName(msgtype simple.MsgType, search string) (rid int, e error) {
 
-	rid, e = ps.simple.SearchName(msgtype, simple.SearchString(search))
+	rid, e = ps.simple.SearchName(msgtype, search)
 	return rid, e
 }
