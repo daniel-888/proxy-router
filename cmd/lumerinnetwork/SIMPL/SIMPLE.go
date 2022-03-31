@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/connectionmanager"
@@ -135,18 +134,23 @@ const MsgToProtocol EventType = "msgUp"
 //  SimpleListenStruct Functions
 // ----------------------------------------------------------------------
 
-func NewListen(ctx context.Context, listen net.Addr) (SimpleListenStruct, error) {
+func NewListen(ctx context.Context) (sls *SimpleListenStruct, e error) {
 
 	ctx, cancel := context.WithCancel(ctx)
 
 	c := ctx.Value(contextlib.ContextKey)
 	if c == nil {
-		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" called")
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context is nil")
+		e = errors.New("Context is nil")
+		return nil, e
 	}
 
 	cs, ok := c.(*contextlib.ContextStruct)
 	if !ok {
 		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLine()+" Context Structre not correct")
+	}
+	if cs == nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLine()+" Context Structre is nil")
 	}
 
 	if cs.GetSrc() == nil {
@@ -166,7 +170,7 @@ func NewListen(ctx context.Context, listen net.Addr) (SimpleListenStruct, error)
 		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Lumerin Listen() returne error:%s", e)
 	}
 
-	myStruct := SimpleListenStruct{
+	sls = &SimpleListenStruct{
 		ctx:              ctx,
 		cancel:           cancel,
 		accept:           make(chan *SimpleStruct),
@@ -175,7 +179,7 @@ func NewListen(ctx context.Context, listen net.Addr) (SimpleListenStruct, error)
 		logger:           cs.GetLog(),
 	}
 	// determine if a more robust error message is needed
-	return myStruct, nil
+	return sls, e
 }
 
 //consider calling this as a gorouting from protocol layer, assuming

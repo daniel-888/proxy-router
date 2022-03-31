@@ -79,7 +79,7 @@ func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 	pls = &ProtocolListenStruct{
 		ctx:          ctx,
 		cancel:       cancel,
-		simplelisten: &sls,
+		simplelisten: sls,
 		accept:       accept,
 	}
 

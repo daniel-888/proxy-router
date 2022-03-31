@@ -1,22 +1,40 @@
 package simple
 
 import (
+	"fmt"
 	_ "fmt"
 	_ "reflect"
 	"testing"
+
+	"gitlab.com/TitanInd/lumerin/cmd/log"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	"gitlab.com/TitanInd/lumerin/lumerinlib/testinglib"
 )
 
-/*
-testing system for the SIMPLE layer
-The SIMPLE layer will need to be tested to
-ensure that is can route packets depending on outside instructions
-As additional functionality is added to the SIMPLE layer
-(multithreading, compressing, rerouting, error handling, etc)
-additional feature and functional tests will need to be written.
+func TestListen(t *testing.T) {
 
-The Stratum layer, lower level layers, and MSG are not being tested in this
-testing suite, however their messages may either be used or simulated for testing purposes
-*/
+	l := log.New()
+	mb := msgbus.New(1, l)
+
+	ctx := testinglib.GetNewContextWithValueStruct()
+	contextlib.GetContextStruct(ctx).SetLog(l)
+	contextlib.GetContextStruct(ctx).SetMsgBus(mb)
+
+	ip := "127.0.0.1"
+	port := testinglib.GetRandPort()
+	addr := fmt.Sprintf("%s:%d", ip, port)
+	srcaddr := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
+	contextlib.GetContextStruct(ctx).SetSrc(srcaddr)
+
+	sls, e := NewListen(ctx)
+	if e != nil {
+		t.Errorf(lumerinlib.FileLineFunc()+" NewListen error:%s", e)
+	}
+
+	_ = sls
+}
 
 //func generateTestContext() context.Context {
 //	//create a ContextStruct and add into :tab
@@ -90,10 +108,10 @@ test steps
 2. call the close function on the SimpleListenStruct
 3. ensure all associated routines are closed
 */
-func TestSimpleListenStructClose(t *testing.T) {
-	listenStruct, _ := NewListen(generateTestContext(), generateTestAddr())
-	listenStruct.Close()
-}
+//func TestSimpleListenStructClose(t *testing.T) {
+//	listenStruct, _ := NewListen(generateTestContext(), generateTestAddr())
+//	listenStruct.Close()
+//}
 
 /*
 test steps
@@ -101,12 +119,12 @@ test steps
 2. call the close function on the SimpleListenStruct
 3. ensure all associated routines are closed
 */
-func TestSimpleStructClose(t *testing.T) {
-	simpleStruct := generateSimpleStruct()
-	//context := generateTestContext() //this needs to be replaced to accept a context from the protocol
-	simpleStruct.Run() //run is working but needs to do "something" with the context
-	simpleStruct.Close()
-}
+//func TestSimpleStructClose(t *testing.T) {
+//	simpleStruct := generateSimpleStruct()
+//	//context := generateTestContext() //this needs to be replaced to accept a context from the protocol
+//	simpleStruct.Run() //run is working but needs to do "something" with the context
+//	simpleStruct.Close()
+//}
 
 //func TestSetMessageSizeDefault(t *testing.T) {
 //	simpleStruct := generateSimpleStruct()
@@ -175,28 +193,28 @@ steps:
 4. call the dial function on the SimpleStruct
 5. confirm that the id counter is now 1
 */
-func TestProtocolDialTheSimpleStruct(t *testing.T) {
-	simpleListenStruct := generateSimpleListenStruct()
-	simpleListenStruct.Run()
-	testAddr := generateTestAddr()
-
-	var simpleStruct *SimpleStruct
-
-	go func() {
-		simpleStruct = <-simpleListenStruct.accept
-		//initial dial
-		err := simpleStruct.AsyncDial(testAddr)
-
-		if err != nil {
-			t.Errorf("error creating a connection: %s", err)
-		}
-
-		//second dial to ensure that the uid increases as expected
-		err = simpleStruct.AsyncDial(testAddr)
-
-		if err != nil {
-			t.Errorf("error creating a connection: %s", err)
-		}
-
-	}()
-}
+//func TestProtocolDialTheSimpleStruct(t *testing.T) {
+//	simpleListenStruct := generateSimpleListenStruct()
+//	simpleListenStruct.Run()
+//	testAddr := generateTestAddr()
+//
+//	var simpleStruct *SimpleStruct
+//
+//	go func() {
+//		simpleStruct = <-simpleListenStruct.accept
+//		//initial dial
+//		err := simpleStruct.AsyncDial(testAddr)
+//
+//		if err != nil {
+//			t.Errorf("error creating a connection: %s", err)
+//		}
+//
+//		//second dial to ensure that the uid increases as expected
+//		err = simpleStruct.AsyncDial(testAddr)
+//
+//		if err != nil {
+//			t.Errorf("error creating a connection: %s", err)
+//		}
+//
+//	}()
+//}
