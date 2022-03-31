@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -30,13 +31,13 @@ import (
 )
 
 type TestSetup struct {
-	ethClient              *ethclient.Client
-	nodeEthereumPrivateKey string
-	nodeEthereumAccount    common.Address
-	validatorAddress       common.Address
-	proxyAddress           common.Address
-	lumerinAddress         common.Address
-	cloneFactoryAddress    common.Address
+	EthClient              *ethclient.Client
+	NodeEthereumPrivateKey string
+	NodeEthereumAccount    common.Address
+	ValidatorAddress       common.Address
+	ProxyAddress           common.Address
+	LumerinAddress         common.Address
+	CloneFactoryAddress    common.Address
 }
 
 func LoadTestConfiguration(pkg string, filePath string) (map[string]interface{}, error) {
@@ -66,8 +67,8 @@ func LoadTestConfiguration(pkg string, filePath string) (map[string]interface{},
 func DeployContract(client *ethclient.Client,
 	fromAddress common.Address,
 	privateKeyString string,
-	constructorParams [5]common.Address,
-	contract string) common.Address {
+	constructorParams [4]common.Address,
+	contract string) (common.Address, *types.Transaction) {
 	privateKey, err := crypto.HexToECDSA(privateKeyString)
 	if err != nil {
 		log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
@@ -99,27 +100,34 @@ func DeployContract(client *ethclient.Client,
 	auth.GasLimit = uint64(6000000) // in units
 	auth.GasPrice = gasPrice
 
+	fmt.Printf("Gas price while deploying %v contract: %v WEI\n", contract, auth.GasPrice)
+	fmt.Printf("Gas limit while deploying %v contract: %v\n", contract, auth.GasLimit)
+
+	gasPriceInt := gasPrice.Int64()
+	gasFee := float64(uint64(gasPriceInt) * auth.GasLimit)
+	gasFeeEth := gasFee / math.Pow10(18)
+	fmt.Printf("Max Gas Fee while deploying %v contract: %v ETH\n", contract, gasFeeEth)
+
 	lmnAddress := constructorParams[0]
-	validatorAddress := constructorParams[1]
-	proxyAddress := constructorParams[2]
+	ValidatorAddress := constructorParams[1]
 
 	switch contract {
 	case "LumerinToken":
-		address, _, _, err := lumerintoken.DeployLumerintoken(auth, client)
+		address, ltransaction, _, err := lumerintoken.DeployLumerintoken(auth, client)
 		if err != nil {
 			log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
 		}
-		return address
+		return address, ltransaction
 	case "CloneFactory":
-		address, _, _, err := clonefactory.DeployClonefactory(auth, client, lmnAddress, validatorAddress, proxyAddress)
+		address, cftransaction, _, err := clonefactory.DeployClonefactory(auth, client, lmnAddress, ValidatorAddress)
 		if err != nil {
 			log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
 		}
-		return address
+		return address, cftransaction
 	}
 
 	address := common.HexToAddress("0x0")
-	return address
+	return address, nil
 }
 
 func CreateHashrateContract(client *ethclient.Client,
@@ -159,7 +167,7 @@ func CreateHashrateContract(client *ethclient.Client,
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)      // in wei
-	auth.GasLimit = uint64(3000000) // in units
+	auth.GasLimit = uint64(6000000) // in units
 	auth.GasPrice = gasPrice
 
 	instance, err := clonefactory.NewClonefactory(contractAddress, client)
@@ -171,7 +179,7 @@ func CreateHashrateContract(client *ethclient.Client,
 	limit := big.NewInt(int64(_limit))
 	speed := big.NewInt(int64(_speed))
 	length := big.NewInt(int64(_length))
-	tx, err := instance.SetCreateNewRentalContract(auth, price, limit, speed, length, _validator)
+	tx, err := instance.SetCreateNewRentalContract(auth, price, limit, speed, length, _validator, "")
 	if err != nil {
 		log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
 	}
@@ -214,7 +222,7 @@ func PurchaseHashrateContract(client *ethclient.Client,
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)      // in wei
-	auth.GasLimit = uint64(3000000) // in units
+	auth.GasLimit = uint64(6000000) // in units
 	auth.GasPrice = gasPrice
 
 	instance, err := clonefactory.NewClonefactory(contractAddress, client)
@@ -266,7 +274,7 @@ func UpdatePurchaseInformation(client *ethclient.Client,
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)      // in wei
-	auth.GasLimit = uint64(3000000) // in units
+	auth.GasLimit = uint64(6000000) // in units
 	auth.GasPrice = gasPrice
 
 	instance, err := implementation.NewImplementation(contractAddress, client)
@@ -320,7 +328,7 @@ func UpdateCipherText(client *ethclient.Client,
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)      // in wei
-	auth.GasLimit = uint64(3000000) // in units
+	auth.GasLimit = uint64(6000000) // in units
 	auth.GasPrice = gasPrice
 
 	instance, err := implementation.NewImplementation(contractAddress, client)
@@ -336,19 +344,19 @@ func UpdateCipherText(client *ethclient.Client,
 	fmt.Printf("Hashrate Contract %s Cipher Text Updated \n\n", contractAddress)
 }
 
-func createNewGanacheBlock(ts TestSetup, account common.Address, privateKey string, contractLength int, sleepTime int) {
+func CreateNewGanacheBlock(ts TestSetup, account common.Address, privateKey string, contractLength int, sleepTime int) {
 	time.Sleep(time.Second * time.Duration(contractLength))
 
-	nonce, err := ts.ethClient.PendingNonceAt(context.Background(), account)
+	nonce, err := ts.EthClient.PendingNonceAt(context.Background(), account)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	gasPrice, err := ts.ethClient.SuggestGasPrice(context.Background())
+	gasPrice, err := ts.EthClient.SuggestGasPrice(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
-	gasLimit := uint64(3000000)
+	gasLimit := uint64(6000000)
 
 	unsignedTx := types.NewTransaction(nonce, account, nil, gasLimit, gasPrice, nil)
 
@@ -363,7 +371,7 @@ func createNewGanacheBlock(ts TestSetup, account common.Address, privateKey stri
 		log.Fatal(err)
 	}
 
-	err = ts.ethClient.SendTransaction(context.Background(), signedTx)
+	err = ts.EthClient.SendTransaction(context.Background(), signedTx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -371,39 +379,34 @@ func createNewGanacheBlock(ts TestSetup, account common.Address, privateKey stri
 	time.Sleep(time.Millisecond * time.Duration(sleepTime))
 }
 
-func BeforeEach(configPath string) (ts TestSetup) {
-	var constructorParams [5]common.Address
+func BeforeEach(configPath string) (ts TestSetup, ltransaction *types.Transaction, cftransaction *types.Transaction) {
+	var constructorParams [4]common.Address
 	configData, err := LoadTestConfiguration("contract", configPath)
 	if err != nil {
 		log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
 	}
 
 	mnemonic := configData["mnemonic"].(string)
-	account, privateKey := hdWalletKeys(mnemonic, 0)
-	ts.nodeEthereumAccount = account.Address
-	ts.nodeEthereumPrivateKey = privateKey
-
-	fmt.Println("Contract Manager account", ts.nodeEthereumAccount)
-	fmt.Println("Contract Manager key", ts.nodeEthereumPrivateKey)
+	account, privateKey := HdWalletKeys(mnemonic, 0)
+	ts.NodeEthereumAccount = account.Address
+	ts.NodeEthereumPrivateKey = privateKey
 
 	var client *ethclient.Client
-	client, err = setUpClient(configData["ethNodeAddr"].(string), ts.nodeEthereumAccount)
+	client, err = setUpClient(configData["ethNodeAddr"].(string), ts.NodeEthereumAccount)
 	if err != nil {
 		log.Fatalf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
 	}
 
-	ts.ethClient = client
-	ts.validatorAddress = common.HexToAddress(configData["validatorAddress"].(string)) // dummy address
-	ts.proxyAddress = common.HexToAddress(configData["proxyAddress"].(string))         // dummy address
-	ts.lumerinAddress = DeployContract(ts.ethClient, ts.nodeEthereumAccount, ts.nodeEthereumPrivateKey, constructorParams, "LumerinToken")
-	fmt.Println("Lumerin Token Contract Address: ", ts.lumerinAddress)
+	ts.EthClient = client
+	ts.ValidatorAddress = common.HexToAddress(configData["validatorAddress"].(string)) // dummy address
+	ts.LumerinAddress, ltransaction = DeployContract(ts.EthClient, ts.NodeEthereumAccount, ts.NodeEthereumPrivateKey, constructorParams, "LumerinToken")
+	fmt.Println("Lumerin Token Contract Address: ", ts.LumerinAddress)
 
-	constructorParams[0] = ts.lumerinAddress
-	constructorParams[1] = ts.validatorAddress
-	constructorParams[2] = ts.proxyAddress
+	constructorParams[0] = ts.LumerinAddress
+	constructorParams[1] = ts.ValidatorAddress
 
-	ts.cloneFactoryAddress = DeployContract(ts.ethClient, ts.nodeEthereumAccount, ts.nodeEthereumPrivateKey, constructorParams, "CloneFactory")
-	fmt.Println("Clone Factory Contract Address: ", ts.cloneFactoryAddress)
+	ts.CloneFactoryAddress, cftransaction = DeployContract(ts.EthClient, ts.NodeEthereumAccount, ts.NodeEthereumPrivateKey, constructorParams, "CloneFactory")
+	fmt.Println("Clone Factory Contract Address: ", ts.CloneFactoryAddress)
 
-	return ts
+	return ts, ltransaction, cftransaction
 }

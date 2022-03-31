@@ -6,28 +6,28 @@ import (
 )
 
 type ConfigRead struct {
-	BuyerNode 			bool
-	DisableConnection	bool
-	DisableStratumv1	bool
-	ListenIP 			string
-	ListenPort 			string
-	DefaultPoolAddr 	string
-	DisableSchedule 	bool
-	SchedulePassthrough	bool
-	DisableContract 	bool
-	Mnemonic			string
-	AccountIndex		int
-	EthNodeAddr			string
-	ClaimFunds			bool
-	TimeThreshold		int
+	BuyerNode           bool
+	DisableConnection   bool
+	DisableStratumv1    bool
+	ListenIP            string
+	ListenPort          string
+	DefaultPoolAddr     string
+	DisableSchedule     bool
+	SchedulePassthrough bool
+	DisableContract     bool
+	Mnemonic            string
+	AccountIndex        int
+	EthNodeAddr         string
+	ClaimFunds          bool
+	TimeThreshold       int
 	CloneFactoryAddress string
 	LumerinTokenAddress string
-	ValidatorAddress 	string
-	ProxyAddress 		string
-	DisableApi 			bool
-	ApiPort				string
-	LogLevel			int
-	LogFilePath			string
+	ValidatorAddress    string
+	ProxyAddress        string
+	DisableApi          bool
+	ApiPort             string
+	LogLevel            int
+	LogFilePath         string
 }
 
 func ReadConfigs() (configs ConfigRead) {
@@ -68,7 +68,7 @@ func ReadConfigs() (configs ConfigRead) {
 		}
 		configs.DisableSchedule = scheduleConfig["disable"].(bool)
 		configs.SchedulePassthrough = scheduleConfig["passthrough"].(bool)
-		
+
 		//
 		// Contract Configs
 		//
@@ -171,7 +171,7 @@ func ReadConfigs() (configs ConfigRead) {
 		if passthroughStr == "true" {
 			configs.SchedulePassthrough = true
 		}
-		
+
 		//
 		// Contract Configs
 		//

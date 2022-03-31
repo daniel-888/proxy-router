@@ -25,7 +25,7 @@ func TestBuyerRoutine(t *testing.T) {
 	configPath := "../../ganacheconfig.json"
 	ps := msgbus.New(10, nil)
 	l := log.New()
-	ts := BeforeEach(configPath)
+	ts, _, _ := BeforeEach(configPath)
 	var hashrateContractAddress [3]common.Address
 	var purchasedHashrateContractAddress [3]common.Address
 
@@ -61,27 +61,27 @@ func TestBuyerRoutine(t *testing.T) {
 	contractManagerConfig.AccountIndex = int(contractManagerConfigFile["accountIndex"].(float64))
 	contractManagerConfig.TimeThreshold = int(contractManagerConfigFile["timeThreshold"].(float64))
 	contractManagerConfig.EthNodeAddr = contractManagerConfigFile["ethNodeAddr"].(string)
-	contractManagerConfig.CloneFactoryAddress = ts.cloneFactoryAddress.Hex()
+	contractManagerConfig.CloneFactoryAddress = ts.CloneFactoryAddress.Hex()
 
 	sleepTime := 5000 // 5000 ms sleeptime in ganache
 	if contractManagerConfig.EthNodeAddr != "ws://127.0.0.1:7545" {
 		sleepTime = 30000 // 20000 ms on testnet
 	}
 
-	account, privateKey := hdWalletKeys(contractManagerConfig.Mnemonic, contractManagerConfig.AccountIndex+1)
-	sellerAddress := account.Address
-	sellerPrivateKey := privateKey
-	fmt.Println("Seller account", sellerAddress)
+	Account, PrivateKey := HdWalletKeys(contractManagerConfig.Mnemonic, contractManagerConfig.AccountIndex+1)
+	sellerAddress := Account.Address
+	sellerPrivateKey := PrivateKey
+	fmt.Println("Seller Account", sellerAddress)
 	fmt.Println("Seller private key", sellerPrivateKey)
 
 	ps.PubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractManagerConfig)
 
-	nodeOperator := msgbus.NodeOperator{
+	NodeOperator := msgbus.NodeOperator{
 		ID:          msgbus.NodeOperatorID(msgbus.GetRandomIDString()),
 		DefaultDest: defaultDest.ID,
 		IsBuyer:     true,
 	}
-	event, err = ps.PubWait(msgbus.NodeOperatorMsg, msgbus.IDString(nodeOperator.ID), nodeOperator)
+	event, err = ps.PubWait(msgbus.NodeOperatorMsg, msgbus.IDString(NodeOperator.ID), NodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("Adding Node Operator Failed: %s", err))
 	}
@@ -90,7 +90,7 @@ func TestBuyerRoutine(t *testing.T) {
 	}
 
 	// start connection scheduler look at miners
-	cs, err := connectionscheduler.New(&mainCtx, &nodeOperator, false)
+	cs, err := connectionscheduler.New(&mainCtx, &NodeOperator, false)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -100,16 +100,16 @@ func TestBuyerRoutine(t *testing.T) {
 	}
 
 	var cman BuyerContractManager
-	go newConfigMonitor(&mainCtx, contractManagerCtx, contractManagerCancel, &cman, contractManagerConfigID, &nodeOperator)
-	err = cman.init(&contractManagerCtx, contractManagerConfigID, &nodeOperator)
+	go newConfigMonitor(&mainCtx, contractManagerCtx, contractManagerCancel, &cman, contractManagerConfigID, &NodeOperator)
+	err = cman.init(&contractManagerCtx, contractManagerConfigID, &NodeOperator)
 	if err != nil {
 		panic(fmt.Sprintf("contract manager init failed:%s", err))
 	}
 
 	// subcribe to creation events emitted by clonefactory contract
-	cfLogs, cfSub, _ := subscribeToContractEvents(ts.ethClient, ts.cloneFactoryAddress)
+	cfLogs, cfSub, _ := SubscribeToContractEvents(ts.EthClient, ts.CloneFactoryAddress)
 	// create event signature to parse out creation event
-	contractCreatedSig := []byte("contractCreated(address)")
+	contractCreatedSig := []byte("contractCreated(address,string)")
 	contractCreatedSigHash := crypto.Keccak256Hash(contractCreatedSig)
 	clonefactoryContractPurchasedSig := []byte("clonefactoryContractPurchased(address)")
 	clonefactoryContractPurchasedSigHash := crypto.Keccak256Hash(clonefactoryContractPurchasedSig)
@@ -139,21 +139,21 @@ func TestBuyerRoutine(t *testing.T) {
 	//
 	// test startup with 1 running contract and 1 availabe contract
 	//
-	CreateHashrateContract(cman.ethClient, sellerAddress, sellerPrivateKey, ts.cloneFactoryAddress, int(0), int(10), int(31), int(contractLength), cman.account)
-	CreateHashrateContract(cman.ethClient, sellerAddress, sellerPrivateKey, ts.cloneFactoryAddress, int(0), int(10), int(41), int(contractLength), cman.account)
+	CreateHashrateContract(cman.EthClient, sellerAddress, sellerPrivateKey, ts.CloneFactoryAddress, int(0), int(10), int(31), int(contractLength), cman.Account)
+	CreateHashrateContract(cman.EthClient, sellerAddress, sellerPrivateKey, ts.CloneFactoryAddress, int(0), int(10), int(41), int(contractLength), cman.Account)
 
 	// wait until created hashrate contract was found before continuing
-	loop1:
+loop1:
 	for {
 		if hashrateContractAddress[0] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop1
 		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	PurchaseHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, hashrateContractAddress[0], cman.account, "stratum+tcp://127.0.0.1:3333/testrig")
+	PurchaseHashrateContract(cman.EthClient, cman.Account, cman.PrivateKey, ts.CloneFactoryAddress, hashrateContractAddress[0], cman.Account, "stratum+tcp://127.0.0.1:3333/testrig")
 
 	// wait until hashrate contract was purchased before continuing
-	loop2:
+loop2:
 	for {
 		if purchasedHashrateContractAddress[0] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop2
@@ -184,10 +184,10 @@ func TestBuyerRoutine(t *testing.T) {
 	}
 
 	// contract manager sees existing contracts and states are correct
-	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] != msgbus.ContRunningState {
+	if cman.NodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] != msgbus.ContRunningState {
 		t.Errorf("Contract 1 was not found or is not in correct state")
 	}
-	if _, ok := cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())]; ok {
+	if _, ok := cman.NodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())]; ok {
 		t.Errorf("Contract 2 was found by buyer node while in the available state")
 	}
 
@@ -200,17 +200,17 @@ func TestBuyerRoutine(t *testing.T) {
 
 	// contract manager should updated states
 	// wait until created hashrate contract was found before continuing
-	loop3:
+loop3:
 	for {
 		if hashrateContractAddress[1] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop3
 		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	PurchaseHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, hashrateContractAddress[1], cman.account, "stratum+tcp://127.0.0.1:3333/testrig")
+	PurchaseHashrateContract(cman.EthClient, cman.Account, cman.PrivateKey, ts.CloneFactoryAddress, hashrateContractAddress[1], cman.Account, "stratum+tcp://127.0.0.1:3333/testrig")
 
 	// wait until hashrate contract was purchased before continuing
-	loop4:
+loop4:
 	for {
 		if purchasedHashrateContractAddress[1] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop4
@@ -226,7 +226,7 @@ func TestBuyerRoutine(t *testing.T) {
 	ps.Pub(msgbus.MinerMsg, msgbus.IDString(miner3.ID), miner3)
 	time.Sleep(time.Millisecond * time.Duration(sleepTime))
 
-	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] != msgbus.ContRunningState {
+	if cman.NodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] != msgbus.ContRunningState {
 		t.Errorf("Contract 2 is not in correct state")
 	}
 
@@ -243,13 +243,13 @@ func TestBuyerRoutine(t *testing.T) {
 		//
 		// Test early closeout from seller
 		//
-		CreateHashrateContract(cman.ethClient, sellerAddress, sellerPrivateKey, ts.cloneFactoryAddress, int(0), int(0), int(30), int(contractLength*10), cman.account)
+		CreateHashrateContract(cman.EthClient, sellerAddress, sellerPrivateKey, ts.cloneFactoryAddress, int(0), int(0), int(30), int(contractLength*10), cman.Account)
 		time.Sleep(time.Millisecond * time.Duration(sleepTime))
 		if _,ok := cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] ; ok {
 			t.Errorf("Contract 3 was found by buyer node while in the available state")
 		}
 
-		PurchaseHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, hashrateContractAddress[2], cman.account, "stratum+tcp://127.0.0.1:3333/testrig")
+		PurchaseHashrateContract(cman.EthClient, cman.Account, cman.PrivateKey, ts.cloneFactoryAddress, hashrateContractAddress[2], cman.Account, "stratum+tcp://127.0.0.1:3333/testrig")
 		time.Sleep(time.Millisecond * time.Duration(sleepTime))
 		if cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContRunningState {
 			t.Errorf("Contract 3 is not in correct state")
@@ -257,7 +257,7 @@ func TestBuyerRoutine(t *testing.T) {
 
 		var wg sync.WaitGroup
 		wg.Add(1)
-		setContractCloseOut(cman.ethClient, sellerAddress, sellerPrivateKey, hashrateContractAddress[2], &wg, &cman.currentNonce, 0)
+		setContractCloseOut(cman.EthClient, sellerAddress, sellerPrivateKey, hashrateContractAddress[2], &wg, &cman.currentNonce, 0)
 		wg.Wait()
 		time.Sleep(time.Millisecond * time.Duration(sleepTime))
 		if _,ok := cman.msg.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())]; ok {
@@ -268,7 +268,7 @@ func TestBuyerRoutine(t *testing.T) {
 	//
 	// Test contract creation, purchasing, and target dest being updated while node is running
 	//
-	CreateHashrateContract(cman.ethClient, sellerAddress, sellerPrivateKey, ts.cloneFactoryAddress, int(0), int(10), int(100), int(contractLength), cman.account)
+	CreateHashrateContract(cman.EthClient, sellerAddress, sellerPrivateKey, ts.CloneFactoryAddress, int(0), int(10), int(100), int(contractLength), cman.Account)
 
 loop5:
 	for {
@@ -277,13 +277,13 @@ loop5:
 		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	if _, ok := cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())]; ok {
+	if _, ok := cman.NodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())]; ok {
 		t.Errorf("Contract 3 was found by buyer node while in the available state")
 	}
-	PurchaseHashrateContract(cman.ethClient, cman.account, cman.privateKey, ts.cloneFactoryAddress, hashrateContractAddress[2], cman.account, "stratum+tcp://127.0.0.1:3333/testrig")
+	PurchaseHashrateContract(cman.EthClient, cman.Account, cman.PrivateKey, ts.CloneFactoryAddress, hashrateContractAddress[2], cman.Account, "stratum+tcp://127.0.0.1:3333/testrig")
 
 	// wait until hashrate contract was purchased before continuing
-	loop6:
+loop6:
 	for {
 		if purchasedHashrateContractAddress[2] != common.HexToAddress("0x0000000000000000000000000000000000000000") {
 			break loop6
@@ -299,7 +299,7 @@ loop5:
 	ps.Pub(msgbus.MinerMsg, msgbus.IDString(miner4.ID), miner4)
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
 
-	if cman.nodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContRunningState {
+	if cman.NodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContRunningState {
 		t.Errorf("Contract 3 is not in correct state")
 	}
 
@@ -313,10 +313,10 @@ loop5:
 		t.Errorf("Miner contracts not set correctly")
 	}
 
-	UpdateCipherText(cman.ethClient, cman.account, cman.privateKey, hashrateContractAddress[2], "stratum+tcp://127.0.0.1:3333/updated")
+	UpdateCipherText(cman.EthClient, cman.Account, cman.PrivateKey, hashrateContractAddress[2], "stratum+tcp://127.0.0.1:3333/updated")
 	time.Sleep(time.Millisecond * time.Duration(sleepTime*2))
 	// check dest msg with associated contract was updated in msgbus
-	event, err = cman.ps.GetWait(msgbus.ContractMsg, msgbus.IDString(hashrateContractAddress[2].Hex()))
+	event, err = ps.GetWait(msgbus.ContractMsg, msgbus.IDString(hashrateContractAddress[2].Hex()))
 	if err != nil {
 		panic(fmt.Sprintf("Getting Purchased Contract Failed: %s", err))
 	}
@@ -324,7 +324,7 @@ loop5:
 		panic(fmt.Sprintf("Getting Purchased Contract Failed: %s", event.Err))
 	}
 	contractMsg := event.Data.(msgbus.Contract)
-	event, err = cman.ps.GetWait(msgbus.DestMsg, msgbus.IDString(contractMsg.Dest))
+	event, err = ps.GetWait(msgbus.DestMsg, msgbus.IDString(contractMsg.Dest))
 	if err != nil {
 		panic(fmt.Sprintf("Getting Dest Failed: %s", err))
 	}
@@ -360,7 +360,7 @@ loop5:
 	time.Sleep(time.Millisecond * time.Duration(sleepTime*4))
 
 	// check contracts map is empty now
-	if len(cman.nodeOperator.Contracts) != 0 {
+	if len(cman.NodeOperator.Contracts) != 0 {
 		t.Errorf("Contracts did not closeout after all miners were set to offline")
 	}
 
@@ -378,8 +378,8 @@ loop5:
 	contractManagerConfig.AccountIndex = 2
 	ps.SetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractManagerConfig)
 	time.Sleep(time.Second * 3)
-	newAccount, _ := hdWalletKeys(contractManagerConfig.Mnemonic, contractManagerConfig.AccountIndex)
-	if cman.account != newAccount.Address {
+	newAccount, _ := HdWalletKeys(contractManagerConfig.Mnemonic, contractManagerConfig.AccountIndex)
+	if cman.Account != newAccount.Address {
 		t.Errorf("Contract manager's configuration was not updated after msgbus update")
 	}
 }

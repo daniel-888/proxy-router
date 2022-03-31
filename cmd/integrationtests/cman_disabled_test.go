@@ -1,4 +1,4 @@
-package maintest
+package integrationtests
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
-type Config struct {
+type DisabledConfig struct {
 	BuyerNode           bool
 	ListenIP            string
 	ListenPort          string
@@ -28,7 +28,7 @@ type Config struct {
 	LogFilePath         string
 }
 
-func LoadTestConfiguration(filePath string) (configs Config, err error) {
+func LoadDisabledTestConfiguration(filePath string) (configs DisabledConfig, err error) {
 	var data map[string]interface{}
 	currDir, _ := os.Getwd()
 	defer os.Chdir(currDir)
@@ -66,7 +66,7 @@ func LoadTestConfiguration(filePath string) (configs Config, err error) {
 	return configs, err
 }
 
-func SimMain(ps *msgbus.PubSub, l *log.Logger, configs Config) msgbus.DestID {
+func DisabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs DisabledConfig) msgbus.DestID {
 	mainContext := context.Background()
 
 	//
@@ -148,16 +148,16 @@ func SimMain(ps *msgbus.PubSub, l *log.Logger, configs Config) msgbus.DestID {
 	}
 	err = csched.Start()
 	if err != nil {
-		l.Logf(log.LevelPanic, "Schedule manager to start: %v", err)
+		l.Logf(log.LevelPanic, "Schedule manager failed to start: %v", err)
 	}
 
 	return dest.ID
 }
 
-func TestMain(t *testing.T) {
+func TestDisabled(t *testing.T) {
 	configPath := "../../ganacheconfig.json"
 
-	configs, err := LoadTestConfiguration(configPath)
+	configs, err := LoadDisabledTestConfiguration(configPath)
 	if err != nil {
 		panic(fmt.Sprintf("Loading Config Failed: %s", err))
 	}
@@ -175,7 +175,7 @@ func TestMain(t *testing.T) {
 
 	ps := msgbus.New(10, l)
 
-	defaultDestID := SimMain(ps, l, configs)
+	defaultDestID := DisabledSimMain(ps, l, configs)
 
 	//
 	// miner connecting to lumerin node
