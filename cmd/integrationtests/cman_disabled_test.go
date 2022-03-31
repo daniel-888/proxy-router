@@ -90,7 +90,7 @@ func DisabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs DisabledConfig) m
 	//
 	// Setup Default Dest
 	//
-	dest := msgbus.Dest{
+	dest := &msgbus.Dest{
 		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
 		NetUrl: msgbus.DestNetUrl(configs.DefaultPoolAddr),
 	}
@@ -127,12 +127,7 @@ func DisabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs DisabledConfig) m
 		lumerinlib.PanicHere("")
 	}
 
-	dstStrat, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "127.0.0.1", "3334"))
-	if err != nil {
-		lumerinlib.PanicHere("")
-	}
-
-	stratum, err := stratumv1.NewListener(mainContext, srcStrat, dstStrat)
+	stratum, err := stratumv1.NewListener(mainContext, srcStrat, dest)
 	if err != nil {
 		panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
 	}
@@ -155,7 +150,7 @@ func DisabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs DisabledConfig) m
 }
 
 func TestDisabled(t *testing.T) {
-	configPath := "../../ganacheconfig.json"
+	configPath := "../../ropstenconfig.json"
 
 	configs, err := LoadDisabledTestConfiguration(configPath)
 	if err != nil {

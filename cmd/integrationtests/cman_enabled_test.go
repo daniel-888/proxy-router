@@ -111,7 +111,7 @@ func EnabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs EnabledConfig) (ms
 	//
 	// Setup Default Dest
 	//
-	dest := msgbus.Dest{
+	dest := &msgbus.Dest{
 		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
 		NetUrl: msgbus.DestNetUrl(configs.DefaultPoolAddr),
 	}
@@ -148,12 +148,7 @@ func EnabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs EnabledConfig) (ms
 		lumerinlib.PanicHere("")
 	}
 
-	dstStrat, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", "127.0.0.1", "3334"))
-	if err != nil {
-		lumerinlib.PanicHere("")
-	}
-
-	stratum, err := stratumv1.NewListener(mainContext, srcStrat, dstStrat)
+	stratum, err := stratumv1.NewListener(mainContext, srcStrat, dest)
 	if err != nil {
 		panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
 	}
@@ -201,7 +196,7 @@ func EnabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs EnabledConfig) (ms
 }
 
 func TestEnabled(t *testing.T) {
-	configPath := "../../ganacheconfig.json"
+	configPath := "../../.json"
 
 	var hashrateContractAddress msgbus.ContractID
 	var purchasedHashrateContractAddress msgbus.ContractID
