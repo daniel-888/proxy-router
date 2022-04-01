@@ -58,6 +58,13 @@ func New() *Logger {
 	}
 }
 
+// SetLevel sets the logging level for the logger.
+func (l *Logger) SetLevel(level Level) *Logger {
+	l.logger.SetLevel(logrus.Level(level))
+
+	return l
+}
+
 // SetOutput sets the output for the logger.
 func (l *Logger) SetOutput(output io.Writer) *Logger {
 	l.logger.SetOutput(output)

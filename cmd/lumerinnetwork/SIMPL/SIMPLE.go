@@ -205,16 +205,9 @@ func (s *SimpleListenStruct) goListenAccept() {
 		contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Structre not correct")
 	}
 
-	// if cs.GetProtocol() == nil {
-	// 	contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context New Protocol Function not defined")
-	// }
-
-	// This needs error checking....
-	// proto := cs.GetProtocol()
-	// if proto == nil {
-	// 	contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetProtocol() returned nil")
-	// }
-
+	//
+	// Get the Accept channel from the listen struct
+	//
 	connectionStructChan := s.connectionListen.Accept()
 
 FORLOOP:
@@ -301,7 +294,10 @@ func (s *SimpleListenStruct) Cancel() {
 		return
 	}
 
-	close(s.accept)
+	_, ok := <-s.accept
+	if ok {
+		close(s.accept)
+	}
 	s.cancel()
 }
 
@@ -459,9 +455,22 @@ func (s *SimpleStruct) Cancel() {
 		return
 	}
 
-	close(s.eventChan)
-	close(s.msgbusChan)
-	close(s.openChan)
+	//
+	// Close all channles if they are still open
+	//
+	var ok bool
+	_, ok = <-s.eventChan
+	if ok {
+		close(s.eventChan)
+	}
+	_, ok = <-s.msgbusChan
+	if ok {
+		close(s.msgbusChan)
+	}
+	_, ok = <-s.openChan
+	if ok {
+		close(s.openChan)
+	}
 	s.cancel()
 }
 

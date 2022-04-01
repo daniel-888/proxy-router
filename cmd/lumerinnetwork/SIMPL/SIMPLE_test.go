@@ -7,13 +7,17 @@ import (
 	"testing"
 
 	"gitlab.com/TitanInd/lumerin/cmd/log"
+	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/sockettcp"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 	"gitlab.com/TitanInd/lumerin/lumerinlib/testinglib"
 )
 
-func TestListen(t *testing.T) {
+//
+// Test NewListen()
+//
+func Test_NewListen(t *testing.T) {
 
 	l := log.New()
 	mb := msgbus.New(1, l)
@@ -34,6 +38,45 @@ func TestListen(t *testing.T) {
 	}
 
 	_ = sls
+}
+
+//
+// Test Run() and goListenAccept()
+//
+func Test_Run_goListenAccept(t *testing.T) {
+
+	l := log.New()
+	mb := msgbus.New(1, l)
+
+	ctx := testinglib.GetNewContextWithValueStruct()
+	contextlib.GetContextStruct(ctx).SetLog(l)
+	contextlib.GetContextStruct(ctx).SetMsgBus(mb)
+
+	ip := "127.0.0.1"
+	port := testinglib.GetRandPort()
+	addr := fmt.Sprintf("%s:%d", ip, port)
+	srcaddr := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
+	contextlib.GetContextStruct(ctx).SetSrc(srcaddr)
+
+	sls, e := NewListen(ctx)
+	if e != nil {
+		t.Errorf(lumerinlib.FileLineFunc()+" NewListen error:%s", e)
+	}
+
+	sls.Run()
+
+	//
+	// Open a connection to the listener socket
+	//
+	_, e = sockettcp.Dial(ctx, "tcp", fmt.Sprintf("%s:%d", ip, port))
+	if e != nil {
+		t.Errorf(lumerinlib.FileLineFunc()+" sockettcp error:%s", e)
+	}
+
+	_ = <-sls.GetAccept()
+
+	sls.Close()
+
 }
 
 //func generateTestContext() context.Context {

@@ -56,7 +56,6 @@ type StratumV1Struct struct {
 	dstState            map[simple.ConnUniqueID]DstState
 	dstDest             map[simple.ConnUniqueID]*msgbus.Dest
 	switchToDestID      msgbus.DestID
-	// defaultUID          simple.ConnUniqueID -- stored in protocol layer
 
 	// Add in stratum state information here
 }
@@ -161,7 +160,7 @@ func NewStratumV1Struct(ctx context.Context, l *protocol.ProtocolStruct) (n *Str
 		Name:                    "",
 		IP:                      "",
 		MAC:                     "",
-		State:                   "",
+		State:                   msgbus.OnlineState,
 		Contract:                "",
 		Dest:                    defdest.ID,
 		InitialMeasuredHashRate: 0,
@@ -353,6 +352,24 @@ func (s *StratumV1Struct) SetDsDestUid(uid simple.ConnUniqueID, dest *msgbus.Des
 //
 func (s *StratumV1Struct) GetDstDestUid(uid simple.ConnUniqueID) (dest *msgbus.Dest) {
 	return s.dstDest[uid]
+}
+
+//
+//
+//
+func (s *StratumV1Struct) GetDstUsernameUid(uid simple.ConnUniqueID) (username string) {
+	dest := s.dstDest[uid]
+	username = dest.Username()
+	return username
+}
+
+//
+//
+//
+func (s *StratumV1Struct) GetDstPasswordUid(uid simple.ConnUniqueID) (password string) {
+	dest := s.dstDest[uid]
+	password = dest.Password()
+	return password
 }
 
 //

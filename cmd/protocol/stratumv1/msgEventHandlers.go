@@ -142,6 +142,9 @@ func (svs *StratumV1Struct) handleMsgDeleteEvent(event *simple.SimpleMsgBusEvent
 // else error out
 //
 func (svs *StratumV1Struct) handleMsgGetEvent(event *simple.SimpleMsgBusEvent) {
+	if svs == nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" svs is nil")
+	}
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
@@ -164,13 +167,26 @@ func (svs *StratumV1Struct) handleMsgGetEvent(event *simple.SimpleMsgBusEvent) {
 			// If default is not already set, set it
 			var dest *msgbus.Dest
 			switch event.Data.(type) {
+			case msgbus.Dest:
+				d := event.Data.(msgbus.Dest)
+				dest = &d
 			case *msgbus.Dest:
 				dest = event.Data.(*msgbus.Dest)
+				if dest == nil {
+					contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" DestMsg: is nil")
+				}
 			default:
 				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" DestMsg: bad data:%t", event.Data)
 			}
 
-			if 0 > svs.GetDstUIDDestID(dest.ID) {
+			if dest == nil {
+				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" DestMsg: is nil")
+			}
+			d := *dest
+			id := d.ID
+
+			//if 0 > svs.GetDstUIDDestID(dest.ID) {
+			if 0 > svs.GetDstUIDDestID(id) {
 				// Open new Dest
 				e := svs.protocol.AsyncDial(dest)
 				if e != nil {

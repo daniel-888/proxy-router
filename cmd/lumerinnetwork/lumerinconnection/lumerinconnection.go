@@ -254,7 +254,10 @@ func (ll *LumerinListenStruct) Cancel() {
 		contextlib.Logf(ll.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" cancel function is nil, struct:%v", ll)
 	}
 
-	close(ll.accept)
+	_, ok := <-ll.accept
+	if ok {
+		close(ll.accept)
+	}
 	ll.cancel()
 }
 

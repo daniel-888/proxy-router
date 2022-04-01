@@ -139,12 +139,17 @@ func (d *Dest) Username() string {
 //---------------------------------------------------------------
 //
 //---------------------------------------------------------------
-func (d *Dest) Password() (string, bool) {
+func (d *Dest) Password() string {
 
 	u, err := url.Parse(string(d.NetUrl))
 	if err != nil {
 		panic(fmt.Sprintf(lumerinlib.FileLine()+"url: %s, err %s\n", u, err))
 	}
 
-	return u.User.Password()
+	pass, set := u.User.Password()
+	if set {
+		return pass
+	} else {
+		return ""
+	}
 }

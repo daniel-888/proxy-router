@@ -211,7 +211,10 @@ func (cls *ConnectionListenStruct) Cancel() {
 		return
 	}
 
-	close(cls.accept)
+	_, ok := <-cls.accept
+	if ok {
+		close(cls.accept)
+	}
 	cls.cancel()
 }
 
@@ -357,7 +360,10 @@ func (cs *ConnectionStruct) Cancel() {
 		return
 	}
 
-	close(cs.readChan)
+	_, ok := <-cs.readChan
+	if ok {
+		close(cs.readChan)
+	}
 	cs.cancel()
 }
 

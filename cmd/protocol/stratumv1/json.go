@@ -409,6 +409,59 @@ func (r *stratumRequest) getMiningNotifyJobID() (jobid string, err error) {
 
 //------------------------------------------------------
 //
+// {"id": 2, "method": "mining.authorize", "params": ["userid.worker1", "somepassword"]}
+//------------------------------------------------------
+func (r *stratumRequest) createAuthorizeRequestMsg(username string, password string) (msg []byte, err error) {
+
+	if r.Method != string(CLIENT_MINING_AUTHORIZE) {
+		fmt.Printf(lumerinlib.FileLineFunc()+"Bad Method:%s\n", r.Method)
+	}
+
+	var parm [2]string
+	parm[0] = username
+	parm[1] = password
+	var parmint []interface{}
+	parmint = append(parmint, parm)
+	req := stratumRequest{
+		ID:     r.ID,
+		Method: r.Method,
+		Params: parmint,
+	}
+
+	msg, err = json.Marshal(req)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Request Err:%s\n", err)
+		return nil, err
+	}
+
+	msg = []byte(string(msg) + "\n")
+
+	return msg, err
+}
+
+//------------------------------------------------------
+//
+// {"method": "mining.submit", "params": ["username.worker0", "624732e600000021", "00", "6247372c", "a13d0400"], "id":4}
+//------------------------------------------------------
+func (r *stratumRequest) createSubmitRequestMsg(username string) (msg []byte, err error) {
+
+	req := *r
+	var u interface{}
+	u = username
+	req.Params[0] = u
+	msg, err = json.Marshal(r)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Request Err:%s\n", err)
+		return nil, err
+	}
+
+	msg = []byte(string(msg) + "\n")
+
+	return msg, err
+}
+
+//------------------------------------------------------
+//
 //------------------------------------------------------
 func (r *stratumRequest) createRequestMsg() (msg []byte, err error) {
 
@@ -755,7 +808,7 @@ func (r *stratumResponse) createResponseMsg() (msg []byte, err error) {
 }
 
 //------------------------------------------------------
-// createSubscribeResponseMsg
+// createSrcSubscribeResponseMsg
 //
 // type stratumResponse struct {
 // 	ID     int         `json:"id"`
@@ -811,7 +864,7 @@ func (r *stratumResponse) createSrcSubscribeResponseMsg(id int) (msg []byte, err
 //
 func LogJson(ctx context.Context, direction string, msg []byte) {
 
-	prefix := ">"
+	prefix := ""
 	indent := " "
 	var buf bytes.Buffer
 	e := json.Indent(&buf, msg, prefix, indent)
@@ -819,6 +872,7 @@ func LogJson(ctx context.Context, direction string, msg []byte) {
 		contextlib.Logf(ctx, contextlib.LevelPanic, "Indent() error:%s", e)
 	}
 
-	contextlib.Logf(ctx, contextlib.LevelDebug, "%s\n%s%s", direction, prefix, buf.String())
+	// contextlib.Logf(ctx, contextlib.LevelDebug, "%s\n%s%s", direction, prefix, buf.String())
+	contextlib.Logf(ctx, contextlib.LevelDebug, "%s%s%s", direction, prefix, buf.String())
 
 }

@@ -36,6 +36,7 @@ func (svs *StratumV1Struct) handleConnOpenEvent(scoe *simple.SimpleConnOpenEvent
 	}
 
 	uid := scoe.UniqueID()
+	dest := scoe.Dest()
 
 	// Need a new Dst Conn Connection Record.
 
@@ -45,7 +46,7 @@ func (svs *StratumV1Struct) handleConnOpenEvent(scoe *simple.SimpleConnOpenEvent
 		return e
 	}
 	svs.dstState[uid] = DstStateNew
-	svs.dstDest[uid] = scoe.Dest()
+	svs.dstDest[uid] = dest
 
 	dstconn, e := svs.protocol.GetDstConn(uid)
 	if e != nil {
@@ -296,7 +297,9 @@ func (svs *StratumV1Struct) handleResponse(uid simple.ConnUniqueID, response *st
 		case DstStateSubscribing:
 			svs.SetDstStateUid(uid, DstStateAuthorizing)
 			request := svs.srcAuthRequest
-			msg, e := request.createRequestMsg()
+			username := svs.dstDest[uid].Username()
+			password := svs.dstDest[uid].Password()
+			msg, e := request.createAuthorizeRequestMsg(username, password)
 			if e != nil {
 				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" error:%s", e)
 			}
@@ -330,7 +333,7 @@ func (svs *StratumV1Struct) handleResponse(uid simple.ConnUniqueID, response *st
 
 			// Write to the current destination
 
-			LogJson(svs.Ctx(), "Response DST -> SRC:", msg)
+			LogJson(svs.Ctx(), "Response DST -> [SRC]:", msg)
 
 			count, e := svs.protocol.WriteSrc(msg)
 			if e != nil {
@@ -447,7 +450,7 @@ func (svs *StratumV1Struct) handleSrcReqSubscribe(request *stratumRequest) (e er
 		return e
 	}
 
-	LogJson(svs.Ctx(), "SRC -> SRC:", msg)
+	LogJson(svs.Ctx(), "SRC -> [SRC]:", msg)
 
 	count, e := svs.protocol.WriteSrc(msg)
 	if e != nil {
@@ -481,7 +484,7 @@ func (svs *StratumV1Struct) handleSrcReqAuthorize(request *stratumRequest) (e er
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Got Authorize, expect subscribe")
 		return ErrBadSrcState
 	case SrcStateSubscribed:
-		// This is what we expect, so skip
+		// This is what we expect, so continue
 	case SrcStateAuthorized:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Got Authorize, but already authorized")
 		return ErrBadSrcState
@@ -522,7 +525,7 @@ func (svs *StratumV1Struct) handleSrcReqAuthorize(request *stratumRequest) (e er
 		return e
 	}
 
-	LogJson(svs.Ctx(), "SRC -> SRC:", msg)
+	LogJson(svs.Ctx(), "SRC -> [SRC]:", msg)
 
 	count, e := svs.protocol.WriteSrc(msg)
 	if e != nil {
@@ -580,14 +583,25 @@ func (svs *StratumV1Struct) handleSrcReqSubmit(request *stratumRequest) (e error
 	//	return e
 	//}
 
-	msg, e := request.createRequestMsg()
+	//
+	// Get the current default route UID
+	//
+	uid := svs.protocol.GetDefaultRouteUID()
+
+	//
+	// Get the username of the default route
+	//
+	username := svs.dstDest[uid].Username()
+
+	// msg, e := request.createRequestMsg()
+	msg, e := request.createSubmitRequestMsg(username)
 	if e != nil {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createRequestMsg() error:%s", e)
 	}
 
 	// Write to the current destination
 
-	LogJson(svs.Ctx(), "SRC -> DST:", msg)
+	LogJson(svs.Ctx(), "SRC -> [DST]:", msg)
 
 	count, e := svs.protocol.Write(msg)
 	if e != nil {
@@ -698,7 +712,7 @@ func (svs *StratumV1Struct) handleDstReqNotify(uid simple.ConnUniqueID, request 
 			return e
 		}
 
-		LogJson(svs.Ctx(), "DST -> SRC:", msg)
+		LogJson(svs.Ctx(), "DST -> [SRC]:", msg)
 
 		svs.protocol.WriteSrc(msg)
 	} else {
@@ -799,7 +813,7 @@ func (svs *StratumV1Struct) handleDstReqSetDifficulty(uid simple.ConnUniqueID, r
 			return e
 		}
 
-		LogJson(svs.Ctx(), "DST -> SRC:", msg)
+		LogJson(svs.Ctx(), "DST -> [SRC]:", msg)
 
 		svs.protocol.WriteSrc(msg)
 	} else {
@@ -852,7 +866,7 @@ func (svs *StratumV1Struct) handleDstNoticeNotify(uid simple.ConnUniqueID, notic
 			return e
 		}
 
-		LogJson(svs.Ctx(), "DST -> SRC:", msg)
+		LogJson(svs.Ctx(), "DST -> [SRC]:", msg)
 
 		svs.protocol.WriteSrc(msg)
 	} else {
@@ -900,7 +914,7 @@ func (svs *StratumV1Struct) handleDstNoticeSetDifficulty(uid simple.ConnUniqueID
 			return e
 		}
 
-		LogJson(svs.Ctx(), "DST -> SRC:", msg)
+		LogJson(svs.Ctx(), "DST -> [SRC]:", msg)
 
 		svs.protocol.WriteSrc(msg)
 	} else {
@@ -948,7 +962,7 @@ func (svs *StratumV1Struct) handleDstNoticeReconnect(uid simple.ConnUniqueID, no
 			return e
 		}
 
-		LogJson(svs.Ctx(), "DST -> SRC:", msg)
+		LogJson(svs.Ctx(), "DST -> [SRC]:", msg)
 
 		svs.protocol.WriteSrc(msg)
 	} else {
