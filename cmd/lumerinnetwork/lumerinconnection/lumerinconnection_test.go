@@ -54,6 +54,9 @@ func TestSetupListenCancel(t *testing.T) {
 			t.Fatal(lumerinlib.FileLine()+" CTX Done(): %s\n", ctx.Err())
 		}
 
+	case <-time.After(time.Second * 2):
+		t.Fatal(lumerinlib.FileLine() + " select timeout ")
+
 	case <-l.GetAcceptChan():
 		t.Fatal(lumerinlib.FileLine() + " <-Accept() Returned, wtf")
 	}
@@ -77,10 +80,7 @@ func TestSetupListenConnect(t *testing.T) {
 		ipaddr:  addr,
 	}
 
-	listenctx, listencancel := context.WithCancel(ctx)
-	_ = listencancel
-
-	l, e := testListen(listenctx, testaddr)
+	l, e := testListen(ctx, testaddr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" Listen() Failed: %s\n", e))
 	}
@@ -88,10 +88,7 @@ func TestSetupListenConnect(t *testing.T) {
 	l.Run()
 
 	// Connect here
-	dialctx, dialcancel := context.WithCancel(ctx)
-	_ = dialcancel
-
-	s, e := sockettcp.Dial(dialctx, "tcp", addr)
+	s, e := sockettcp.Dial(ctx, "tcp", addr)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine()+" sockettcp.Dial() Errored: %s\n", e))
 	}
@@ -101,10 +98,13 @@ func TestSetupListenConnect(t *testing.T) {
 
 	t.Logf(lumerinlib.FileLine() + " Dial completed\n")
 
-	lconnection := <-l.GetAcceptChan()
-	_ = lconnection
-
 	select {
+	case <-l.GetAcceptChan():
+		t.Logf(lumerinlib.FileLine() + "GetAcceptChan() returned ok")
+
+	case <-time.After(time.Second * 2):
+		t.Fatal(lumerinlib.FileLine() + "Select Timeout")
+
 	case <-l.ctx.Done():
 		e := l.ctx.Err()
 		if e != nil {
@@ -118,14 +118,6 @@ func TestSetupListenConnect(t *testing.T) {
 			t.Fatal(lumerinlib.FileLine()+" socket CTX Done() Error: %s\n", e)
 		}
 		t.Fatal(lumerinlib.FileLine() + " Socket Done() Returned")
-
-	case <-lconnection.ctx.Done():
-		e := lconnection.ctx.Err()
-		if e != nil {
-			t.Fatal(lumerinlib.FileLine()+" lconnection CTX Done() Error: %s\n", e)
-		}
-		t.Fatal(lumerinlib.FileLine() + " lconnection Done() Returned")
-	default:
 
 	}
 
