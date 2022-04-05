@@ -26,12 +26,15 @@ import (
 //
 func (svs *StratumV1Struct) handleConnOpenEvent(scoe *simple.SimpleConnOpenEvent) (e error) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called %v", scoe)
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
+	//
+	// Need Requirements For This: Error on connection
 	// If there is an error do we handle it here, or put it into the connection struct?
+	//
 	e = scoe.Err()
 	if nil != e {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" scre had an error:%s", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" scre had an error:%v", scoe)
 		return e
 	}
 
@@ -279,15 +282,39 @@ func (svs *StratumV1Struct) handleResponse(uid simple.ConnUniqueID, response *st
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
 
 	if uid < 0 {
+
 		srcstate := svs.GetSrcState()
+
+		if response.Error != nil {
+			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Src State:%s, error:%s, %v", srcstate, response.Error, response)
+			//
+			// Which returned errors should result in being put into an Error state?
+			// Log it for now.
+			// svs.SetSrcState(SrcStateError)
+			// srcstate = SrcStateError
+			//
+		}
+
 		switch srcstate {
 		case SrcStateSubscribed:
+		case SrcStateError:
+			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Src is in Error State, closing connection")
+			svs.Close()
+
 		default:
 			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" not handled yet")
 		}
 
 	} else {
+
 		dststate := svs.GetDstStateUid(uid)
+
+		if response.Error != nil {
+			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Dst UID:%d, State:%s, error:%s, %v", uid, dststate, response.Error, response)
+			svs.SetDstStateUid(uid, DstStateError)
+			dststate = DstStateError
+		}
+
 		switch dststate {
 		//
 		// Got Response to Subscribe, send authorize now
@@ -355,6 +382,17 @@ func (svs *StratumV1Struct) handleResponse(uid simple.ConnUniqueID, response *st
 			LogJson(svs.Ctx(), "Response in StandBy - DROPPED:", msg)
 
 			contextlib.Logf(svs.Ctx(), contextlib.LevelDebug, lumerinlib.FileLineFunc()+" state not handled yet:%s", dststate)
+
+		case DstStateError:
+
+			e = svs.DstRedialUid(uid)
+			if e != nil {
+				contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Dst is in Error State, closing connection")
+				svs.CloseUid(uid)
+			}
+
+		case DstStateClosed:
+			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Connecton is already closed")
 
 		default:
 			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" not handled yet")
@@ -569,6 +607,7 @@ func (svs *StratumV1Struct) handleSrcReqSubmit(request *stratumRequest) (e error
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Got Submit, expecting Authorize")
 		return ErrBadSrcState
 	case SrcStateAuthorized:
+		svs.SetSrcState(SrcStateRunning)
 	case SrcStateRunning:
 		// This is what we expect, so skip
 	default:
@@ -586,7 +625,11 @@ func (svs *StratumV1Struct) handleSrcReqSubmit(request *stratumRequest) (e error
 	//
 	// Get the current default route UID
 	//
-	uid := svs.protocol.GetDefaultRouteUID()
+	uid, e := svs.protocol.GetDefaultRouteUID()
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Default Route error:%s", e)
+		return e
+	}
 
 	//
 	// Get the username of the default route
@@ -702,7 +745,7 @@ func (svs *StratumV1Struct) handleDstReqNotify(uid simple.ConnUniqueID, request 
 		return ErrDstReqNotSupported
 	}
 
-	defRouteUid := svs.protocol.GetDefaultRouteUID()
+	defRouteUid, _ := svs.protocol.GetDefaultRouteUID()
 
 	// This is the default route
 	if defRouteUid == uid {
@@ -804,7 +847,7 @@ func (svs *StratumV1Struct) handleDstReqSetDifficulty(uid simple.ConnUniqueID, r
 		return ErrDstReqNotSupported
 	}
 
-	defRouteUid := svs.protocol.GetDefaultRouteUID()
+	defRouteUid, _ := svs.protocol.GetDefaultRouteUID()
 	// This is the default route
 	if defRouteUid == uid {
 		msg, e := request.createRequestMsg()
@@ -850,13 +893,14 @@ func (svs *StratumV1Struct) handleDstNoticeNotify(uid simple.ConnUniqueID, notic
 		contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" passing notify for state:%s", dststate)
 	case DstStateStandBy:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" state not handled yet:%s", dststate)
+
 	// case DstStateError:
 	// case DstStateNew:
 	default:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+"  state:%s not handled", dststate)
 	}
 
-	defRouteUid := svs.protocol.GetDefaultRouteUID()
+	defRouteUid, _ := svs.protocol.GetDefaultRouteUID()
 
 	// This is the default route
 	if defRouteUid == uid {
@@ -905,7 +949,8 @@ func (svs *StratumV1Struct) handleDstNoticeSetDifficulty(uid simple.ConnUniqueID
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+"  state:%s not handled", dststate)
 	}
 
-	defRouteUid := svs.protocol.GetDefaultRouteUID()
+	defRouteUid, _ := svs.protocol.GetDefaultRouteUID()
+
 	// This is the default route
 	if defRouteUid == uid {
 		msg, e := notice.createNoticeSetDifficultyMsg()
@@ -948,11 +993,15 @@ func (svs *StratumV1Struct) handleDstNoticeReconnect(uid simple.ConnUniqueID, no
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" state not handled yet:%s", dststate)
 	// case DstStateError:
 	// case DstStateNew:
+	case DstStateClosed:
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Connecton is Marked closed, ignore reopen")
+		return fmt.Errorf("Connection is marked closed, cant reopen")
 	default:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+"  state:%s not handled", dststate)
 	}
 
-	defRouteUid := svs.protocol.GetDefaultRouteUID()
+	defRouteUid, _ := svs.protocol.GetDefaultRouteUID()
+
 	// This is the default route
 	if defRouteUid == uid {
 		// msg, e := notice.createNoticeSetDifficultyMsg()

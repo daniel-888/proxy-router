@@ -19,6 +19,9 @@ var basePort int = 50000
 
 var TestString = "This is a test string\n"
 
+//
+// Open up listening socket
+//
 func TestSetupListenCancel(t *testing.T) {
 
 	localport := getRandPort()
@@ -44,9 +47,9 @@ func TestSetupListenCancel(t *testing.T) {
 
 	select {
 	case <-l.ctx.Done():
-		fmt.Printf(lumerinlib.FileLineFunc()+" CTX Done(): %s\n", ctx.Err())
+		t.Logf(lumerinlib.FileLineFunc()+" CTX Done(): %s\n", ctx.Err())
 	case <-l.Accept():
-		fmt.Printf(lumerinlib.FileLineFunc() + "Accept() OK: returned error:")
+		t.Logf(lumerinlib.FileLineFunc() + "Accept() OK: returned error:")
 	case <-time.After(time.Second * 1):
 		t.Fatal(fmt.Errorf(lumerinlib.FileLine() + " timeout on Accept()"))
 	}
@@ -54,6 +57,7 @@ func TestSetupListenCancel(t *testing.T) {
 }
 
 //
+// Open up listener
 //
 //
 func TestSrcDial(t *testing.T) {
@@ -133,19 +137,26 @@ func TestSrcDefDstDial(t *testing.T) {
 	cs.SetSrc(testaddr)
 	ctx = context.WithValue(ctx, contextlib.ContextKey, cs)
 
+	//
+	// Setup Connection Manager listener
+	//
 	l, e := NewListen(ctx)
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" Listen() Failed: %s\n", e))
 	}
 
 	l.Run()
-
 	defer l.Close()
 
+	//
+	// Setup incoming connection echo mechanism
+	//
 	s := testSetupEchoConnection(t, l)
-
 	defer s.Close()
 
+	//
+	// Write TestString into socket
+	//
 	writeb := []byte(TestString)
 	writecount, e := s.DstWrite(writeb)
 	if e != nil {
@@ -161,12 +172,14 @@ func TestSrcDefDstDial(t *testing.T) {
 	if e != nil {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" DstGetSocket() Test Failed: %s\n", e))
 	}
-	reader := bufio.NewReader(soc)
-	readbuf, e := reader.ReadBytes('\n')
+
+	fmt.Printf(lumerinlib.FileLineFunc() + " DstGetSocket() completed\n")
+
+	readb := make([]byte, 64)
+	readcount, e := soc.Read(readb)
 	if e != nil {
-		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" ReadBytes() Test Failed: %s\n", e))
+		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+" soc.Read() Error: %s\n", e))
 	}
-	readcount := len(readbuf)
 	if readcount != writecount {
 		t.Fatal(fmt.Errorf(lumerinlib.FileLineFunc()+"Count Test Failed read: %d, write: %d\n", readcount, writecount))
 	}
@@ -235,7 +248,7 @@ func TestSrcIdxDstDial(t *testing.T) {
 // ---------------------------------------------------------------------------------------------------
 
 //
-//
+// Create a connection to Connection Manager, and set the connection manager to echo back the data
 //
 func testSetupEchoConnection(t *testing.T, l *ConnectionListenStruct) (cs *ConnectionStruct) {
 
@@ -278,11 +291,12 @@ func goTestAcceptSrcChannelEcho(l *ConnectionListenStruct) {
 
 	fmt.Printf(lumerinlib.FileLineFunc() + " Connection Accepted\n")
 
-	cs.goSrcChannelEcho()
+	go cs.goSrcChannelEcho()
 }
 
 //
-//
+// One shot - Echo Read event data back to the SRC socket
+// call Cancel if there is an error
 //
 func (cs *ConnectionStruct) goSrcChannelEcho() {
 
@@ -291,6 +305,8 @@ func (cs *ConnectionStruct) goSrcChannelEcho() {
 	for {
 		select {
 		case <-cs.ctx.Done():
+			return
+		case <-time.After(time.Second * 5):
 			return
 		case readevent := <-cs.readChan:
 			if readevent == nil {
@@ -306,6 +322,7 @@ func (cs *ConnectionStruct) goSrcChannelEcho() {
 				cs.Cancel()
 				return
 			}
+
 			count, e := cs.SrcWrite(readevent.data)
 			if e != nil {
 				fmt.Printf(lumerinlib.FileLineFunc()+" SrcWrite() Returned Error:%s\n", e)

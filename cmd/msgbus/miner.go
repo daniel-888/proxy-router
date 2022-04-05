@@ -61,12 +61,16 @@ func (ps *PubSub) MinerGetWait(id MinerID) (miner *Miner, err error) {
 		fmt.Printf(lumerinlib.Funcname()+" ID not found %s, %s\n", err, event.Err)
 	}
 
-	if event.Data == nil {
-		miner = nil
-	} else {
+	switch event.Data.(type) {
+	case Miner:
 		m := event.Data.(Miner)
 		miner = &m
+	case *Miner:
+		miner = event.Data.(*Miner)
+	default:
+		miner = nil
 	}
+
 	return miner, err
 }
 

@@ -165,35 +165,32 @@ func (svs *StratumV1Struct) handleMsgGetEvent(event *simple.SimpleMsgBusEvent) {
 		if event.ID == simple.IDString(svs.switchToDestID) {
 			// Fire up the default destination connction here
 			// If default is not already set, set it
-			var dest *msgbus.Dest
+			var dest msgbus.Dest
 			switch event.Data.(type) {
 			case msgbus.Dest:
-				d := event.Data.(msgbus.Dest)
-				dest = &d
+				dest = event.Data.(msgbus.Dest)
 			case *msgbus.Dest:
-				dest = event.Data.(*msgbus.Dest)
-				if dest == nil {
+				d := event.Data.(*msgbus.Dest)
+				if d == nil {
 					contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" DestMsg: is nil")
 				}
+				dest = *d
 			default:
 				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" DestMsg: bad data:%t", event.Data)
 			}
 
-			if dest == nil {
-				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" DestMsg: is nil")
-			}
-			d := *dest
-			id := d.ID
+			id := dest.ID
 
-			//if 0 > svs.GetDstUIDDestID(dest.ID) {
-			if 0 > svs.GetDstUIDDestID(id) {
+			uid := svs.GetDstUIDDestID(id)
+			if 0 > uid {
 				// Open new Dest
-				e := svs.protocol.AsyncDial(dest)
+				svs.SetDstStateUid(uid, DstStateDialing)
+				e := svs.protocol.AsyncDial(&dest)
 				if e != nil {
 					contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" AsyncDial returned error:%s", e)
 				}
 			} else {
-				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Dest already opened:%s", event.ID)
+				contextlib.Logf(svs.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" Dest already opened:%s", event.ID)
 			}
 		} else {
 			contextlib.Logf(svs.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" Recieved Dest Get(), but it does not match next dest, dropping it:%s", event.ID)

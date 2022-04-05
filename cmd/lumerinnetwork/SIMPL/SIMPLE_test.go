@@ -2,9 +2,8 @@ package simple
 
 import (
 	"fmt"
-	_ "fmt"
-	_ "reflect"
 	"testing"
+	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/sockettcp"
@@ -58,23 +57,35 @@ func Test_Run_goListenAccept(t *testing.T) {
 	srcaddr := lumerinlib.NewNetAddr(lumerinlib.TCP, addr)
 	contextlib.GetContextStruct(ctx).SetSrc(srcaddr)
 
+	t.Logf(lumerinlib.FileLineFunc() + " NewListen()")
 	sls, e := NewListen(ctx)
 	if e != nil {
 		t.Errorf(lumerinlib.FileLineFunc()+" NewListen error:%s", e)
 	}
 
+	t.Logf(lumerinlib.FileLineFunc() + " Listener Run()")
 	sls.Run()
 
 	//
 	// Open a connection to the listener socket
 	//
+	t.Logf(lumerinlib.FileLineFunc() + " Dial()")
 	_, e = sockettcp.Dial(ctx, "tcp", fmt.Sprintf("%s:%d", ip, port))
 	if e != nil {
 		t.Errorf(lumerinlib.FileLineFunc()+" sockettcp error:%s", e)
 	}
 
-	_ = <-sls.GetAccept()
+	t.Logf(lumerinlib.FileLineFunc() + " Wait()")
+	select {
+	case <-ctx.Done():
+		t.Errorf(lumerinlib.FileLineFunc() + " cacncled")
+	case <-time.After(time.Second * 5):
+		t.Errorf(lumerinlib.FileLineFunc() + " timeout")
+	case <-sls.GetAccept():
+		t.Logf(lumerinlib.FileLineFunc() + " Accepted")
+	}
 
+	t.Logf(lumerinlib.FileLineFunc() + " Done")
 	sls.Close()
 
 }

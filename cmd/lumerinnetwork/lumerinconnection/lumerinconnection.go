@@ -108,8 +108,11 @@ func NewListen(ctx context.Context, addr net.Addr) (l *LumerinListenStruct, e er
 	case TCP4:
 		fallthrough
 	case TCP6:
-		tcp, e := sockettcp.NewListen(ctx, proto, ipaddr)
-		if e == nil {
+		var tcp *sockettcp.ListenTCPStruct
+		tcp, e = sockettcp.NewListen(ctx, proto, ipaddr)
+		if e != nil {
+			contextlib.Logf(ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" NewListen() error:%s", e)
+		} else {
 			accept := make(chan *LumerinSocketStruct)
 			l = &LumerinListenStruct{
 				ctx:      ctx,
@@ -316,7 +319,7 @@ func Dial(ctx context.Context, addr net.Addr) (lci *LumerinSocketStruct, e error
 		var tcp *sockettcp.SocketTCPStruct
 		tcp, e = sockettcp.Dial(ctx, string(lumproto), ipaddr)
 		if e != nil {
-			contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Dial() error returned: %s", e)
+			contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Dial() error returned: %v", e)
 			return nil, e
 		}
 		ctx, cancel := context.WithCancel(ctx)

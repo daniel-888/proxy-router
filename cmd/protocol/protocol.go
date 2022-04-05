@@ -32,7 +32,6 @@ type ProtocolStruct struct {
 	srcconn   *ProtocolConnectionStruct
 	dstconn   *ProtocolDstStruct
 	msgbus    *ProtocolMsgBusStruct
-	defRoute  simple.ConnUniqueID
 }
 
 //
@@ -52,9 +51,6 @@ func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Context Structre not present")
 	}
 
-	// if cs.GetProtocol() == nil {
-	// 	cs.Logf(contextlib.LevelPanic, "Context Protocol not defined")
-	// }
 	if cs.GetMsgBus() == nil {
 		cs.Logf(contextlib.LevelPanic, "Context MsgBus not defined")
 	}
@@ -67,20 +63,18 @@ func NewListen(ctx context.Context) (pls *ProtocolListenStruct, e error) {
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	//listenaddr := contextlib.GetSrc(ctx)
+	sls, e := simple.NewListen(ctx)
 
-	sls, err := simple.NewListen(ctx)
-
-	if err != nil {
-		lumerinlib.PanicHere(fmt.Sprintf("Error:%s", err))
-	}
-
-	accept := make(chan *ProtocolStruct)
-	pls = &ProtocolListenStruct{
-		ctx:          ctx,
-		cancel:       cancel,
-		simplelisten: sls,
-		accept:       accept,
+	if e != nil {
+		contextlib.Logf(ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Lumerin Listen() return error:%s", e)
+	} else {
+		accept := make(chan *ProtocolStruct)
+		pls = &ProtocolListenStruct{
+			ctx:          ctx,
+			cancel:       cancel,
+			simplelisten: sls,
+			accept:       accept,
+		}
 	}
 
 	return pls, e
@@ -218,8 +212,8 @@ func NewProtocolStruct(ctx context.Context, s *simple.SimpleStruct) (n *Protocol
 			ctx:  ctx,
 			conn: make(map[simple.ConnUniqueID]*ProtocolConnectionStruct),
 		},
-		msgbus:   &ProtocolMsgBusStruct{},
-		defRoute: -1,
+		msgbus: &ProtocolMsgBusStruct{},
+		//defRoute: -1,
 	}
 
 	return n
@@ -233,6 +227,16 @@ func (ps *ProtocolStruct) Ctx() context.Context {
 		panic(lumerinlib.FileLineFunc() + "ProtocolStruct is nil")
 	}
 	return ps.ctx
+}
+
+//
+// Close()
+//
+func (ps *ProtocolStruct) Close() {
+
+	// Perform orderly shutdown of all connection here
+
+	ps.Cancel()
 }
 
 //
@@ -250,6 +254,7 @@ func (ps *ProtocolStruct) Cancel() {
 		return
 	}
 
+	ps.dstconn.Cancel()
 	ps.cancel()
 }
 
@@ -318,11 +323,16 @@ func (ps *ProtocolStruct) AsyncReDial(uid simple.ConnUniqueID) (e error) {
 //
 func (ps *ProtocolStruct) SetDefaultRouteUID(uid simple.ConnUniqueID) (e error) {
 
-	if ps.defRoute == uid {
+	if uid < 0 {
+		contextlib.Logf(ps.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" uid < 0")
+	}
+
+	defuid, _ := ps.GetDefaultRouteUID()
+
+	if defuid == uid {
 		contextlib.Logf(ps.ctx, contextlib.LevelWarn, lumerinlib.FileLineFunc()+" default route already set to UID: %d", uid)
 	} else {
-		ps.simple.SetRoute(uid) // Are we going to keep this, or just assume that the protocol layer will know the default route?
-		ps.defRoute = uid
+		e = ps.simple.SetRoute(uid)
 	}
 
 	return e
@@ -363,8 +373,9 @@ func (ps *ProtocolStruct) GetSrcConn() (pcs *ProtocolConnectionStruct, e error) 
 // GetDefaultRouteUID()
 // get the  SIMPL layer default route
 //
-func (ps *ProtocolStruct) GetDefaultRouteUID() simple.ConnUniqueID {
-	return ps.defRoute
+func (ps *ProtocolStruct) GetDefaultRouteUID() (uid simple.ConnUniqueID, e error) {
+	uid, e = ps.simple.GetRoute()
+	return uid, e
 }
 
 //
@@ -374,12 +385,20 @@ func (ps *ProtocolStruct) GetDefaultRouteUID() simple.ConnUniqueID {
 func (ps *ProtocolStruct) Write(msg []byte) (count int, e error) {
 	count = 0
 
-	uid := ps.defRoute
+	uid, e := ps.GetDefaultRouteUID()
+	if e != nil {
+		return 0, e
+	}
+
 	if uid < 0 {
 		e = ErrDefaultRouteNotSet
 		return 0, e
 	}
 
+	_, ok := ps.dstconn.conn[uid]
+	if !ok {
+		return 0, fmt.Errorf(lumerinlib.FileLineFunc() + "UID:%d not found in ProtocolConnectionStruct")
+	}
 	state := ps.dstconn.conn[uid].GetState()
 
 	if ConnStateReady != state {
@@ -407,6 +426,20 @@ func (ps *ProtocolStruct) WriteSrc(msg []byte) (count int, e error) {
 func (ps *ProtocolStruct) WriteDst(index simple.ConnUniqueID, msg []byte) (count int, e error) {
 	count, e = ps.simple.Write(index, msg)
 	return count, e
+}
+
+//
+// CloseDst()
+//
+func (ps *ProtocolStruct) CloseDst(index simple.ConnUniqueID) (e error) {
+	return ps.simple.CloseConnection(index)
+}
+
+//
+// CloseSrc()
+//
+func (ps *ProtocolStruct) CloseSrc() {
+	ps.Close()
 }
 
 //

@@ -9,7 +9,6 @@ package stratumv1
 //
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -417,16 +416,12 @@ func (r *stratumRequest) createAuthorizeRequestMsg(username string, password str
 		fmt.Printf(lumerinlib.FileLineFunc()+"Bad Method:%s\n", r.Method)
 	}
 
-	var parm [2]string
-	parm[0] = username
-	parm[1] = password
-	var parmint []interface{}
-	parmint = append(parmint, parm)
 	req := stratumRequest{
 		ID:     r.ID,
 		Method: r.Method,
-		Params: parmint,
 	}
+	req.Params = append(req.Params, username)
+	req.Params = append(req.Params, password)
 
 	msg, err = json.Marshal(req)
 	if err != nil {
@@ -864,15 +859,16 @@ func (r *stratumResponse) createSrcSubscribeResponseMsg(id int) (msg []byte, err
 //
 func LogJson(ctx context.Context, direction string, msg []byte) {
 
-	prefix := ""
-	indent := " "
-	var buf bytes.Buffer
-	e := json.Indent(&buf, msg, prefix, indent)
-	if e != nil {
-		contextlib.Logf(ctx, contextlib.LevelPanic, "Indent() error:%s", e)
-	}
+	//prefix := ""
+	//indent := " "
+	//var buf bytes.Buffer
+	//e := json.Indent(&buf, msg, prefix, indent)
+	//if e != nil {
+	//	contextlib.Logf(ctx, contextlib.LevelPanic, "Indent() error:%s", e)
+	//}
 
 	// contextlib.Logf(ctx, contextlib.LevelDebug, "%s\n%s%s", direction, prefix, buf.String())
-	contextlib.Logf(ctx, contextlib.LevelDebug, "%s%s%s", direction, prefix, buf.String())
+	// contextlib.Logf(ctx, contextlib.LevelDebug, "%s%s%s", direction, prefix, buf.String())
+	contextlib.Logf(ctx, contextlib.LevelDebug, "%s%s", direction, msg)
 
 }

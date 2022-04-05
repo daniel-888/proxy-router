@@ -44,7 +44,6 @@ type ProtocolConnectionStruct struct {
 	state  ConnectionState
 	err    error
 	buffer []byte
-	//uID    simple.ConnUniqueID
 }
 
 type ProtocolDstStruct struct {
@@ -100,7 +99,25 @@ func (p *ProtocolDstStruct) NewProtocolDstStruct(osce *simple.SimpleConnOpenEven
 //
 // Cancel()
 //
-func (p *ProtocolDstStruct) Cancel(uid simple.ConnUniqueID) (e error) {
+func (p *ProtocolDstStruct) Cancel() (e error) {
+
+	// Close all connections
+	for uid, _ := range p.conn {
+		if p.conn[uid] != nil {
+			p.conn[uid].Cancel()
+		} else {
+			e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", uid)
+			break
+		}
+	}
+
+	return e
+}
+
+//
+// CancelUID()
+//
+func (p *ProtocolDstStruct) CancelUID(uid simple.ConnUniqueID) (e error) {
 	if p.conn[uid] == nil {
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+"Index:%d does not exist", uid)
 	} else {

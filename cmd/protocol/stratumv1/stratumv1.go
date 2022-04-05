@@ -16,6 +16,7 @@ import (
 var ErrBadSrcState = errors.New("StratumV1: Bad Src State")
 var ErrSrcReqNotSupported = errors.New("StratumV1: SRC Request Not Supported")
 var ErrDstReqNotSupported = errors.New("StratumV1: DST Request Not Supported")
+var ErrMaxRedialExceeded = errors.New("StratumV1: DST Maximum number of redials attempted")
 
 type SrcState string
 type DstState string
@@ -37,9 +38,13 @@ const DstStateOpen DstState = "stateOpen"
 const DstStateSubscribing DstState = "stateSubscribing" // Sent Subscribe
 const DstStateAuthorizing DstState = "stateAuthorizing" // Recieved Sub-response and Sent Authorize
 const DstStateRunning DstState = "stateRunning"         // Recieved Auth-response (there should only be one dst connection running at any time)
-const DstStateStandBy DstState = "stateStandBy"         // Inactive, not the focus of the Src connection
-const DstStateRedialing DstState = "stateRedialing"     // Inactive, in the process of redialing
+const DstStateStandBy DstState = "stateStandBy"         // Active, but not the focus of the Src connection
+const DstStateDialing DstState = "stateDialing"         // Inactive, initiating a connection
+const DstStateRedialing DstState = "stateRedialing"     // Inactive, reinitiating a connection
 const DstStateError DstState = "stateError"
+const DstStateClosed DstState = "stateClosed"
+
+const MaxRedials int = 2
 
 type StratumV1ListenStruct struct {
 	protocollisten *protocol.ProtocolListenStruct
@@ -55,6 +60,7 @@ type StratumV1Struct struct {
 	srcState            SrcState
 	dstState            map[simple.ConnUniqueID]DstState
 	dstDest             map[simple.ConnUniqueID]*msgbus.Dest
+	dstReDialCount      map[simple.ConnUniqueID]int
 	switchToDestID      msgbus.DestID
 
 	// Add in stratum state information here
@@ -105,13 +111,13 @@ func NewListener(ctx context.Context, src net.Addr, dest *msgbus.Dest) (sls *Str
 	cs.SetSrc(src)
 	cs.SetDest(dest)
 
-	protocollisten, err := protocol.NewListen(ctx)
-	if err != nil {
-		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" NewListen returned error:%s", e)
-	}
-
-	sls = &StratumV1ListenStruct{
-		protocollisten: protocollisten,
+	protocollisten, e := protocol.NewListen(ctx)
+	if e != nil {
+		contextlib.Logf(ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" NewListen returned error:%s", e)
+	} else {
+		sls = &StratumV1ListenStruct{
+			protocollisten: protocollisten,
+		}
 	}
 
 	return sls, e
@@ -133,57 +139,14 @@ FORLOOP:
 		case <-s.Ctx().Done():
 			contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" context canceled")
 			break FORLOOP
-		case l := <-protocolStructChan:
-			ss := NewStratumV1Struct(s.Ctx(), l)
+		case ps := <-protocolStructChan:
+			ss := NewStratumV1Struct(s.Ctx(), ps)
 			ss.Run()
 		}
 	}
 
 	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Exiting...")
 
-}
-
-//
-//
-//
-func NewStratumV1Struct(ctx context.Context, l *protocol.ProtocolStruct) (n *StratumV1Struct) {
-	ctx, cancel := context.WithCancel(ctx)
-	ds := make(map[simple.ConnUniqueID]DstState)
-	dd := make(map[simple.ConnUniqueID]*msgbus.Dest)
-	id := fmt.Sprintf("MinerID:%d", <-MinerCountChan)
-	defdest := contextlib.GetContextStruct(ctx).GetDest()
-	if defdest == nil {
-		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDest() return nil")
-	}
-	miner := &msgbus.Miner{
-		ID:                      msgbus.MinerID(id),
-		Name:                    "",
-		IP:                      "",
-		MAC:                     "",
-		State:                   msgbus.OnlineState,
-		Contract:                "",
-		Dest:                    defdest.ID,
-		InitialMeasuredHashRate: 0,
-		CurrentHashRate:         0,
-		CsMinerHandlerIgnore:    false,
-	}
-
-	n = &StratumV1Struct{
-		ctx:                 ctx,
-		cancel:              cancel,
-		protocol:            l,
-		minerRec:            miner,
-		srcSubscribeRequest: &stratumRequest{},
-		srcAuthRequest:      &stratumRequest{},
-		srcState:            SrcStateNew,
-		dstState:            ds,
-		dstDest:             dd,
-		switchToDestID:      "",
-	}
-
-	n.newMinerRecordPub(miner)
-
-	return n
 }
 
 //
@@ -223,6 +186,49 @@ func (s *StratumV1ListenStruct) Cancel() {
 // ---------------------------------------------------------------------
 
 //
+//
+//
+func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct) (n *StratumV1Struct) {
+	ctx, cancel := context.WithCancel(ctx)
+	ds := make(map[simple.ConnUniqueID]DstState)
+	dd := make(map[simple.ConnUniqueID]*msgbus.Dest)
+	rd := make(map[simple.ConnUniqueID]int)
+	id := fmt.Sprintf("MinerID:%d", <-MinerCountChan)
+	defdest := contextlib.GetContextStruct(ctx).GetDest()
+	if defdest == nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDest() return nil")
+	}
+	miner := &msgbus.Miner{
+		ID:                      msgbus.MinerID(id),
+		Name:                    "",
+		IP:                      "",
+		MAC:                     "",
+		State:                   msgbus.OnlineState,
+		Contract:                "",
+		Dest:                    defdest.ID,
+		InitialMeasuredHashRate: 0,
+		CurrentHashRate:         0,
+		CsMinerHandlerIgnore:    false,
+	}
+
+	n = &StratumV1Struct{
+		ctx:                 ctx,
+		cancel:              cancel,
+		protocol:            ps,
+		minerRec:            miner,
+		srcSubscribeRequest: &stratumRequest{},
+		srcAuthRequest:      &stratumRequest{},
+		srcState:            SrcStateNew,
+		dstState:            ds,
+		dstDest:             dd,
+		dstReDialCount:      rd,
+		switchToDestID:      "",
+	}
+
+	return n
+}
+
+//
 // Run() inialize the stratum running struct
 //
 func (s *StratumV1Struct) Run() {
@@ -242,6 +248,7 @@ func (s *StratumV1Struct) Run() {
 	s.protocol.Run()
 	go s.goEvent()
 
+	s.newMinerRecordPub()
 	s.openDefaultConnection()
 
 }
@@ -290,7 +297,7 @@ func (s *StratumV1Struct) goEvent() {
 			break
 		}
 	}
-	s.Cancel()
+	s.Close()
 }
 
 //
@@ -305,6 +312,18 @@ func (s *StratumV1Struct) Ctx() context.Context {
 		panic(lumerinlib.FileLineFunc() + "StratumV1Struct.protocol is nil")
 	}
 	return s.protocol.Ctx()
+}
+
+//
+//
+//
+func (s *StratumV1Struct) Close() {
+
+	// Orderly shutdown of the system here
+
+	s.protocol.Close()
+	s.Cancel()
+
 }
 
 //
@@ -324,6 +343,30 @@ func (s *StratumV1Struct) Cancel() {
 	}
 
 	s.cancel()
+}
+
+//
+//
+//
+func (s *StratumV1Struct) CloseUid(uid simple.ConnUniqueID) {
+	s.dstState[uid] = DstStateClosed
+	s.dstDest[uid] = nil
+	s.protocol.CloseDst(uid)
+}
+
+//
+//
+//
+func (s *StratumV1Struct) DstRedialUid(uid simple.ConnUniqueID) (e error) {
+	s.dstState[uid] = DstStateRedialing
+	s.dstReDialCount[uid]++
+	if s.dstReDialCount[uid] > MaxRedials {
+		s.CloseUid(uid)
+		return ErrMaxRedialExceeded
+	} else {
+		s.protocol.AsyncReDial(uid)
+	}
+	return nil
 }
 
 //
@@ -377,6 +420,12 @@ func (s *StratumV1Struct) GetDstPasswordUid(uid simple.ConnUniqueID) (password s
 //
 func (s *StratumV1Struct) GetDstUIDDestID(id msgbus.DestID) (uid simple.ConnUniqueID) {
 	uid = -1
+
+	if s == nil {
+		contextlib.Logf(s.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" stratum struct is nil"))
+		return uid
+	}
+
 	for u, v := range s.dstDest {
 		if v.ID == id {
 			uid = u
@@ -403,12 +452,12 @@ func (s *StratumV1Struct) GetSrcState() (state SrcState) {
 //
 //
 //
-func (s *StratumV1Struct) newMinerRecordPub(m *msgbus.Miner) {
+func (s *StratumV1Struct) newMinerRecordPub() {
 
-	mcopy := *m
-	_, e := s.protocol.Pub(simple.MinerMsg, simple.IDString(m.ID), mcopy)
+	miner := *s.minerRec
+	rid, e := s.protocol.Pub(simple.MinerMsg, simple.IDString(miner.ID), &miner)
 	if e != nil {
-		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Miner Pub() error:%s ", e)
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Miner Pub() error:%s RID:%d", e, rid)
 	}
 }
 
@@ -424,12 +473,16 @@ func (s *StratumV1Struct) switchDest() {
 		return
 	}
 
-	currentUID := s.protocol.GetDefaultRouteUID()
+	currentUID, _ := s.protocol.GetDefaultRouteUID()
 
-	// is the next dest the current dest?
-	if currentUID >= 0 && s.switchToDestID == s.dstDest[currentUID].ID {
-		s.switchToDestID = ""
-		return
+	if currentUID >= 0 {
+		v, ok := s.dstDest[currentUID]
+		if ok {
+			if s.switchToDestID == v.ID {
+				s.switchToDestID = ""
+				return
+			}
+		}
 	}
 
 	newUID := s.GetDstUIDDestID(s.switchToDestID)

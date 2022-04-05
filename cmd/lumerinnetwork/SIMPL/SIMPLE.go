@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/connectionmanager"
@@ -12,6 +13,8 @@ import (
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
+
+var reDialTimeDealySec = 5
 
 type ConnUniqueID int
 
@@ -167,16 +170,16 @@ func NewListen(ctx context.Context) (sls *SimpleListenStruct, e error) {
 
 	cls, e := connectionmanager.NewListen(ctx)
 	if e != nil {
-		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Lumerin Listen() returne error:%s", e)
-	}
-
-	sls = &SimpleListenStruct{
-		ctx:              ctx,
-		cancel:           cancel,
-		accept:           make(chan *SimpleStruct),
-		connectionListen: cls,
-		msgbus:           cs.GetMsgBus(),
-		logger:           cs.GetLog(),
+		contextlib.Logf(ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Lumerin Listen() return error:%s", e)
+	} else {
+		sls = &SimpleListenStruct{
+			ctx:              ctx,
+			cancel:           cancel,
+			accept:           make(chan *SimpleStruct),
+			connectionListen: cls,
+			msgbus:           cs.GetMsgBus(),
+			logger:           cs.GetLog(),
+		}
 	}
 	// determine if a more robust error message is needed
 	return sls, e
@@ -294,10 +297,7 @@ func (s *SimpleListenStruct) Cancel() {
 		return
 	}
 
-	_, ok := <-s.accept
-	if ok {
-		close(s.accept)
-	}
+	// close(s.accept)
 	s.cancel()
 }
 
@@ -524,6 +524,9 @@ func (s *SimpleStruct) AsyncDial(dest *msgbus.Dest) (e error) {
 	go func() {
 
 		uid, e := s.ConnectionStruct.Dial(addr)
+		if e != nil {
+			contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" UID:%d Dial error:%s", uid, e)
+		}
 
 		open := &SimpleConnOpenEvent{
 			uID:  ConnUniqueID(uid),
@@ -555,7 +558,16 @@ func (s *SimpleStruct) AsyncReDial(uid ConnUniqueID) error {
 	}
 
 	go func() {
+
+		//
+		// Keep from redialing too quickly.
+		//
+		<-time.After(time.Duration(reDialTimeDealySec) * time.Second)
+
 		e := s.ConnectionStruct.ReDialIdx(int(uid))
+		if e != nil {
+			contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+"UID:%d (re)Dial error:%s", uid, e)
+		}
 
 		open := &SimpleConnOpenEvent{
 			uID: ConnUniqueID(uid),
@@ -582,11 +594,16 @@ func (s *SimpleStruct) SetRoute(u ConnUniqueID) error {
 	if u < 0 {
 		contextlib.Logf(s.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" index out of range:%d", u)
 	}
+
 	return s.ConnectionStruct.SetRoute(int(u))
 }
 
 // Used later to direct the default route
-func (s *SimpleStruct) GetRoute() {} //return of 1 to appease compiler
+func (s *SimpleStruct) GetRoute() (uid ConnUniqueID, e error) {
+	id, e := s.ConnectionStruct.GetRoute()
+	uid = ConnUniqueID(id)
+	return uid, e
+}
 
 // Used later to direct the default route
 func (s *SimpleStruct) GetLocalAddr(ConnUniqueID) {} //return of 1 to appease compiler
@@ -604,7 +621,9 @@ func (s *SimpleStruct) GetRemoteAddr(uid ConnUniqueID) {
 
 }
 
+//
 // Writes buffer to the specified connection
+
 func (s *SimpleStruct) Write(uid ConnUniqueID, msg []byte) (count int, e error) {
 	if uid < 0 {
 		count, e = s.ConnectionStruct.SrcWrite(msg)
@@ -618,6 +637,18 @@ func (s *SimpleStruct) Write(uid ConnUniqueID, msg []byte) (count int, e error) 
 	}
 
 	return count, e
+}
+
+//
+//
+//
+func (s *SimpleStruct) CloseConnection(uid ConnUniqueID) (e error) {
+	if uid < 0 {
+		s.ConnectionStruct.SrcClose()
+		return nil
+	} else {
+		return s.ConnectionStruct.IdxClose(int(uid))
+	}
 }
 
 // Automatic duplication of writes to a MsgBus data channel

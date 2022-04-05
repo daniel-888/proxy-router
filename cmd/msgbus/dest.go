@@ -128,6 +128,10 @@ func (d *Dest) Port() (port string) {
 //---------------------------------------------------------------
 func (d *Dest) Username() string {
 
+	if d == nil {
+		return ""
+	}
+
 	u, err := url.Parse(string(d.NetUrl))
 	if err != nil {
 		panic(fmt.Sprintf(lumerinlib.FileLine()+"url: %s, err %s\n", u, err))

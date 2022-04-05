@@ -45,6 +45,7 @@ func TestConnMgr(t *testing.T) {
 	//
 	l := log.New()
 	l.SetLevel(log.LevelTrace)
+	// l.SetLevel(log.LevelDebug)
 
 	// logFile, err := os.OpenFile("/tmp/logfile", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	// logFile, err := os.OpenFile("/dev/stdout", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
@@ -71,7 +72,8 @@ func TestConnMgr(t *testing.T) {
 	mainContext := context.Background()
 
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, configs.ListenIP+":"+configs.ListenPort)
-	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, configs.DefaultPoolAddr)
+	// dst := lumerinlib.NewNetAddr(lumerinlib.TCP, configs.DefaultPoolAddr)
+	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, "stratum+tcp://sean.0:@127.0.0.1:33335")
 
 	cs := contextlib.NewContextStruct(nil, ps, l, src, dst)
 	// cs := contextlib.NewContextStruct(nil, ps, nil, src, dst)
@@ -79,8 +81,10 @@ func TestConnMgr(t *testing.T) {
 	mainContext = context.WithValue(mainContext, contextlib.ContextKey, cs)
 
 	defaultDest := &msgbus.Dest{
-		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
-		NetUrl: msgbus.DestNetUrl(configs.DefaultPoolAddr),
+		ID: msgbus.DestID(msgbus.DEFAULT_DEST_ID),
+		// NetUrl: msgbus.DestNetUrl(configs.DefaultPoolAddr),
+		NetUrl: "stratum+tcp://sean.0:@127.0.0.1:33335/",
+		// NetUrl: "stratum+tcp://sean.1:@mining.dev.pool.titan.io:4242/",
 	}
 
 	//
@@ -98,9 +102,9 @@ func TestConnMgr(t *testing.T) {
 	// Publish alternamte pool destination
 	//
 	newTargetDest := msgbus.Dest{
-		ID: msgbus.DestID(msgbus.GetRandomIDString()),
-		// NetUrl: "stratum+tcp://sean.worker1:@127.0.0.1:33335/",
-		NetUrl: "stratum+tcp://sean.worker1:@mining.dev.pool.titan.io:4242/",
+		ID:     msgbus.DestID(msgbus.GetRandomIDString()),
+		NetUrl: "stratum+tcp://sean.1:@127.0.0.1:33335/",
+		// NetUrl: "stratum+tcp://sean.1:@mining.dev.pool.titan.io:4242/",
 	}
 	ps.PubWait(msgbus.DestMsg, msgbus.IDString(newTargetDest.ID), newTargetDest)
 
@@ -131,10 +135,12 @@ func TestConnMgr(t *testing.T) {
 		for _, v := range miners {
 			minerptr, _ := ps.MinerGetWait(msgbus.MinerID(v))
 			miner := *minerptr
-			miner.Dest = newTargetDest.ID
-			e := ps.MinerSetWait(miner)
-			if e != nil {
-				t.Errorf("MinerSetWait() error:%s on %s", e, miner.ID)
+			if minerptr != nil {
+				miner.Dest = newTargetDest.ID
+				e := ps.MinerSetWait(miner)
+				if e != nil {
+					t.Errorf("MinerSetWait() error:%s on %s", e, miner.ID)
+				}
 			}
 		}
 
@@ -146,11 +152,13 @@ func TestConnMgr(t *testing.T) {
 		miners, _ = ps.MinerGetAllWait()
 		for _, v := range miners {
 			minerptr, _ := ps.MinerGetWait(msgbus.MinerID(v))
-			miner := *minerptr
-			miner.Dest = defaultDest.ID
-			e := ps.MinerSetWait(miner)
-			if e != nil {
-				t.Errorf("MinerSetWait() error:%s on %s", e, miner.ID)
+			if minerptr != nil {
+				miner := *minerptr
+				miner.Dest = defaultDest.ID
+				e := ps.MinerSetWait(miner)
+				if e != nil {
+					t.Errorf("MinerSetWait() error:%s on %s", e, miner.ID)
+				}
 			}
 		}
 
