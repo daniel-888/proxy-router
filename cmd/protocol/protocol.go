@@ -213,7 +213,6 @@ func NewProtocolStruct(ctx context.Context, s *simple.SimpleStruct) (n *Protocol
 			conn: make(map[simple.ConnUniqueID]*ProtocolConnectionStruct),
 		},
 		msgbus: &ProtocolMsgBusStruct{},
-		//defRoute: -1,
 	}
 
 	return n

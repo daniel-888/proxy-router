@@ -78,8 +78,7 @@ type StratumMsgStruct struct {
 // Used to build outgoing JSON message
 //
 type stratumRequest struct {
-	ID int `json:"id"`
-	// ID     string        `json:"id"`
+	ID     int           `json:"id"`
 	Method string        `json:"method"`
 	Params []interface{} `json:"params"`
 }
@@ -207,7 +206,7 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 		}
 
 		// Is this a Response Msg?
-		if msg.Result != nil {
+		if msg.Result != nil || msg.Error != nil {
 			r := stratumResponse{}
 			r.ID = msg.ID.(int)
 			r.Result = msg.Result
@@ -816,20 +815,29 @@ func (r *stratumResponse) createResponseMsg() (msg []byte, err error) {
 //		"result": [ [ ["mining.set_difficulty", "b4b6693b72a50c7116db18d6497cac52"], ["mining.notify", "ae6812eb4cd7735a302a8a9dd95cf71f"]], "08000002", 4],
 //		"error": null
 //	}\n
+//
+//  ExtraNonce1. - Hex-encoded, per-connection unique string which will be used for creating generation transactions later.
+//  ExtraNonce2_size. - The number of bytes that the miner users for its ExtraNonce2 counter.
+//
 //------------------------------------------------------
 func (r *stratumResponse) createSrcSubscribeResponseMsg(id int) (msg []byte, err error) {
 
 	// Move this to JSON file
 
-	extranonce := "1"
-	extranonce2 := 1 // 0 will result in subscribe erroring out
+	extranonce := "deadbeef"
+	extranonce2 := 16 // 0 will result in subscribe erroring out
 
-	subscriptions := make([]string, 2)
-	subscriptions[0] = string(SERVER_MINING_NOTIFY)
-	subscriptions[1] = "0"
+	notify := make([]string, 2)
+	notify[0] = string(SERVER_MINING_NOTIFY)
+	notify[1] = "1"
 
-	sub2 := make([][]string, 1)
-	sub2[0] = subscriptions
+	difficulty := make([]string, 2)
+	difficulty[0] = string(SERVER_MINING_SET_DIFFICULTY)
+	difficulty[1] = "1"
+
+	sub2 := make([][]string, 2)
+	sub2[0] = notify
+	sub2[1] = difficulty
 
 	result := make([]interface{}, 3)
 	result[0] = sub2
@@ -869,6 +877,6 @@ func LogJson(ctx context.Context, direction string, msg []byte) {
 
 	// contextlib.Logf(ctx, contextlib.LevelDebug, "%s\n%s%s", direction, prefix, buf.String())
 	// contextlib.Logf(ctx, contextlib.LevelDebug, "%s%s%s", direction, prefix, buf.String())
-	contextlib.Logf(ctx, contextlib.LevelDebug, "%s%s", direction, msg)
+	contextlib.Logf(ctx, contextlib.LevelDebug, "JSON: %s%s", direction, msg)
 
 }

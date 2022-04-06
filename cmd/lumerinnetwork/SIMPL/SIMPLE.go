@@ -548,7 +548,7 @@ func (s *SimpleStruct) AsyncDial(dest *msgbus.Dest) (e error) {
 //
 func (s *SimpleStruct) AsyncReDial(uid ConnUniqueID) error {
 
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called UID:%d", uid)
 
 	if s == nil {
 		return errors.New(lumerinlib.FileLineFunc() + " SimpleStruct == nil ")

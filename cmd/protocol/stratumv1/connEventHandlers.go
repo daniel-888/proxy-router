@@ -69,6 +69,8 @@ func (svs *StratumV1Struct) handleConnOpenEvent(scoe *simple.SimpleConnOpenEvent
 	}
 
 	msgsize := len(msg)
+	jsonmsg := fmt.Sprintf("Node Send to Dst[%d] ", uid)
+	LogJson(svs.Ctx(), jsonmsg, msg)
 	if e == nil {
 		count, e := svs.protocol.WriteDst(uid, msg)
 		if e != nil {
@@ -98,9 +100,9 @@ func (svs *StratumV1Struct) handleConnOpenEvent(scoe *simple.SimpleConnOpenEvent
 //
 func (svs *StratumV1Struct) handleConnReadEvent(scre *simple.SimpleConnReadEvent) (e error) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called ")
-
 	uid := scre.UniqueID()
+
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called UID:%d", uid)
 
 	// Validate the index is good HERE
 
@@ -160,6 +162,9 @@ func (svs *StratumV1Struct) handleConnReadEvent(scre *simple.SimpleConnReadEvent
 
 		// Process the message
 		ret, e := unmarshalMsg(buf)
+
+		jsonmsg := fmt.Sprintf("Recieved JSON on UID:%d ", uid)
+		LogJson(svs.Ctx(), jsonmsg, buf)
 
 		if e != nil {
 			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Called data:%s", data)
@@ -279,7 +284,7 @@ func (svs *StratumV1Struct) handleRequest(uid simple.ConnUniqueID, request *stra
 //
 func (svs *StratumV1Struct) handleResponse(uid simple.ConnUniqueID, response *stratumResponse) (e error) {
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called UID:%d", uid)
 
 	if uid < 0 {
 
@@ -309,10 +314,11 @@ func (svs *StratumV1Struct) handleResponse(uid simple.ConnUniqueID, response *st
 
 		dststate := svs.GetDstStateUid(uid)
 
+		// Notate the Error, and pass it on to the miner
 		if response.Error != nil {
-			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Dst UID:%d, State:%s, error:%s, %v", uid, dststate, response.Error, response)
-			svs.SetDstStateUid(uid, DstStateError)
-			dststate = DstStateError
+			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Dst UID:%d, State:%s, error:%s, %v", uid, dststate, *response.Error, response)
+			// svs.SetDstStateUid(uid, DstStateError)
+			// dststate = DstStateError
 		}
 
 		switch dststate {
@@ -322,15 +328,36 @@ func (svs *StratumV1Struct) handleResponse(uid simple.ConnUniqueID, response *st
 		// push the auth message back
 		//
 		case DstStateSubscribing:
+			//
+			// Forward response to SRC here
+			//
+			msg, e := response.createResponseMsg()
+			if e != nil {
+				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponeMsg() error:%s", e)
+			}
+
+			LogJson(svs.Ctx(), "Subscribe Response DST -> [SRC]:", msg)
+			count, e := svs.protocol.WriteSrc(msg)
+			if e != nil {
+				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc() error:%s", e)
+			}
+			if count != len(msg) {
+				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc() returned bad count:%d, msg len:%d", count, len(msg))
+			}
+
+			//
+			//  Now sent Authorize
+			//
 			svs.SetDstStateUid(uid, DstStateAuthorizing)
 			request := svs.srcAuthRequest
 			username := svs.dstDest[uid].Username()
 			password := svs.dstDest[uid].Password()
-			msg, e := request.createAuthorizeRequestMsg(username, password)
+
+			msg, e = request.createAuthorizeRequestMsg(username, password)
 			if e != nil {
 				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" error:%s", e)
 			}
-			count, e := svs.protocol.WriteDst(uid, msg)
+			count, e = svs.protocol.WriteDst(uid, msg)
 			if e != nil {
 				contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" error:%s", e)
 			}
@@ -360,7 +387,7 @@ func (svs *StratumV1Struct) handleResponse(uid simple.ConnUniqueID, response *st
 
 			// Write to the current destination
 
-			LogJson(svs.Ctx(), "Response DST -> [SRC]:", msg)
+			LogJson(svs.Ctx(), "Running Response DST -> [SRC]:", msg)
 
 			count, e := svs.protocol.WriteSrc(msg)
 			if e != nil {
@@ -488,7 +515,7 @@ func (svs *StratumV1Struct) handleSrcReqSubscribe(request *stratumRequest) (e er
 		return e
 	}
 
-	LogJson(svs.Ctx(), "SRC -> [SRC]:", msg)
+	LogJson(svs.Ctx(), "Subscribe Node -> [SRC]:", msg)
 
 	count, e := svs.protocol.WriteSrc(msg)
 	if e != nil {
@@ -563,7 +590,7 @@ func (svs *StratumV1Struct) handleSrcReqAuthorize(request *stratumRequest) (e er
 		return e
 	}
 
-	LogJson(svs.Ctx(), "SRC -> [SRC]:", msg)
+	LogJson(svs.Ctx(), "Authorize Node -> [SRC]:", msg)
 
 	count, e := svs.protocol.WriteSrc(msg)
 	if e != nil {
@@ -724,10 +751,10 @@ func (svs *StratumV1Struct) handleDstReqNotify(uid simple.ConnUniqueID, request 
 	dststate := svs.GetDstStateUid(uid)
 	switch dststate {
 	case DstStateSubscribing:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelDebug, lumerinlib.FileLineFunc()+" Dst Not Subscribed yet, dropping Notifying Request")
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Dst Not Subscribed yet, dropping Notifying Request")
 		return nil
 	case DstStateAuthorizing:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelDebug, lumerinlib.FileLineFunc()+" Dst Not Authorized yet, dropping Notifying Request")
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Dst Not Authorized yet, dropping Notifying Request")
 		return nil
 	case DstStateRunning:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" passing notify for state:%s", dststate)
@@ -755,7 +782,7 @@ func (svs *StratumV1Struct) handleDstReqNotify(uid simple.ConnUniqueID, request 
 			return e
 		}
 
-		LogJson(svs.Ctx(), "DST -> [SRC]:", msg)
+		LogJson(svs.Ctx(), "Notify DST -> [SRC]:", msg)
 
 		svs.protocol.WriteSrc(msg)
 	} else {
@@ -827,10 +854,10 @@ func (svs *StratumV1Struct) handleDstReqSetDifficulty(uid simple.ConnUniqueID, r
 	dststate := svs.GetDstStateUid(uid)
 	switch dststate {
 	case DstStateSubscribing:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelDebug, lumerinlib.FileLineFunc()+" Dst Not Subscribed yet, dropping Notifying Request")
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Dst Not Subscribed yet, dropping Notifying Request")
 		return nil
 	case DstStateAuthorizing:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelDebug, lumerinlib.FileLineFunc()+" Dst Not Authorized yet, dropping Notifying Request")
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Dst Not Authorized yet, dropping Notifying Request")
 		return nil
 	case DstStateRunning:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" passing notify for state:%s", dststate)
@@ -840,7 +867,7 @@ func (svs *StratumV1Struct) handleDstReqSetDifficulty(uid simple.ConnUniqueID, r
 		if e != nil {
 			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createResponseMsg() error:%s", e)
 		}
-		LogJson(svs.Ctx(), "Request in StandBy - DROPPED:", msg)
+		LogJson(svs.Ctx(), "[DROPPED] DST in StandBy:", msg)
 
 	default:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Dst ReqNotify state:%s not handled", dststate)
@@ -851,17 +878,19 @@ func (svs *StratumV1Struct) handleDstReqSetDifficulty(uid simple.ConnUniqueID, r
 	// This is the default route
 	if defRouteUid == uid {
 		msg, e := request.createRequestMsg()
+		// msg, e := request.createRequestSetDifficultyMsg()
 		if e != nil {
-			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createNoticeSetDifficultyMsg() returned error:%s", e)
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createNoticeSetDifficultyMsg() returned error:%s", e)
 			return e
 		}
 
-		LogJson(svs.Ctx(), "DST -> [SRC]:", msg)
+		LogJson(svs.Ctx(), "JSON SetDifficulty DST -> [SRC]:", msg)
 
 		svs.protocol.WriteSrc(msg)
 	} else {
 		// Store or drop the message?
-		contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" uid:%d is not the default dst:%d, should we store or drop the message", uid, defRouteUid)
+		// contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" uid:%d is not the default dst:%d, should we store or drop the message", uid, defRouteUid)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" uid:%d is not the default dst:%d, should we store or drop the message", uid, defRouteUid)
 	}
 
 	return e
@@ -890,10 +919,13 @@ func (svs *StratumV1Struct) handleDstNoticeNotify(uid simple.ConnUniqueID, notic
 	case DstStateSubscribing:
 		fallthrough
 	case DstStateRunning:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" passing notify for state:%s", dststate)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" running... passing notify")
 	case DstStateStandBy:
-		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" state not handled yet:%s", dststate)
-
+		contextlib.Logf(svs.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" Standby... drop the messages")
+		return nil
+	case DstStateRedialing:
+		contextlib.Logf(svs.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" Redialing... drop the message")
+		return nil
 	// case DstStateError:
 	// case DstStateNew:
 	default:
@@ -910,7 +942,7 @@ func (svs *StratumV1Struct) handleDstNoticeNotify(uid simple.ConnUniqueID, notic
 			return e
 		}
 
-		LogJson(svs.Ctx(), "DST -> [SRC]:", msg)
+		LogJson(svs.Ctx(), "NOTICE DST -> [SRC]:", msg)
 
 		svs.protocol.WriteSrc(msg)
 	} else {
@@ -949,10 +981,24 @@ func (svs *StratumV1Struct) handleDstNoticeSetDifficulty(uid simple.ConnUniqueID
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+"  state:%s not handled", dststate)
 	}
 
+	//
+	// If Default Route not set, set it.
+	//
 	defRouteUid, _ := svs.protocol.GetDefaultRouteUID()
+	if defRouteUid < 0 {
+		e = svs.protocol.SetDefaultRouteUID(uid)
+		if e != nil {
+			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" SetDefaultRouteUID() error:%s", e)
+			return e
+		}
+
+		defRouteUid = uid
+		svs.SetDstStateUid(uid, DstStateRunning)
+	}
 
 	// This is the default route
 	if defRouteUid == uid {
+
 		msg, e := notice.createNoticeSetDifficultyMsg()
 		if e != nil {
 			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createNoticeSetDifficultyMsg() returned error:%s", e)

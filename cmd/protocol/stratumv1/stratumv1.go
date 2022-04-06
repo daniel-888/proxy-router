@@ -497,29 +497,39 @@ func (s *StratumV1Struct) switchDest() {
 		// Reset the switch to state
 		s.switchToDestID = ""
 
+		//
+		// This is problematic, need to get a difficulty from the dst before sending it.
+		//
+		//
+
+		// difficulty := 8192.0
+
 		// Send set difficulty notice to SRC -  to reset it
-		var params = make([]interface{}, 1)
-		params[0] = 1.0
-		n := &stratumNotice{
-			ID:     nil,
-			Method: string(SERVER_MINING_SET_DIFFICULTY),
-			Params: params,
-		}
+		// var params = make([]interface{}, 1)
+		// params[0] = difficulty
+		// n := &stratumNotice{
+		// 	ID:     nil,
+		// 	Method: string(SERVER_MINING_SET_DIFFICULTY),
+		// 	Params: params,
+		// }
 
-		msg, e := n.createNoticeSetDifficultyMsg()
-		if e != nil {
-			contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createNoticeSetDifficulty() error: %s", e)
-		}
+		// msg, e := n.createNoticeSetDifficultyMsg()
+		// if e != nil {
+		//	contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createNoticeSetDifficulty() error: %s", e)
+		//}
 
-		count, e := s.protocol.WriteSrc(msg)
-		if e != nil {
-			contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc() error: %s", e)
-		}
+		// jsonmsg := fmt.Sprintf("New DST Connection[%d] ", newUID)
+		// LogJson(s.ctx, jsonmsg, msg)
 
-		if count != len(msg) {
-			contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc() count not equal to msg %d != %d", count, len(msg))
+		// count, e := s.protocol.WriteSrc(msg)
+		// if e != nil {
+		// 	contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc() error: %s", e)
+		// }
 
-		}
+		// if count != len(msg) {
+		// 	contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" WriteSrc() count not equal to msg %d != %d", count, len(msg))
+		// }
+
 	} else {
 		contextlib.Logf(s.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" next dest not in standby mode ")
 	}

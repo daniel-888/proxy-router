@@ -170,7 +170,7 @@ FORLOOP:
 			cs := &ConnectionStruct{
 				src:      l,
 				dst:      dst,
-				defidx:   0,
+				defidx:   -1,
 				ctx:      ctx,
 				cancel:   cancel,
 				readChan: make(chan *ConnectionReadEvent, DefaultReadEventChanSize),
@@ -406,7 +406,18 @@ func (cs *ConnectionStruct) ReDialIdx(idx int) (e error) {
 		panic("ConnectionStruct is nil...")
 	}
 
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" called"))
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprint(lumerinlib.FileLineFunc()+" called idx:%d", idx))
+
+	if idx < 0 {
+		contextlib.Logf(cs.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Bad IDX:%d", idx)
+		return ErrConnMgrBadDest
+	}
+
+	_, ok := cs.dst[idx]
+	if !ok {
+		contextlib.Logf(cs.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Bad IDX:%d, dst:%v", idx, cs.dst)
+		return ErrConnMgrBadDest
+	}
 
 	// Verify the slot is NOT empty
 	if cs.dst[idx] == nil {
