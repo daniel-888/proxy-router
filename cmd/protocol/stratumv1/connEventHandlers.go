@@ -457,8 +457,6 @@ func (svs *StratumV1Struct) handleNotice(uid simple.ConnUniqueID, notice *stratu
 		}
 	}
 
-	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called")
-
 	return nil
 }
 
@@ -877,8 +875,8 @@ func (svs *StratumV1Struct) handleDstReqSetDifficulty(uid simple.ConnUniqueID, r
 	defRouteUid, _ := svs.protocol.GetDefaultRouteUID()
 	// This is the default route
 	if defRouteUid == uid {
-		msg, e := request.createRequestMsg()
-		// msg, e := request.createRequestSetDifficultyMsg()
+		// msg, e := request.createRequestMsg()
+		msg, e := request.createRequestSetDifficultyMsg()
 		if e != nil {
 			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createNoticeSetDifficultyMsg() returned error:%s", e)
 			return e

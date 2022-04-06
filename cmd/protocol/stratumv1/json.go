@@ -83,6 +83,12 @@ type stratumRequest struct {
 	Params []interface{} `json:"params"`
 }
 
+type stratumSetDifficultyRequest struct {
+	ID     int       `json:"id"`
+	Method string    `json:"method"`
+	Params []float64 `json:"params"`
+}
+
 // notice ID is always null
 type stratumNotice struct {
 	ID     *string     `json:"id"`
@@ -107,12 +113,12 @@ type noticeMiningNotifyParams struct {
 	NTime          string   `json:","`
 	CleanJob       bool     `json:","`
 }
+
 type MiningNotify struct {
-	ID      *string `json:"id"`
-	Jsonrpc *string `json:"jsonrpc,omitempty"`
-	Method  string  `json:"method"`
-	// Params  noticeMiningNotifyParams `json:"params"`
-	Params [9]interface{} `json:"params"`
+	ID      *string        `json:"id"`
+	Jsonrpc *string        `json:"jsonrpc,omitempty"`
+	Method  string         `json:"method"`
+	Params  [9]interface{} `json:"params"`
 }
 
 type stratumResponse struct {
@@ -444,6 +450,39 @@ func (r *stratumRequest) createSubmitRequestMsg(username string) (msg []byte, er
 	u = username
 	req.Params[0] = u
 	msg, err = json.Marshal(r)
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Request Err:%s\n", err)
+		return nil, err
+	}
+
+	msg = []byte(string(msg) + "\n")
+
+	return msg, err
+}
+
+//------------------------------------------------------
+//
+//------------------------------------------------------
+func (r *stratumRequest) createRequestSetDifficultyMsg() (msg []byte, err error) {
+
+	id := r.ID
+	method := r.Method
+	param := r.Params[0].(string)
+
+	f, e := strconv.ParseFloat(param, 64)
+	if e != nil {
+		panic("")
+	}
+
+	p := make([]float64, 1)
+	p[0] = f
+	sd := &stratumSetDifficultyRequest{
+		ID:     id,
+		Method: method,
+		Params: p,
+	}
+
+	msg, err = json.Marshal(sd)
 	if err != nil {
 		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Request Err:%s\n", err)
 		return nil, err
