@@ -653,13 +653,14 @@ func (svs *StratumV1Struct) handleSrcReqConfigure(request *stratumRequest) (e er
 		return e
 	}
 
-	count, e := svs.protocol.WriteSrc(msg)
+	LogJson(svs.Ctx(), "SRC -> DST:", msg)
+	count, e := svs.protocol.Write(msg)
 	if e != nil {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" WriteSrc error:%s", e)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write error:%s", e)
 		return e
 	}
 	if count != len(msg) {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write bad count:%d, %d", count, len(msg))
 		e = fmt.Errorf(lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
 		return e
 	}
