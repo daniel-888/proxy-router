@@ -71,20 +71,19 @@ func TestConnMgr(t *testing.T) {
 
 	mainContext := context.Background()
 
+	defaultdst := "stratum+tcp://seanmcadam.test0:@mining.pool.titan.io:4242"
+	seconddst := "stratum+tcp://seanmcadam.worker0:@us-east.stratum.slushpool.com:3333/"
+
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, configs.ListenIP+":"+configs.ListenPort)
-	// dst := lumerinlib.NewNetAddr(lumerinlib.TCP, configs.DefaultPoolAddr)
-	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, "stratum+tcp://sean.0:@127.0.0.1:33335")
+	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, defaultdst)
 
 	cs := contextlib.NewContextStruct(nil, ps, l, src, dst)
-	// cs := contextlib.NewContextStruct(nil, ps, nil, src, dst)
 
 	mainContext = context.WithValue(mainContext, contextlib.ContextKey, cs)
 
 	defaultDest := &msgbus.Dest{
-		ID: msgbus.DestID(msgbus.DEFAULT_DEST_ID),
-		// NetUrl: msgbus.DestNetUrl(configs.DefaultPoolAddr),
-		NetUrl: "stratum+tcp://sean.0:@127.0.0.1:33335/",
-		// NetUrl: "stratum+tcp://sean.1:@mining.dev.pool.titan.io:4242/",
+		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
+		NetUrl: msgbus.DestNetUrl(defaultdst),
 	}
 
 	//
@@ -103,8 +102,7 @@ func TestConnMgr(t *testing.T) {
 	//
 	newTargetDest := msgbus.Dest{
 		ID:     msgbus.DestID(msgbus.GetRandomIDString()),
-		NetUrl: "stratum+tcp://sean.1:@127.0.0.1:33335/",
-		// NetUrl: "stratum+tcp://sean.1:@mining.dev.pool.titan.io:4242/",
+		NetUrl: msgbus.DestNetUrl(seconddst),
 	}
 	ps.PubWait(msgbus.DestMsg, msgbus.IDString(newTargetDest.ID), newTargetDest)
 

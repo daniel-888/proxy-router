@@ -241,6 +241,8 @@ func (svs *StratumV1Struct) handleRequest(uid simple.ConnUniqueID, request *stra
 			svs.handleSrcReqExtranonce(request)
 		case string(CLIENT_MINING_AUTHORIZE):
 			e = svs.handleSrcReqAuthorize(request)
+		case string(CLIENT_MINING_CONFIGURE):
+			e = svs.handleSrcReqConfigure(request)
 		case string(CLIENT_MINING_SUBSCRIBE):
 			e = svs.handleSrcReqSubscribe(request)
 		case string(CLIENT_MINING_SUBMIT):
@@ -610,6 +612,57 @@ func (svs *StratumV1Struct) handleSrcReqAuthorize(request *stratumRequest) (e er
 	//			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" AsyncDial returned error:%s", e)
 	//		}
 	//	}
+
+	return nil
+}
+
+//
+// handleSrcReqConfigure()
+//
+func (svs *StratumV1Struct) handleSrcReqConfigure(request *stratumRequest) (e error) {
+
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" enter")
+
+	state := svs.GetSrcState()
+	// Validate the current sstate of the SRC connection
+	switch state {
+	case SrcStateNew:
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Got Configure")
+		return ErrBadSrcState
+	case SrcStateSubscribed:
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Got Configure")
+		return ErrBadSrcState
+	case SrcStateAuthorized:
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Got Configure")
+		return ErrBadSrcState
+	case SrcStateRunning:
+	default:
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Src state:%s", state)
+	}
+
+	dstID := contextlib.GetDest(svs.Ctx())
+	if dstID == nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDest() returned nil")
+	}
+
+	// Move this to JSON file
+
+	msg, e := request.createRequestMsg()
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createRequestMsg error:%s", e)
+		return e
+	}
+
+	count, e := svs.protocol.WriteSrc(msg)
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" WriteSrc error:%s", e)
+		return e
+	}
+	if count != len(msg) {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+		return e
+	}
 
 	return nil
 }

@@ -49,7 +49,7 @@ const (
 	CLIENT_MINING_SUBSCRIBE          stratumMethods = "mining.subscribe"
 	CLIENT_MINING_SUGGEST_DIFFICULTY stratumMethods = "mining.suggest_difficulty"
 	CLIENT_MINING_SUGGEST_TARGET     stratumMethods = "mining.suggest_target"
-	MINING_CONFIGURE                 stratumMethods = "mining.configure"
+	CLIENT_MINING_CONFIGURE          stratumMethods = "mining.configure"
 	MINING_SET_TARGET                stratumMethods = "mining.set_target"
 	SERVER_GET_VERSION               stratumMethods = "client.get_version"
 	SERVER_RECONNECT                 stratumMethods = "client.reconnect"
