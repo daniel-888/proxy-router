@@ -354,7 +354,7 @@ func Dial(ctx context.Context, addr net.Addr) (lci *LumerinSocketStruct, e error
 //
 func (l *LumerinSocketStruct) Read(buf []byte) (count int, e error) {
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	// contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	if l.Done() {
 		return 0, ErrLumConSocketClosed
@@ -371,6 +371,9 @@ func (l *LumerinSocketStruct) Read(buf []byte) (count int, e error) {
 			default:
 				contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Read() returned unexpected error: %s", e)
 			}
+
+			// contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Read() returned unexpected error: %s", e)
+
 			l.Close()
 			return 0, ErrLumConSocketClosed
 		}
@@ -451,7 +454,7 @@ func (l *LumerinSocketStruct) Close() (e error) {
 		return errors.New(lumerinlib.FileLineFunc() + " nil pointer ")
 	}
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	//	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	if l.Done() {
 		return ErrLumConSocketClosed
@@ -481,14 +484,15 @@ func (l *LumerinSocketStruct) GetAddr() net.Addr {
 //
 func (l *LumerinSocketStruct) Cancel() {
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	//	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
 	if l.Done() {
 		contextlib.Logf(l.ctx, contextlib.LevelInfo, lumerinlib.FileLineFunc()+" already called")
 		return
 	}
 
 	if l.cancel == nil {
-		contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" cancel function is nul, struct:%v", l)
+		//		contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" cancel function is nul, struct:%v", l)
 		return
 	}
 

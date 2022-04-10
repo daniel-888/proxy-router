@@ -114,7 +114,7 @@ func (pls *ProtocolListenStruct) Cancel() {
 //
 func (pls *ProtocolListenStruct) Run() {
 
-	contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	//	contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	pls.simplelisten.Run()
 	go pls.goListenAccept()
@@ -137,7 +137,7 @@ FORLOOP:
 		case <-pls.ctx.Done():
 			break FORLOOP
 		case newSimpleStruct := <-newSimpleStructChan:
-			contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" simplelisten.Accept() recieved")
+			// contextlib.Logf(pls.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" simplelisten.Accept() recieved")
 
 			if newSimpleStruct == nil {
 				contextlib.Logf(pls.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" pls.simplelisten.Accept() stopping")
@@ -181,7 +181,7 @@ FORLOOP:
 //
 func NewProtocol(ctx context.Context, s *simple.SimpleStruct) (ps *ProtocolStruct, e error) {
 
-	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	//	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	dstID := contextlib.GetDest(ctx)
 	if dstID == nil {
@@ -264,7 +264,7 @@ func (ps *ProtocolStruct) Run() {
 	if ps == nil {
 		panic(lumerinlib.FileLineFunc() + "ProtocolStruct is nil")
 	}
-	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	//	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 	ps.simple.Run()
 }
 
@@ -275,7 +275,9 @@ func (ps *ProtocolStruct) GetSimpleEventChan() <-chan *simple.SimpleEvent {
 	if ps == nil {
 		panic(lumerinlib.FileLineFunc() + "ProtocolStruct is nil")
 	}
-	contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	// contextlib.Logf(ps.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
 	c := ps.simple.GetEventChan()
 	if c == nil {
 		contextlib.Logf(ps.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetEVentChan returned nil, ps:%v", ps)

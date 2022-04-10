@@ -56,7 +56,7 @@ type ProtocolDstStruct struct {
 //
 func NewProtocolConnectionStruct(ctx context.Context, dest *msgbus.Dest) (pcs *ProtocolConnectionStruct) {
 
-	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	//	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	ctx, cancel := context.WithCancel(ctx)
 	pcs = &ProtocolConnectionStruct{
@@ -78,10 +78,10 @@ func (p *ProtocolDstStruct) NewProtocolDstStruct(osce *simple.SimpleConnOpenEven
 
 	contextlib.Logf(p.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
-	_, nok := p.conn[osce.UniqueID()]
-	if nok {
-		contextlib.Logf(p.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" called")
-		e = fmt.Errorf(lumerinlib.FileLineFunc()+" UniqueID:%d is already used", osce.UniqueID())
+	_, exists := p.conn[osce.UniqueID()]
+	if exists {
+		contextlib.Logf(p.ctx, contextlib.LevelInfo, lumerinlib.FileLineFunc()+" Dst UID:%d exsists", osce.UniqueID())
+		// e = fmt.Errorf(lumerinlib.FileLineFunc()+" UniqueID:%d is already used", osce.UniqueID())
 	}
 
 	p.conn[osce.UniqueID()] = NewProtocolConnectionStruct(p.ctx, osce.Dest())

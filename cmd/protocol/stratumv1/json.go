@@ -21,6 +21,7 @@ import (
 type stratumMethods string
 type stratumStates string
 type stratumErrors string
+type jsonDirection string
 
 const (
 	SErrNull           stratumErrors = "null"
@@ -59,6 +60,20 @@ const (
 	SERVER_MINING_SET_DIFFICULTY     stratumMethods = "mining.set_difficulty"
 	SERVER_MINING_SET_EXTRANONCE     stratumMethods = "mining.set_extranonce"
 	SERVER_MINING_SET_GOAL           stratumMethods = "mining.set_goal"
+	SERVER_MINING_SET_VERSION_MASK   stratumMethods = "mining.set_version_mask"
+)
+
+const (
+	JSON_RECV_SRC      jsonDirection = "[RECV] SRC >>>"
+	JSON_RECV_DST      jsonDirection = "[RECV] <<< DST"
+	JSON_STOR_SRC      jsonDirection = "[STOR] SRC >>> STOR"
+	JSON_STOR_DST      jsonDirection = "[STOR] STORE <<< DST"
+	JSON_SEND_SRC2DST  jsonDirection = "[SEND] SRC >>> DST"
+	JSON_SEND_DST2SRC  jsonDirection = "[SEND] SRC <<< DST"
+	JSON_SEND_STOR2DST jsonDirection = "[SEND] STOR >>> DST"
+	JSON_SEND_STOR2SRC jsonDirection = "[SEND] SRC <<< STOR"
+	JSON_DROP_SRC      jsonDirection = "[DROP] SRC >>>"
+	JSON_DROP_DST      jsonDirection = "[DROP] <<< DST"
 )
 
 //
@@ -126,6 +141,12 @@ type stratumResponse struct {
 	Error  *string     `json:"error"`
 	Result interface{} `json:"result"`
 	Reject interface{} `json:"reject-reason,omitempty"`
+}
+
+type stratumConfigureResponse struct {
+	ID     int            `json:"id"`
+	Error  *string        `json:"error"`
+	Result [3]interface{} `json:"result"`
 }
 
 //
@@ -419,6 +440,7 @@ func (r *stratumRequest) createAuthorizeRequestMsg(username string, password str
 
 	if r.Method != string(CLIENT_MINING_AUTHORIZE) {
 		fmt.Printf(lumerinlib.FileLineFunc()+"Bad Method:%s\n", r.Method)
+		panic("")
 	}
 
 	req := stratumRequest{
@@ -724,7 +746,7 @@ func (r *stratumRequest) createReqMiningNotify() (msg []byte, err error) {
 			mn.Params[i] = v.(string)
 		case 8:
 			// CleanJob
-			mn.Params[i] = (v == "true")
+			mn.Params[i] = v.(bool)
 		}
 	}
 
@@ -789,7 +811,7 @@ func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 			nsd.Params[i] = v.(string)
 		case 8:
 			// CleanJob
-			nsd.Params[i] = (v == "true")
+			nsd.Params[i] = v.(bool)
 		}
 	}
 
@@ -901,21 +923,93 @@ func (r *stratumResponse) createSrcSubscribeResponseMsg(id int) (msg []byte, err
 	return msg, err
 }
 
+//------------------------------------------------------
+// createSrcConfigureResponseMsg
 //
-//
-//
-func LogJson(ctx context.Context, direction string, msg []byte) {
+//------------------------------------------------------
+func (r *stratumResponse) createSrcConfigureResponseMsg() (msg []byte, err error) {
 
-	//prefix := ""
-	//indent := " "
-	//var buf bytes.Buffer
-	//e := json.Indent(&buf, msg, prefix, indent)
-	//if e != nil {
-	//	contextlib.Logf(ctx, contextlib.LevelPanic, "Indent() error:%s", e)
-	//}
+	// Move this to JSON file
 
-	// contextlib.Logf(ctx, contextlib.LevelDebug, "%s\n%s%s", direction, prefix, buf.String())
-	// contextlib.Logf(ctx, contextlib.LevelDebug, "%s%s%s", direction, prefix, buf.String())
-	contextlib.Logf(ctx, contextlib.LevelDebug, "JSON: %s%s", direction, msg)
+	result := make(map[string]interface{})
+	result["minimum-difficulty"] = false
+	result["version-rolling"] = false
+	// result["version-rolling.mask"] = "0"
+
+	response := &stratumResponse{
+		ID:     r.ID,
+		Error:  nil,
+		Result: result,
+		Reject: nil,
+	}
+
+	msg, err = json.Marshal(response)
+
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Response Err:%s\n", err)
+		return nil, err
+	}
+
+	msg = []byte(string(msg) + "\n")
+	return msg, err
+}
+
+//------------------------------------------------------
+// createSrcConfigureResponseMsg
+//
+//------------------------------------------------------
+func (r *stratumResponse) createSrcExtranonceResponseMsg() (msg []byte, err error) {
+
+	// Move this to JSON file
+
+	response := &stratumResponse{
+		ID:     r.ID,
+		Error:  nil,
+		Result: true,
+		Reject: nil,
+	}
+
+	msg, err = json.Marshal(response)
+
+	if err != nil {
+		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Response Err:%s\n", err)
+		return nil, err
+	}
+
+	msg = []byte(string(msg) + "\n")
+	return msg, err
+}
+
+//
+//
+//
+func LogJson(ctx context.Context, filelocation string, direction jsonDirection, data interface{}) {
+
+	if data == nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" data is nil")
+	}
+
+	var e error
+	var msg []byte
+	switch data.(type) {
+	case *stratumRequest:
+		req := data.(*stratumRequest)
+		msg, e = req.createRequestMsg()
+	case *stratumResponse:
+		res := data.(*stratumResponse)
+		msg, e = res.createResponseMsg()
+	case *stratumNotice:
+		not := data.(*stratumNotice)
+		msg, e = not.createNoticeMsg()
+	case []byte:
+		msg = data.([]byte)
+	default:
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" bad data type:%t", data)
+	}
+	if e != nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" error:%s", e)
+	}
+
+	contextlib.Logf(ctx, contextlib.LevelDebug, "%s%s: %s", filelocation, direction, msg)
 
 }

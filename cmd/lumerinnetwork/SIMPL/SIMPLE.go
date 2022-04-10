@@ -189,7 +189,7 @@ func NewListen(ctx context.Context) (sls *SimpleListenStruct, e error) {
 //protocll layer will have a layer to communicate with a chan over
 func (s *SimpleListenStruct) Run() {
 
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	//	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	s.connectionListen.Run()
 	go s.goListenAccept()
@@ -321,7 +321,8 @@ func (s *SimpleStruct) GetEventChan() <-chan *SimpleEvent {
 //
 //
 func (s *SimpleStruct) Run() {
-	contextlib.Logf(s.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" enter")
+
+	//	contextlib.Logf(s.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" enter")
 
 	if s == nil {
 		panic(lumerinlib.FileLineFunc() + " SimpleStruct is nil")
@@ -340,7 +341,8 @@ func (s *SimpleStruct) Run() {
 }
 
 func (s *SimpleStruct) goEvent() {
-	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" enter ")
+
+	//	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" enter ")
 
 	//
 	// Using connection managers index as the UniqueID (for now?)
@@ -370,6 +372,10 @@ FORLOOP:
 			scre.data = comm.Data()
 			scre.count = comm.Count()
 			scre.err = comm.Err()
+
+			if scre.err != nil {
+				contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Readchan: UID:%d, Err:%s", scre.uID, scre.err)
+			}
 
 			ev := &SimpleEvent{
 				EventType:     ConnReadEvent,
