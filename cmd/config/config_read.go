@@ -86,7 +86,6 @@ func ReadConfigs() (configs ConfigRead) {
 		configs.CloneFactoryAddress = contractConfig["cloneFactoryAddress"].(string)
 		configs.LumerinTokenAddress = contractConfig["lumerinTokenAddress"].(string)
 		configs.ValidatorAddress = contractConfig["validatorAddress"].(string)
-		configs.ProxyAddress = contractConfig["proxyAddress"].(string)
 
 		//
 		// API Configs

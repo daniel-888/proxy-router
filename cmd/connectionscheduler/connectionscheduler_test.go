@@ -5,17 +5,15 @@ import (
 	"fmt"
 	"testing"
 	"time"
-
-	"gitlab.com/TitanInd/lumerin/cmd/log"
+	
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 func TestSellerConnectionScheduler(t *testing.T) {
 	ps := msgbus.New(10, nil)
-	l := log.New()
 
-	ctxStruct := contextlib.NewContextStruct(nil, ps, l, nil, nil)
+	ctxStruct := contextlib.NewContextStruct(nil, ps, nil, nil, nil)
 	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)
 
 	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"
@@ -329,9 +327,8 @@ func TestSellerConnectionScheduler(t *testing.T) {
 
 func TestBuyerConnectionScheduler(t *testing.T) {
 	ps := msgbus.New(10, nil)
-	l := log.New()
 
-	ctxStruct := contextlib.NewContextStruct(nil, ps, l, nil, nil)
+	ctxStruct := contextlib.NewContextStruct(nil, ps, nil, nil, nil)
 	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)
 
 	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"
@@ -465,9 +462,8 @@ func TestBuyerConnectionScheduler(t *testing.T) {
 
 func TestPassthroughConnectionScheduler(t *testing.T) {
 	ps := msgbus.New(10, nil)
-	l := log.New()
 
-	ctxStruct := contextlib.NewContextStruct(nil, ps, l, nil, nil)
+	ctxStruct := contextlib.NewContextStruct(nil, ps, nil, nil, nil)
 	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)
 
 	defaultpooladdr := "stratum+tcp://127.0.0.1:33334/"
