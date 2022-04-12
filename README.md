@@ -19,3 +19,6 @@ Lumerin Node (aka ProxyRouter)
     c) "cloneFactoryAddress" will be generated from Deployment test<br/>
 10. Edit `run_lumerin.sh` (optional)
 11. Run `./run_lumerin.sh`
+
+License
+MIT
