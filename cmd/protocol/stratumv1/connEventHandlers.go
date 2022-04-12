@@ -85,11 +85,6 @@ func (svs *StratumV1Struct) handleConnOpenEvent(scoe *simple.SimpleConnOpenEvent
 		svs.SetDstStateUid(uid, DstStateSubscribing)
 	}
 
-	// Set default route if not set already
-	//if svs.protocol.GetDefaultRouteUID() < 0 {
-	//	svs.protocol.SetDefaultRouteUID(uid)
-	// }
-
 	return e
 }
 
@@ -637,17 +632,14 @@ func (svs *StratumV1Struct) handleSrcReqAuthorize(request *stratumRequest) (e er
 		return e
 	}
 
-	//	// Fire up the default destination connction here
-	//	// If it does not alread exist
-	//	dr := svs.protocol.GetDefaultRouteUID()
-	//	if dr < 0 {
-	//		err := svs.protocol.AsyncDial(dst)
-	//		if err != nil {
-	//			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" AsyncDial returned error:%s", e)
-	//		}
-	//	}
-
+	//
+	// Sets up mining record in the MsgBus
+	//
 	svs.newMinerRecordPub()
+
+	//
+	// Open up the default pool connection
+	//
 	svs.openDefaultConnection()
 
 	return nil

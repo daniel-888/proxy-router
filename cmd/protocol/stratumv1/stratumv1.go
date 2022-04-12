@@ -541,7 +541,7 @@ func (s *StratumV1Struct) sendConfigure() {
 }
 
 //
-// sendConfigure()
+// sendExtranonoce()
 //
 func (s *StratumV1Struct) sendExtranonce() {
 
