@@ -15,7 +15,6 @@ import (
 
 type ConnectionScheduler struct {
 	Ps                   *msgbus.PubSub
-	Log                  *log.Logger
 	Contracts            lumerinlib.ConcurrentMap
 	ReadyMiners          lumerinlib.ConcurrentMap // miners with no contract
 	BusyMiners           lumerinlib.ConcurrentMap // miners fulfilling a contract
@@ -44,7 +43,6 @@ func New(Ctx *context.Context, NodeOperator *msgbus.NodeOperator, Passthrough bo
 	ctxStruct := contextlib.GetContextStruct(*Ctx)
 	cs = &ConnectionScheduler{
 		Ps:           ctxStruct.MsgBus,
-		Log:          ctxStruct.Log,
 		NodeOperator: *NodeOperator,
 		Passthrough:  Passthrough,
 		Ctx:          *Ctx,
@@ -61,19 +59,19 @@ func New(Ctx *context.Context, NodeOperator *msgbus.NodeOperator, Passthrough bo
 //
 //------------------------------------------
 func (cs *ConnectionScheduler) Start() (err error) {
-	cs.Log.Logf(log.LevelInfo, "Connection Scheduler Starting\n")
+	contextlib.Logf(cs.Ctx, log.LevelInfo, "Connection Scheduler Starting")
 
 	// Update connection scheduler with current contracts
 	event, err := cs.Ps.GetWait(msgbus.ContractMsg, "")
 	if err != nil {
-		cs.Log.Logf(log.LevelError, "Failed to get all contract ids, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
+		contextlib.Logf(cs.Ctx, log.LevelError, "Failed to get all contract ids, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 		return err
 	}
 	contracts := event.Data.(msgbus.IDIndex)
 	for i := range contracts {
 		event, err := cs.Ps.GetWait(msgbus.ContractMsg, contracts[i])
 		if err != nil {
-			cs.Log.Logf(log.LevelError, "Failed to get contract, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
+			contextlib.Logf(cs.Ctx, log.LevelError, "Failed to get contract, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 			return err
 		}
 		contract := event.Data.(msgbus.Contract)
@@ -84,7 +82,7 @@ func (cs *ConnectionScheduler) Start() (err error) {
 	contractEventChan := msgbus.NewEventChan()
 	_, err = cs.Ps.Sub(msgbus.ContractMsg, "", contractEventChan)
 	if err != nil {
-		cs.Log.Logf(log.LevelError, "Failed to subscribe to contract events, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
+		contextlib.Logf(cs.Ctx, log.LevelError, "Failed to subscribe to contract events, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 		return err
 	}
 	go cs.goContractHandler(contractEventChan)
@@ -92,13 +90,13 @@ func (cs *ConnectionScheduler) Start() (err error) {
 	// Update connection scheduler with current miners in online state
 	miners, err := cs.Ps.MinerGetAllWait()
 	if err != nil {
-		cs.Log.Logf(log.LevelError, "Failed to get all miner ids, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
+		contextlib.Logf(cs.Ctx, log.LevelError, "Failed to get all miner ids, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 		return err
 	}
 	for i := range miners {
 		miner, err := cs.Ps.MinerGetWait(miners[i])
 		if err != nil {
-			cs.Log.Logf(log.LevelError, "Failed to get miner, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
+			contextlib.Logf(cs.Ctx, log.LevelError, "Failed to get miner, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 			return err
 		}
 		if miner.State == msgbus.OnlineState {
@@ -114,7 +112,7 @@ func (cs *ConnectionScheduler) Start() (err error) {
 	minerEventChan := msgbus.NewEventChan()
 	_, err = cs.Ps.Sub(msgbus.MinerMsg, "", minerEventChan)
 	if err != nil {
-		cs.Log.Logf(log.LevelError, "Failed to subscribe to miner events, Fileline::%s, Error::%v\n", lumerinlib.FileLine(), err)
+		contextlib.Logf(cs.Ctx, log.LevelError, "Failed to subscribe to miner events, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 		return err
 	}
 	minerMux := &sync.Mutex{}
@@ -133,7 +131,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 	for {
 		select {
 		case <-cs.Ctx.Done():
-			cs.Log.Logf(log.LevelInfo, "Cancelling current connection scheduler context: cancelling ContractHandler go routine")
+			contextlib.Logf(cs.Ctx, log.LevelInfo, "Cancelling current connection scheduler context: cancelling ContractHandler go routine")
 			return
 
 		case event := <-ch:
@@ -145,13 +143,13 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 			// Publish Event
 			//
 			case msgbus.PublishEvent:
-				cs.Log.Logf(log.LevelTrace, lumerinlib.Funcname()+"Got Contract Publish Event: %v\n", event)
+				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Contract Publish Event: %v", event)
 				contract := event.Data.(msgbus.Contract)
 
 				if !cs.Contracts.Exists(string(id)) {
 					cs.Contracts.Set(string(id), contract)
 				} else {
-					cs.Log.Logf(log.LevelPanic, lumerinlib.Funcname()+"Got Publish Event, but already had the ID: %v\n", event)
+					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.Funcname()+"Got Publish Event, but already had the ID: %v", event)
 				}
 
 				// pusblished contract is already running
@@ -169,7 +167,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 				// Unpublish Event
 				//
 			case msgbus.UnpublishEvent:
-				cs.Log.Logf(log.LevelTrace, lumerinlib.Funcname()+"Got Contract Unpublish Event: %v\n", event)
+				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Contract Unpublish Event: %v", event)
 
 				if cs.Contracts.Exists(string(id)) {
 					cs.Contracts.Delete(string(id))
@@ -181,17 +179,17 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 					cs.MinerUpdatedChans.Delete(string(id))
 					cs.ContractUpdatedChans.Delete(string(id))
 				} else {
-					cs.Log.Logf(log.LevelPanic, lumerinlib.Funcname()+"Got Unsubscribe Event, but dont have the ID: %v\n", event)
+					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.Funcname()+"Got Unsubscribe Event, but dont have the ID: %v", event)
 				}
 
 				//
 				// Update Event
 				//
 			case msgbus.UpdateEvent:
-				cs.Log.Logf(log.LevelTrace, lumerinlib.Funcname()+"Got Contract Update Event: %v\n", event)
+				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Contract Update Event: %v", event)
 
 				if !cs.Contracts.Exists(string(id)) {
-					cs.Log.Logf(log.LevelPanic, lumerinlib.Funcname()+"Got contract ID does not exist: %v\n", event)
+					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.Funcname()+"Got contract ID does not exist: %v", event)
 				}
 
 				// Update the current contract data
@@ -199,12 +197,12 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 				cs.Contracts.Set(string(id), event.Data.(msgbus.Contract))
 
 				if currentContract.State == event.Data.(msgbus.Contract).State {
-					cs.Log.Logf(log.LevelTrace, lumerinlib.Funcname()+"Got Contract change with no state change: %v\n", event)
+					contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Contract change with no state change: %v", event)
 					// cs.ContractUpdatedChans.Get(string(id)).(chan bool) <- true
 				} else {
 					switch event.Data.(msgbus.Contract).State {
 					case msgbus.ContAvailableState:
-						cs.Log.Logf(log.LevelTrace, lumerinlib.Funcname()+"Found Available Contract: %v\n", event)
+						contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Found Available Contract: %v", event)
 						if currentContract.State != msgbus.ContAvailableState {
 							cs.ContractUpdatedChans.Get(string(id)).(chan bool) <- true
 							close(cs.MinerUpdatedChans.Get(string(id)).(chan bool))
@@ -215,7 +213,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 						}
 
 					case msgbus.ContRunningState:
-						cs.Log.Logf(log.LevelTrace, lumerinlib.Funcname()+"Found Running Contract: %v\n", event)
+						contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Found Running Contract: %v", event)
 						if currentContract.State != msgbus.ContRunningState {
 							cs.MinerUpdatedChans.Set(string(id), make(chan bool, 5))
 							cs.ContractUpdatedChans.Set(string(id), make(chan bool, 5))
@@ -227,11 +225,11 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 						}
 
 					default:
-						cs.Log.Logf(log.LevelPanic, lumerinlib.Funcname()+"Got bad state: %v\n", event)
+						contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.Funcname()+"Got bad state: %v", event)
 					}
 				}
 			default:
-				cs.Log.Logf(log.LevelTrace, lumerinlib.Funcname()+"Got Contract Event: %v\n", event)
+				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Contract Event: %v", event)
 			}
 		}
 	}
@@ -248,8 +246,9 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 	for {
 		select {
 		case <-cs.Ctx.Done():
-			cs.Log.Logf(log.LevelInfo, "Cancelling current connection scheduler context: cancelling MinerHandler go routine")
+			contextlib.Logf(cs.Ctx, log.LevelInfo, "Cancelling current connection scheduler context: cancelling MinerHandler go routine")
 			return
+
 		case event := <-ch:
 			id := msgbus.MinerID(event.ID)
 
@@ -265,7 +264,7 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 					break loop
 				}
 
-				cs.Log.Logf(log.LevelTrace, lumerinlib.Funcname()+"Got Miner Publish Event: %v\n", event)
+				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Publish Event: %v", event)
 
 				switch miner.Contract {
 				case "": // no contract
@@ -278,7 +277,7 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 							}
 						}
 					} else {
-						cs.Log.Logf(log.LevelPanic, "Got PubEvent, but already had the ID: %v\n", event)
+						contextlib.Logf(cs.Ctx, log.LevelPanic, "Got PubEvent, but already had the ID: %v", event)
 					}
 				default:
 					if !cs.BusyMiners.Exists(string(id)) {
@@ -290,11 +289,11 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 							}
 						}
 					} else {
-						cs.Log.Logf(log.LevelPanic, "Got PubEvent, but already had the ID: %v\n", event)
+						contextlib.Logf(cs.Ctx, log.LevelPanic, "Got PubEvent, but already had the ID: %v", event)
 					}
 				}
-				cs.Log.Logf(log.LevelInfo, "Ready Miners: %v\n", cs.ReadyMiners.M)
-				cs.Log.Logf(log.LevelInfo, "Busy Miners: %v\n", cs.BusyMiners.M)
+				contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners: %v", cs.ReadyMiners.M)
+				contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners: %v", cs.BusyMiners.M)
 
 				//
 				// Update Event
@@ -308,7 +307,7 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 					break loop
 				}
 
-				cs.Log.Logf(log.LevelTrace, lumerinlib.Funcname()+"Got Miner Update Event: %v\n", event)
+				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Update Event: %v", event)
 
 				switch miner.Contract {
 				case "": // no contract
@@ -332,14 +331,14 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 						}
 					}
 				}
-				cs.Log.Logf(log.LevelInfo, "Ready Miners: %v\n", cs.ReadyMiners.M)
-				cs.Log.Logf(log.LevelInfo, "Busy Miners: %v\n", cs.BusyMiners.M)
+				contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners: %v", cs.ReadyMiners.M)
+				contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners: %v", cs.BusyMiners.M)
 
 				//
 				// Unpublish Event
 				//
 			case msgbus.UnpublishEvent:
-				cs.Log.Logf(log.LevelTrace, lumerinlib.Funcname()+"Got Miner Unpublish/Unsubscribe Event: %v\n", event)
+				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Unpublish/Unsubscribe Event: %v", event)
 				cs.BusyMiners.Delete(string(id))
 				cs.ReadyMiners.Delete(string(id))
 				contracts := cs.Contracts.GetAll()
@@ -350,7 +349,7 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 				}
 
 			default:
-				cs.Log.Logf(log.LevelTrace, lumerinlib.Funcname()+"Got Miner Event: %v\n", event)
+				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Event: %v", event)
 			}
 		}
 	}
@@ -360,29 +359,29 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 //
 //------------------------------------------------------------------------
 func (cs *ConnectionScheduler) ContractRunningPassthrough(contractId msgbus.ContractID) {
-	cs.Log.Logf(log.LevelInfo, lumerinlib.FileLine()+"Contract Running in Passthrough Mode: %s\n", contractId)
+	contextlib.Logf(cs.Ctx, log.LevelInfo, lumerinlib.FileLine()+"Contract Running in Passthrough Mode: %s", contractId)
 
 	event, err := cs.Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contractId))
 	if err != nil {
-		cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", event)
+		contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", event)
 	}
 	contract := event.Data.(msgbus.Contract)
 	destid := contract.Dest
 
 	if destid == "" {
-		cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"DestID is empty")
+		contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"DestID is empty")
 	}
 
 	// Find all of the online miners point them to new target
 	miners, err := cs.Ps.MinerGetAllWait()
 	if err != nil {
-		cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+		contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 	}
 
 	for _, v := range miners {
 		err := cs.Ps.MinerSetContractWait(v, contract.ID, destid, true)
 		if err != nil {
-			cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+			contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 		}
 	}
 
@@ -391,11 +390,11 @@ func (cs *ConnectionScheduler) ContractRunningPassthrough(contractId msgbus.Cont
 	for {
 		select {
 		case <-cs.Ctx.Done():
-			cs.Log.Logf(log.LevelInfo, "Cancelling current connection scheduler context: cancelling contract running Passthrough go routine for contract: %v\n", contract.ID)
+			contextlib.Logf(cs.Ctx, log.LevelInfo, "Cancelling current connection scheduler context: cancelling contract running Passthrough go routine for contract: %v", contract.ID)
 			return
 
 		case <-contractUpdated:
-			cs.Log.Logf(log.LevelInfo, "Contract state switched to available: cancelling contract running go routine for contract: %v\n", contract.ID)
+			contextlib.Logf(cs.Ctx, log.LevelInfo, "Contract state switched to available: cancelling contract running go routine for contract: %v", contract.ID)
 
 			// free up busy miners with this contract id
 			miners := cs.BusyMiners.GetAll()
@@ -403,7 +402,7 @@ func (cs *ConnectionScheduler) ContractRunningPassthrough(contractId msgbus.Cont
 				if v.(msgbus.Miner).Contract == contract.ID {
 					err := cs.Ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, cs.NodeOperator.DefaultDest, true)
 					if err != nil {
-						cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+						contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 					}
 				}
 			}
@@ -417,7 +416,7 @@ func (cs *ConnectionScheduler) ContractRunningPassthrough(contractId msgbus.Cont
 			contract = event.Data.(msgbus.Contract)
 
 			if contract.State == msgbus.ContAvailableState {
-				cs.Log.Logf(log.LevelInfo, "Contract state switched to available: cancelling contract running go routine for contract: %v\n", contract.ID)
+				cs.Log.Logf(log.LevelInfo, "Contract state switched to available: cancelling contract running go routine for contract: %v", contract.ID)
 
 				// free up busy miners with contract id
 				miners, err := cs.Ps.MinerGetAllWait()
@@ -455,17 +454,17 @@ func (cs *ConnectionScheduler) ContractRunningPassthrough(contractId msgbus.Cont
 		case <-minerMapUpdated:
 			miners, err := cs.Ps.MinerGetAllWait()
 			if err != nil {
-				cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+				contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 			}
 			for _, v := range miners {
 				miner, err := cs.Ps.MinerGetWait(v)
 				if err != nil {
-					cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 				}
 				if miner.Contract == "" {
 					err = cs.Ps.MinerSetContractWait(miner.ID, contract.ID, destid, true)
 					if err != nil {
-						cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+						contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 					}
 				}
 			}
@@ -477,11 +476,11 @@ func (cs *ConnectionScheduler) ContractRunningPassthrough(contractId msgbus.Cont
 //
 //------------------------------------------------------------------------
 func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
-	cs.Log.Logf(log.LevelInfo, lumerinlib.FileLine()+"Contract Running: %s\n", contractId)
+	contextlib.Logf(cs.Ctx, log.LevelInfo, lumerinlib.FileLine()+"Contract Running: %s", contractId)
 
 	event, err := cs.Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contractId))
 	if err != nil {
-		cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", event)
+		contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 	}
 	contract := event.Data.(msgbus.Contract)
 	hashrateTolerance := float64(contract.Limit) / 100
@@ -499,7 +498,7 @@ func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
 	if availableHashrate >= MIN {
 		cs.SetMinerTarget(contract)
 	} else {
-		cs.Log.Logf(log.LevelWarn, "Not enough available hashrate to fulfill contract: %v\n", contract.ID)
+		contextlib.Logf(cs.Ctx, log.LevelWarn, "Not enough available hashrate to fulfill contract: %v", contract.ID)
 
 		// free up busy miners with this contract id
 		miners := cs.BusyMiners.GetAll()
@@ -507,7 +506,7 @@ func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
 			if v.(msgbus.Miner).Contract == contract.ID {
 				err := cs.Ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, cs.NodeOperator.DefaultDest, true)
 				if err != nil {
-					cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 				}
 			}
 		}
@@ -518,11 +517,11 @@ func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
 	for {
 		select {
 		case <-cs.Ctx.Done():
-			cs.Log.Logf(log.LevelInfo, "Cancelling current connection scheduler context: cancelling contract running go routine for contract: %v\n", contract.ID)
+			contextlib.Logf(cs.Ctx, log.LevelInfo, "Cancelling current connection scheduler context: cancelling contract running go routine for contract: %v", contract.ID)
 			return
 
 		case <-contractUpdated:
-			cs.Log.Logf(log.LevelInfo, "Contract state switched to available: cancelling contract running go routine for contract: %v\n", contract.ID)
+			contextlib.Logf(cs.Ctx, log.LevelInfo, "Contract state switched to available: cancelling contract running go routine for contract: %v", contract.ID)
 
 			// free up busy miners with this contract id
 			miners := cs.BusyMiners.GetAll()
@@ -530,7 +529,7 @@ func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
 				if v.(msgbus.Miner).Contract == contract.ID {
 					err := cs.Ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, cs.NodeOperator.DefaultDest, true)
 					if err != nil {
-						cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+						contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 					}
 				}
 			}
@@ -545,14 +544,14 @@ func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
 				cs.SetMinerTarget(contract)
 				//}
 			} else {
-				cs.Log.Logf(log.LevelWarn, "Not enough available hashrate to fulfill contract: %v\n", contract.ID)
+				contextlib.Logf(cs.Ctx, log.LevelWarn, "Not enough available hashrate to fulfill contract: %v", contract.ID)
 				// free up busy miners with this contract id
 				miners := cs.BusyMiners.GetAll()
 				for _, v := range miners {
 					if v.(msgbus.Miner).Contract == contract.ID {
 						err := cs.Ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, cs.NodeOperator.DefaultDest, true)
 						if err != nil {
-							cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+							contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 						}
 					}
 				}
@@ -572,17 +571,17 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 	}
 
 	if destid == "" {
-		cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+" Error DestID is empty")
+		contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+" Error DestID is empty")
 	}
 
 	// sort miners by hashrate from least to greatest
 	sortedReadyMiners := cs.sortMinersByHashrate(contract.ID)
-	cs.Log.Logf(log.LevelInfo, "Sorted Miners: %v\n", sortedReadyMiners)
+	contextlib.Logf(cs.Ctx, log.LevelInfo, "Sorted Miners: %v", sortedReadyMiners)
 
 	// find all miner combinations that add up to promised hashrate
 	minerCombinations := findSubsets(sortedReadyMiners, promisedHashrate, hashrateTolerance)
 	if minerCombinations == nil {
-		cs.Log.Logf(log.LevelWarn, "No valid miner combinations")
+		contextlib.Logf(cs.Ctx, log.LevelWarn, "No valid miner combinations")
 
 		// free up busy miners with this contract id
 		miners := cs.BusyMiners.GetAll()
@@ -590,24 +589,24 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 			if v.(msgbus.Miner).Contract == contract.ID {
 				err := cs.Ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, cs.NodeOperator.DefaultDest, true)
 				if err != nil {
-					cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 				}
 			}
 		}
 		return
 	}
 
-	cs.Log.Logf(log.LevelInfo, "Valid Miner Combinations: %v\n", minerCombinations)
+	contextlib.Logf(cs.Ctx, log.LevelInfo, "Valid Miner Combinations: %v", minerCombinations)
 
 	// find best combination of miners
 	minerCombination := bestCombination(minerCombinations, promisedHashrate)
-	cs.Log.Logf(log.LevelInfo, "Best Miner Combination: %v\n", minerCombination)
+	contextlib.Logf(cs.Ctx, log.LevelInfo, "Best Miner Combination: %v", minerCombination)
 
 	// set contract and target destination for miners in optimal miner combination
 	for _, v := range minerCombination {
 		err := cs.Ps.MinerSetContractWait(v.id, contract.ID, destid, true)
 		if err != nil {
-			cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+			contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 		}
 	}
 
@@ -622,7 +621,7 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 			if v.(msgbus.Miner).Contract == contract.ID {
 				err := cs.Ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, cs.NodeOperator.DefaultDest, true)
 				if err != nil {
-					cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 				}
 			}
 		}
@@ -642,7 +641,8 @@ func (cs *ConnectionScheduler) calculateHashrateAvailability(id msgbus.ContractI
 	}
 	availableHashrate += contractHashrate
 
-	cs.Log.Logf(log.LevelInfo, "Available Hashrate: %v\n", availableHashrate)
+	contextlib.Logf(cs.Ctx, log.LevelInfo, "Available Hashrate: %v", availableHashrate)
+
 	return availableHashrate, contractHashrate
 }
 

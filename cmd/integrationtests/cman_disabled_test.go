@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
-	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
@@ -66,7 +65,7 @@ func LoadDisabledTestConfiguration(filePath string) (configs DisabledConfig, err
 	return configs, err
 }
 
-func DisabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs DisabledConfig) msgbus.DestID {
+func DisabledSimMain(ps *msgbus.PubSub, configs DisabledConfig) msgbus.DestID {
 	mainContext := context.Background()
 
 	//
@@ -80,7 +79,7 @@ func DisabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs DisabledConfig) m
 	//
 	// the proro argument (#1) gets set in the Protocol sus-system
 	//
-	cs := contextlib.NewContextStruct(nil, ps, l, src, dst)
+	cs := contextlib.NewContextStruct(nil, ps, nil, src, dst)
 
 	//
 	//  All of the various needed subsystem values get passed into the context here.
@@ -139,11 +138,11 @@ func DisabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs DisabledConfig) m
 	//
 	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
 	if err != nil {
-		l.Logf(log.LevelPanic, "Schedule manager failed: %v", err)
+		panic(fmt.Sprintf("Schedule manager failed: %v", err))
 	}
 	err = csched.Start()
 	if err != nil {
-		l.Logf(log.LevelPanic, "Schedule manager failed to start: %v", err)
+		panic(fmt.Sprintf("Schedule manager failed to start: %v", err))
 	}
 
 	return dest.ID
@@ -157,20 +156,11 @@ func TestDisabled(t *testing.T) {
 		panic(fmt.Sprintf("Loading Config Failed: %s", err))
 	}
 
-	var sleepTime time.Duration = 3 * time.Second
+	var sleepTime time.Duration = 10 * time.Second
 
-	l := log.New()
+	ps := msgbus.New(10, nil)
 
-	logFile, err := os.OpenFile(configs.LogFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
-	if err != nil {
-		l.Logf(log.LevelFatal, "error opening log file: %v", err)
-	}
-	defer logFile.Close()
-	l.SetFormat(log.FormatJSON).SetOutput(logFile)
-
-	ps := msgbus.New(10, l)
-
-	defaultDestID := DisabledSimMain(ps, l, configs)
+	defaultDestID := DisabledSimMain(ps, configs)
 
 	//
 	// miner connecting to lumerin node
@@ -186,8 +176,9 @@ func TestDisabled(t *testing.T) {
 	}
 
 	time.Sleep(sleepTime)
-
-	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), miner)
+	
+	_ = miner
+	//ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), miner)
 
 	//
 	// seller created contract found by lumerin node
@@ -223,7 +214,7 @@ func TestDisabled(t *testing.T) {
 
 	targetDest := msgbus.Dest{
 		ID:     msgbus.DestID(msgbus.GetRandomIDString()),
-		NetUrl: "stratum+tcp://127.0.0.1:55555/",
+		NetUrl: "stratum+tcp://pool-east.staging.pool.titan.io:4242",
 	}
 	ps.PubWait(msgbus.DestMsg, msgbus.IDString(targetDest.ID), targetDest)
 
@@ -248,7 +239,7 @@ func TestDisabled(t *testing.T) {
 	//
 	fmt.Print("\n\n/// Target dest was updated while contract running ///\n\n\n")
 
-	targetDest.NetUrl = "stratum+tcp://127.0.0.1:66666/"
+	targetDest.NetUrl = "stratum+tcp://pool-west.staging.pool.titan.io:4242"
 	ps.SetWait(msgbus.DestMsg, msgbus.IDString(targetDest.ID), targetDest)
 
 	time.Sleep(sleepTime)
@@ -261,7 +252,7 @@ func TestDisabled(t *testing.T) {
 		}
 	}
 
-	if targetDest.NetUrl != "stratum+tcp://127.0.0.1:66666/" {
+	if targetDest.NetUrl != "stratum+tcp://pool-west.staging.pool.titan.io:4242" {
 		t.Errorf("Target dest was not updated")
 	}
 }

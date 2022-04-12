@@ -16,7 +16,6 @@ import (
 	//"github.com/ethereum/go-ethereum/crypto/ecies"
 
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
-	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
@@ -25,12 +24,11 @@ import (
 func TestSellerRoutine(t *testing.T) {
 	configPath := "../../ganacheconfig.json"
 	ps := msgbus.New(10, nil)
-	l := log.New()
 	ts, _, _ := BeforeEach(configPath)
 	var hashrateContractAddress [4]common.Address
 	var purchasedHashrateContractAddress [4]common.Address
 
-	ctxStruct := contextlib.NewContextStruct(nil, ps, l, nil, nil)
+	ctxStruct := contextlib.NewContextStruct(nil, ps, nil, nil, nil)
 	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)
 
 	contractManagerCtx, contractManagerCancel := context.WithCancel(mainCtx)
