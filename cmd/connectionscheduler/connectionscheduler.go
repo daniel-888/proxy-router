@@ -258,7 +258,7 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 			// Publish Event
 			//
 			case msgbus.PublishEvent:
-				miner := event.Data.(msgbus.Miner)
+				miner := event.Data.(*msgbus.Miner)
 
 				if miner.State != msgbus.OnlineState {
 					break loop
