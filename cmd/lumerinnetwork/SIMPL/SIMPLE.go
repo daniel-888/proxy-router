@@ -649,6 +649,9 @@ func (s *SimpleStruct) Write(uid ConnUniqueID, msg []byte) (count int, e error) 
 //
 //
 func (s *SimpleStruct) CloseConnection(uid ConnUniqueID) (e error) {
+
+	contextlib.Logf(s.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" UID:%d", uid)
+
 	if uid < 0 {
 		s.ConnectionStruct.SrcClose()
 		return nil

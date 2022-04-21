@@ -63,6 +63,12 @@ type StratumV1Struct struct {
 	dstState            map[simple.ConnUniqueID]DstState
 	dstDest             map[simple.ConnUniqueID]*msgbus.Dest
 	dstReDialCount      map[simple.ConnUniqueID]int
+	dstExtranonce       map[simple.ConnUniqueID]string
+	dstExtranonce2size  map[simple.ConnUniqueID]int
+	dstDiff             map[simple.ConnUniqueID]int
+	dstVersionMask      map[simple.ConnUniqueID]string
+	dstLastMiningNotice map[simple.ConnUniqueID]*stratumNotice
+	dstLastReqNotice    map[simple.ConnUniqueID]*stratumRequest
 	switchToDestID      msgbus.DestID
 
 	// Add in stratum state information here
@@ -154,12 +160,43 @@ FORLOOP:
 //
 //
 //
+func (s *StratumV1ListenStruct) goListenAcceptOnce() {
+
+	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	protocolStructChan := s.protocollisten.GetAccept()
+	select {
+	case <-s.Ctx().Done():
+		contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" context canceled")
+	case ps := <-protocolStructChan:
+		ss := NewStratumV1Struct(s.Ctx(), ps)
+		ss.Run()
+	}
+
+	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Exiting...")
+
+}
+
+//
+//
+//
 func (sls *StratumV1ListenStruct) Run() {
 
 	//	contextlib.Logf(sls.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 
 	sls.protocollisten.Run()
 	go sls.goListenAccept()
+}
+
+//
+//
+//
+func (sls *StratumV1ListenStruct) RunOnce() {
+
+	//	contextlib.Logf(sls.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	sls.protocollisten.Run()
+	go sls.goListenAcceptOnce()
 }
 
 //
@@ -195,6 +232,12 @@ func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct) (n *St
 	ds := make(map[simple.ConnUniqueID]DstState)
 	dd := make(map[simple.ConnUniqueID]*msgbus.Dest)
 	rd := make(map[simple.ConnUniqueID]int)
+	de := make(map[simple.ConnUniqueID]string)
+	de2 := make(map[simple.ConnUniqueID]int)
+	di := make(map[simple.ConnUniqueID]int)
+	vm := make(map[simple.ConnUniqueID]string)
+	lmn := make(map[simple.ConnUniqueID]*stratumNotice)
+	lrn := make(map[simple.ConnUniqueID]*stratumRequest)
 	id := fmt.Sprintf("MinerID:%d", <-MinerCountChan)
 	defdest := contextlib.GetContextStruct(ctx).GetDest()
 	if defdest == nil {
@@ -226,6 +269,12 @@ func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct) (n *St
 		dstState:            ds,
 		dstDest:             dd,
 		dstReDialCount:      rd,
+		dstExtranonce:       de,
+		dstExtranonce2size:  de2,
+		dstDiff:             di,
+		dstVersionMask:      vm,
+		dstLastMiningNotice: lmn,
+		dstLastReqNotice:    lrn,
 		switchToDestID:      "",
 	}
 
@@ -433,10 +482,26 @@ func (s *StratumV1Struct) GetDstUIDDestID(id msgbus.DestID) (uid simple.ConnUniq
 		return uid
 	}
 
-	for u, v := range s.dstDest {
-		if v.ID == id {
-			uid = u
-			break
+	if s.dstDest == nil {
+		contextlib.Logf(s.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" stratum struct is nil"))
+		return uid
+	}
+
+	if id == "" {
+		contextlib.Logf(s.ctx, contextlib.LevelPanic, fmt.Sprint(lumerinlib.FileLineFunc()+" id is blank"))
+	}
+
+	if s.dstDest != nil {
+		for u, v := range s.dstDest {
+			if v == nil {
+				contextlib.Logf(s.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" v is nil"))
+				continue
+			}
+
+			if v.ID == id {
+				uid = u
+				break
+			}
 		}
 	}
 	return uid
@@ -476,14 +541,24 @@ func (s *StratumV1Struct) newMinerRecordPub() {
 //
 func (s *StratumV1Struct) switchDest() {
 
+	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called ")
+
 	if s.switchToDestID == "" {
 		return
 	}
 
 	currentUID, _ := s.protocol.GetDefaultRouteUID()
 
+	//
+	// Is the current Route the same as the new route?
+	//
 	if currentUID >= 0 {
 		v, ok := s.dstDest[currentUID]
+
+		if v == nil {
+			contextlib.Logf(s.Ctx(), contextlib.LevelPanic, fmt.Sprintf(lumerinlib.FileLineFunc()+" dstDest[%d] ", currentUID))
+		}
+
 		if ok {
 			if s.switchToDestID == v.ID {
 				s.switchToDestID = ""
@@ -498,17 +573,25 @@ func (s *StratumV1Struct) switchDest() {
 	newUID := s.GetDstUIDDestID(s.switchToDestID)
 	if s.dstState[newUID] == DstStateStandBy {
 
+		contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Switch from UID:%d to UID:%d ", currentUID, newUID)
+
 		if currentUID >= 0 {
 			s.dstState[currentUID] = DstStateStandBy
 		}
 		s.dstState[newUID] = DstStateRunning
 		s.protocol.SetDefaultRouteUID(newUID)
 
+		// Goose the miner to the correct Extranonce settings.
+		s.sendSetExtranonceNotice(newUID)
+		s.sendSetDifficultyNotice(newUID)
+		s.sendLastMiningNotice(newUID)
+		s.sendLastReqNotice(newUID)
+
 		// Reset the switch to state
 		s.switchToDestID = ""
 
 	} else {
-		contextlib.Logf(s.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" next dest not in standby mode ")
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" next dest not in standby mode ")
 	}
 
 }
@@ -625,3 +708,201 @@ func (svs *StratumV1Struct) eventHandler(event *simple.SimpleEvent) (e error) {
 
 	return e
 }
+
+//
+// sendSetExtranonceNotice()
+//
+func (svs *StratumV1Struct) sendSetExtranonceNotice(uid simple.ConnUniqueID) (e error) {
+
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" on  UID:%d", uid)
+
+	_, ok := svs.dstExtranonce[uid]
+	if !ok {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" dstExtranonce[%d] DNE ", uid)
+	}
+	_, ok = svs.dstExtranonce2size[uid]
+	if !ok {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" dstExtranonce2size[%d] DNE ", uid)
+	}
+
+	msg, e := createSetExtranonceNoticeMsg(svs.dstExtranonce[uid], svs.dstExtranonce2size[uid])
+
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createSetExtranonceNoticeMsg error:%s", e)
+		return e
+	}
+
+	LogJson(svs.Ctx(), lumerinlib.FileLineFunc(), JSON_SEND_STOR2SRC, msg)
+
+	count, e := svs.protocol.WriteSrc(msg)
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write error:%s", e)
+		return e
+	}
+
+	if count != len(msg) {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write bad count:%d, %d", count, len(msg))
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+	}
+
+	return e
+
+}
+
+//
+// sendSetDifficultyNotice()
+//
+func (svs *StratumV1Struct) sendSetDifficultyNotice(uid simple.ConnUniqueID) (e error) {
+
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" on  UID:%d", uid)
+
+	_, ok := svs.dstDiff[uid]
+	if !ok {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" dstDiff[%d] DNE ", uid)
+		return nil
+	}
+
+	msg, e := createSetDifficultyNoticeMsg(svs.dstDiff[uid])
+
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createSetDifficultyNoticeMsg() error:%s", e)
+		return e
+	}
+
+	LogJson(svs.Ctx(), lumerinlib.FileLineFunc(), JSON_SEND_STOR2SRC, msg)
+
+	count, e := svs.protocol.WriteSrc(msg)
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write error:%s", e)
+		return e
+	}
+
+	if count != len(msg) {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write bad count:%d, %d", count, len(msg))
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+	}
+
+	return e
+
+}
+
+//
+// sendLastMiningNotice()
+//
+func (svs *StratumV1Struct) sendLastMiningNotice(uid simple.ConnUniqueID) (e error) {
+
+	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" on  UID:%d", uid)
+
+	_, ok := svs.dstLastMiningNotice[uid]
+	if !ok {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" dstLastMiningNotice[%d] DNE ", uid)
+		return nil
+	}
+
+	if svs.dstLastMiningNotice[uid] == nil {
+		return nil
+	}
+
+	notice := svs.dstLastMiningNotice[uid]
+	svs.dstLastMiningNotice[uid] = nil
+
+	msg, e := notice.createNoticeMsg()
+
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createLastMiningNoticeMsg() error:%s", e)
+		return e
+	}
+
+	LogJson(svs.Ctx(), lumerinlib.FileLineFunc(), JSON_SEND_STOR2SRC, msg)
+
+	count, e := svs.protocol.WriteSrc(msg)
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write error:%s", e)
+		return e
+	}
+
+	if count != len(msg) {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write bad count:%d, %d", count, len(msg))
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+	}
+
+	return e
+
+}
+
+//
+// sendLastReqNotice()
+//
+func (svs *StratumV1Struct) sendLastReqNotice(uid simple.ConnUniqueID) (e error) {
+
+	_, ok := svs.dstLastReqNotice[uid]
+	if !ok {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" dstLastReqNotice[%d] DNE ", uid)
+		return nil
+	}
+
+	if svs.dstLastReqNotice[uid] == nil {
+		return nil
+	}
+
+	request := svs.dstLastReqNotice[uid]
+	svs.dstLastReqNotice[uid] = nil
+
+	msg, e := request.createRequestMsg()
+
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createRequestMsg() error:%s", e)
+		return e
+	}
+
+	LogJson(svs.Ctx(), lumerinlib.FileLineFunc(), JSON_SEND_STOR2SRC, msg)
+
+	count, e := svs.protocol.WriteSrc(msg)
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write error:%s", e)
+		return e
+	}
+
+	if count != len(msg) {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write bad count:%d, %d", count, len(msg))
+		e = fmt.Errorf(lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+	}
+
+	return e
+
+}
+
+//
+// sendSetVersionMaskNotice()
+//
+//func (svs *StratumV1Struct) sendSetVersionMaskNotice(uid simple.ConnUniqueID) (e error) {
+//
+//	_, ok := svs.dstVersionMask[uid]
+//	if !ok {
+//		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" dstDiff[%d] DNE ", uid)
+//	}
+//
+//	msg, e := createSetVersionMaskNoticeMsg(svs.dstDiff[uid])
+//
+//	if e != nil {
+//		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createSetVersionMaskNoticeMsg() error:%s", e)
+//		return e
+//	}
+//
+//	LogJson(svs.Ctx(), lumerinlib.FileLineFunc(), JSON_SEND_STOR2SRC, msg)
+//
+//	count, e := svs.protocol.WriteSrc(msg)
+//	if e != nil {
+//		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write error:%s", e)
+//		return e
+//	}
+//
+//	if count != len(msg) {
+//		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write bad count:%d, %d", count, len(msg))
+//		e = fmt.Errorf(lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
+//	}
+//
+//	return e
+//
+//}
+//

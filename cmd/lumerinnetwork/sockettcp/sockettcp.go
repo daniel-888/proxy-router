@@ -386,12 +386,13 @@ func (s *SocketTCPStruct) Read(buf []byte) (count int, e error) {
 
 	count, e = s.socket.Read(buf)
 	if e != nil {
-		if e == io.ErrUnexpectedEOF {
+		switch e {
+		case io.ErrUnexpectedEOF:
 			contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Socket Read() return Unexpected EOF")
-		}
-		if e == io.EOF {
-			//			contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Socket Read() return EOF")
-		} else {
+		case io.EOF:
+			contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Socket Read() return EOF")
+		default:
+			contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Socket Read() return default close")
 			e = ErrSocTCPClosed
 		}
 		s.Close()

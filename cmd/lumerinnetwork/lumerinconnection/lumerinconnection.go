@@ -372,7 +372,7 @@ func (l *LumerinSocketStruct) Read(buf []byte) (count int, e error) {
 				contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Read() returned unexpected error: %s", e)
 			}
 
-			// contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Read() returned unexpected error: %s", e)
+			contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Read() returned unexpected error: %s", e)
 
 			l.Close()
 			return 0, ErrLumConSocketClosed

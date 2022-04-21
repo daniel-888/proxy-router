@@ -268,20 +268,15 @@ FORLOOP:
 			case io.EOF:
 				contextlib.Logf(cs.ctx, contextlib.LevelInfo, fmt.Sprintf(lumerinlib.FileLineFunc()+" %s Read() index:%d returned EOF", name, index))
 			case lumerinconnection.ErrLumConSocketClosed:
-				// contextlib.Logf(cs.ctx, contextlib.LevelInfo, fmt.Sprintf(lumerinlib.FileLineFunc()+" %s Read() index:%d returned %s", name, index, e))
+				contextlib.Logf(cs.ctx, contextlib.LevelInfo, fmt.Sprintf(lumerinlib.FileLineFunc()+" %s Read() index:%d returned %s", name, index, e))
 			default:
 				contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" %s Read() on index:%d returned error:%s", name, index, e))
-			}
-
-			// Src is closed, so shutdown the whole shebang
-			if index < 0 {
-				cs.Close()
-				break FORLOOP
 			}
 
 			// Src closed = shutdown the whole shebang
 			// if Dst closed pass the error up
 			if index < 0 {
+				cs.Close()
 				break FORLOOP
 			} else {
 				e = ErrConnDstClosed
@@ -302,16 +297,18 @@ FORLOOP:
 		}
 
 		if e != nil {
+			contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" %s UID:%d Error:%s", name, e))
 			break FORLOOP
 		}
 	}
 
-	// Something errored or closed, so call close to be sure nothing is hanging
-	// contextlib.Logf(cs.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Exiting - %d:%s", index, name)
-
 	if index < 0 {
 		cs.Close()
 	}
+
+	// Something errored or closed, so call close to be sure nothing is hanging
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" %s UID:%d Exiting", name, index))
+
 }
 
 //

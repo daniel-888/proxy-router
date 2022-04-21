@@ -29,7 +29,7 @@ type LocalConfig struct {
 
 func TestConnMgr(t *testing.T) {
 
-	var sleepTime time.Duration = 30 * time.Second
+	var sleepTime time.Duration = 60 * time.Second
 
 	//
 	// Load configuration
@@ -71,8 +71,11 @@ func TestConnMgr(t *testing.T) {
 
 	mainContext := context.Background()
 
-	defaultdst := "stratum+tcp://seanmcadam.test0:@mining.pool.titan.io:4242"
-	seconddst := "stratum+tcp://seanmcadam.worker0:@us-east.stratum.slushpool.com:3333/"
+	defaultdst := "stratum+tcp://seanmcadam.switcher0:@mining.pool.titan.io:4242"
+	seconddst := "stratum+tcp://seanmcadam.switcher1:@mining.pool.titan.io:4242/"
+
+	//defaultdst := "stratum+tcp://seanmcadam.switcher0:@pooltesta1.sbx.lumerin.io:4242/"
+	//seconddst := "stratum+tcp://seanmcadam.switcher1:@pooltesta1.sbx.lumerin.io:4242/"
 
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, configs.ListenIP+":"+configs.ListenPort)
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, defaultdst)
@@ -98,7 +101,7 @@ func TestConnMgr(t *testing.T) {
 	}
 
 	//
-	// Publish alternamte pool destination
+	// Publish alternate pool destination
 	//
 	newTargetDest := msgbus.Dest{
 		ID:     msgbus.DestID(msgbus.GetRandomIDString()),
@@ -116,7 +119,8 @@ func TestConnMgr(t *testing.T) {
 		panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
 	}
 
-	stratum.Run()
+	stratum.RunOnce()
+	// stratum.Run()
 
 	//
 	// Sleep while the system stablizes
@@ -144,6 +148,7 @@ func TestConnMgr(t *testing.T) {
 
 		time.Sleep(sleepTime)
 
+		fmt.Printf("\n***********\nPoint to Alternate DST\n************\n")
 		//
 		// Toggle back to the default dest
 		//
@@ -161,6 +166,7 @@ func TestConnMgr(t *testing.T) {
 		}
 
 		time.Sleep(sleepTime)
+		fmt.Printf("\n***********\nPoint to Primary DST\n************\n")
 	}
 }
 
