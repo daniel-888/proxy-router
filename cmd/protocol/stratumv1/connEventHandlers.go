@@ -980,7 +980,7 @@ func (svs *StratumV1Struct) handleDstReqNotify(uid simple.ConnUniqueID, request 
 		case DstStateAuthorizing:
 			fallthrough
 		case DstStateStandBy:
-			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" State:%s", dststate)
+			contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" State:%s", dststate)
 
 			svs.dstLastReqNotice[uid] = request
 			LogJson(svs.Ctx(), lumerinlib.FileLineFunc(), JSON_STOR_DST, msg)
