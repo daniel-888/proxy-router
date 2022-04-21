@@ -591,12 +591,8 @@ func (s *StratumV1Struct) switchDest() {
 		s.switchToDestID = ""
 
 	} else {
-		if s.dstState[newUID] == DstStateRunning {
-			contextlib.Logf(s.Ctx(), contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" next dest not in standby mode %s", s.dstState[newUID]))
-			return
-		}
 
-		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, fmt.Sprintf(lumerinlib.FileLineFunc()+" next dest not in standby mode %s", s.dstState[newUID]))
+		contextlib.Logf(s.Ctx(), contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" Ignore... next dest not in standby mode %s", s.dstState[newUID]))
 	}
 
 }
