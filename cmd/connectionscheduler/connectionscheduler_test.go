@@ -47,6 +47,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 	//
 	// 1 miner and 1 contract with hashrate within 10% tolerance
 	//
+	fmt.Print("\n\n/// 1 miner and 1 contract with hashrate within 10% tolerance ///\n\n\n")
 	miner1Hashrate := 100
 	miner1 := msgbus.Miner{
 		ID:                   msgbus.MinerID("MinerID01"),
@@ -98,6 +99,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 	//
 	// miner 1 updated to fall out of tolerance range
 	//
+	fmt.Print("\n\n/// miner 1 updated to fall out of tolerance range ///\n\n\n")
 	event, _ = ps.GetWait(msgbus.MinerMsg, msgbus.IDString(miner1.ID))
 	miner1 = event.Data.(msgbus.Miner)
 	miner1.CsMinerHandlerIgnore = false
@@ -127,6 +129,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 	//
 	// Publish multiple miners and find best combination to point to running contract dest
 	//
+	fmt.Print("\n\n/// Publish multiple miners and find best combination to point to running contract dest ///\n\n\n")
 	miner2 := msgbus.Miner{
 		ID:                   msgbus.MinerID("MinerID02"),
 		IP:                   "IpAddress2",
@@ -216,6 +219,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 	//
 	// Publish new miner and update another that creates new best combination
 	//
+	fmt.Print("\n\n/// Publish new miner and update another that creates new best combination ///\n\n\n")
 	event, _ = ps.GetWait(msgbus.MinerMsg, msgbus.IDString(miner5.ID))
 	miner5 = event.Data.(msgbus.Miner)
 	miner5.CsMinerHandlerIgnore = false
@@ -285,6 +289,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 	//
 	// Another contract is created and purchased with different dest
 	//
+	fmt.Print("\n\n/// Another contract is created and purchased with different dest ///\n\n\n")
 	contract2 := msgbus.Contract{
 		IsSeller: true,
 		ID:       msgbus.ContractID("ContractID02"),

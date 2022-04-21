@@ -16,7 +16,6 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
-	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
@@ -87,7 +86,7 @@ func LoadEnabledTestConfiguration(filePath string) (configs EnabledConfig, err e
 	return configs, err
 }
 
-func EnabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs EnabledConfig) (msgbus.DestID, contractmanager.SellerContractManager) {
+func EnabledSimMain(ps *msgbus.PubSub, configs EnabledConfig) (msgbus.DestID, contractmanager.SellerContractManager) {
 	mainContext := context.Background()
 
 	//
@@ -101,7 +100,7 @@ func EnabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs EnabledConfig) (ms
 	//
 	// the proro argument (#1) gets set in the Protocol sus-system
 	//
-	cs := contextlib.NewContextStruct(nil, ps, l, src, dst)
+	cs := contextlib.NewContextStruct(nil, ps, nil, src, dst)
 
 	//
 	//  All of the various needed subsystem values get passed into the context here.
@@ -160,11 +159,11 @@ func EnabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs EnabledConfig) (ms
 	//
 	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
 	if err != nil {
-		l.Logf(log.LevelPanic, "Schedule manager failed: %v", err)
+		panic(fmt.Sprintf("Schedule manager failed: %v", err))
 	}
 	err = csched.Start()
 	if err != nil {
-		l.Logf(log.LevelPanic, "Schedule manager failed to start: %v", err)
+		panic(fmt.Sprintf("Schedule manager failed to start: %v", err))
 	}
 
 	//
@@ -189,18 +188,21 @@ func EnabledSimMain(ps *msgbus.PubSub, l *log.Logger, configs EnabledConfig) (ms
 	err = contractmanager.Run(&mainContext, &sellerCM, msgbus.IDString(contractManagerConfig.ID), &nodeOperator)
 
 	if err != nil {
-		l.Logf(log.LevelPanic, "Contract manager failed to run: %v", err)
+		panic(fmt.Sprintf("Contract manager failed to run: %v", err))
 	}
 
 	return dest.ID, sellerCM
 }
 
 func TestEnabled(t *testing.T) {
-	configPath := "../../.json"
+	configPath := "../../ganacheconfig.json"
 
 	var hashrateContractAddress msgbus.ContractID
 	var purchasedHashrateContractAddress msgbus.ContractID
 	var updatedHashrateContractAddress msgbus.ContractID
+
+	targetDest1 := "stratum+tcp://pool-east.staging.pool.titan.io:4242"
+	targetDest2 := "stratum+tcp://pool-west.staging.pool.titan.io:4242"
 
 	configs, err := LoadEnabledTestConfiguration(configPath)
 	if err != nil {
@@ -216,18 +218,9 @@ func TestEnabled(t *testing.T) {
 		contractLength = 20 // when running in ganache
 	}
 
-	var sleepTime time.Duration = 3 * time.Second
+	var sleepTime time.Duration = 10 * time.Second
 
-	l := log.New()
-
-	logFile, err := os.OpenFile(configs.LogFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
-	if err != nil {
-		l.Logf(log.LevelFatal, "error opening log file: %v", err)
-	}
-	defer logFile.Close()
-	l.SetFormat(log.FormatJSON).SetOutput(logFile)
-
-	ps := msgbus.New(10, l)
+	ps := msgbus.New(10, nil)
 
 	// wait until transaction for deploying contracts went through before continuing
 	_, lerr := ts.EthClient.TransactionReceipt(context.Background(), ltransaction.Hash())
@@ -238,7 +231,7 @@ func TestEnabled(t *testing.T) {
 		time.Sleep(time.Second * 10)
 	}
 
-	defaultDestID, cm := EnabledSimMain(ps, l, configs)
+	defaultDestID, cm := EnabledSimMain(ps, configs)
 
 	Account, PrivateKey := contractmanager.HdWalletKeys(configs.Mnemonic, configs.AccountIndex+1)
 	buyerAddress := Account.Address
@@ -287,7 +280,8 @@ func TestEnabled(t *testing.T) {
 
 	time.Sleep(sleepTime)
 
-	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), miner)
+	_ = miner
+	//ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), miner)
 
 	//
 	// seller created contract found by lumerin node
@@ -319,8 +313,9 @@ loop1:
 	}
 	time.Sleep(time.Second * 2)
 
-	contractmanager.PurchaseHashrateContract(cm.EthClient, buyerAddress, buyerPrivateKey, cm.CloneFactoryAddress, common.HexToAddress(string(hashrateContractAddress)), buyerAddress, "stratum+tcp://127.0.0.1:33333/")
-
+	contractmanager.PurchaseHashrateContract(cm.EthClient, buyerAddress, buyerPrivateKey, cm.CloneFactoryAddress, common.HexToAddress(string(hashrateContractAddress)), buyerAddress, targetDest1)
+	time.Sleep(sleepTime)
+	
 	// wait until hashrate contract was purchased before continuing
 loop2:
 	for {
@@ -341,7 +336,7 @@ loop2:
 		if err != nil {
 			panic(fmt.Sprintf("Getting dest failed: %s", err))
 		}
-		if dest.NetUrl == "stratum+tcp://127.0.0.1:33333/" {
+		if dest.NetUrl == msgbus.DestNetUrl(targetDest1) {
 			targetDest = msgbus.DestID(v)
 		}
 	}
@@ -383,7 +378,7 @@ loop2:
 		}
 	}()
 
-	contractmanager.UpdateCipherText(cm.EthClient, buyerAddress, buyerPrivateKey, common.HexToAddress(string(hashrateContractAddress)), "stratum+tcp://127.0.0.1:66666/")
+	contractmanager.UpdateCipherText(cm.EthClient, buyerAddress, buyerPrivateKey, common.HexToAddress(string(hashrateContractAddress)), targetDest2)
 
 	// wait until hashrate contract was update before continuing
 loop3:
@@ -399,7 +394,7 @@ loop3:
 		panic(fmt.Sprintf("Getting dest failed: %s", err))
 	}
 
-	if targetDestMsg.NetUrl != "stratum+tcp://127.0.0.1:66666/" {
+	if targetDestMsg.NetUrl != msgbus.DestNetUrl(targetDest2) {
 		t.Errorf("Target dest was not updated")
 	}
 

@@ -195,9 +195,9 @@ func TestDisabled(t *testing.T) {
 		Length:   1000,
 	}
 
-	time.Sleep(sleepTime)
-
 	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract.ID), contract)
+
+	time.Sleep(sleepTime)
 
 	miners, _ := ps.MinerGetAllWait()
 	for _, v := range miners {

@@ -258,7 +258,15 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 			// Publish Event
 			//
 			case msgbus.PublishEvent:
-				miner := event.Data.(msgbus.Miner)
+				var miner msgbus.Miner
+
+				switch event.Data.(type) {
+				case msgbus.Miner:
+					miner = event.Data.(msgbus.Miner)
+				case *msgbus.Miner:
+					m := event.Data.(*msgbus.Miner)
+					miner = *m
+				}
 
 				if miner.State != msgbus.OnlineState {
 					break loop
@@ -299,7 +307,15 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 				// Update Event
 				//
 			case msgbus.UpdateEvent:
-				miner := event.Data.(msgbus.Miner)
+				var miner msgbus.Miner
+
+				switch event.Data.(type) {
+				case msgbus.Miner:
+					miner = event.Data.(msgbus.Miner)
+				case *msgbus.Miner:
+					m := event.Data.(*msgbus.Miner)
+					miner = *m
+				}
 
 				if miner.State != msgbus.OnlineState {
 					cs.BusyMiners.Delete(string(id))

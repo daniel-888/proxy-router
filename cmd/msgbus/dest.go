@@ -55,12 +55,16 @@ func (ps *PubSub) DestGetWait(id DestID) (dest *Dest, err error) {
 		fmt.Printf(lumerinlib.Funcname()+" ID not found %s, %s\n", err, event.Err)
 	}
 
-	if event.Data == nil {
-		dest = nil
-	} else {
+	switch event.Data.(type) {
+	case Dest:
 		d := event.Data.(Dest)
 		dest = &d
+	case *Dest:
+		dest = event.Data.(*Dest)
+	default:
+		dest = nil
 	}
+
 	return dest, err
 }
 
