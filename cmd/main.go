@@ -28,6 +28,7 @@ import (
 // Connection Manager
 // Scheduling Manager
 // Contract Manager
+// External API
 //
 // -------------------------------------------
 
@@ -55,9 +56,8 @@ func main() {
 
 	//
 	// Add the various Context variables here
-	// msgbus, logger, defailt listen address, defalt desitnation address
+	// msgbus, logger, default listen address, defalt desitnation address
 	//
-
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, configs.ListenIP+":"+configs.ListenPort)
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, configs.DefaultPoolAddr)
 
@@ -67,12 +67,12 @@ func main() {
 	cs := contextlib.NewContextStruct(nil, ps, nil, src, dst)
 
 	//
-	//  All of the various needed subsystem values get passed into the context here.
+	// All of the various needed subsystem values get passed into the context here.
 	//
 	mainContext = context.WithValue(mainContext, contextlib.ContextKey, cs)
 
 	//
-	// Setup Default Dest
+	// Setup Default Dest in msgbus
 	//
 	dest := &msgbus.Dest{
 		ID:     msgbus.DestID(msgbus.DEFAULT_DEST_ID),
@@ -88,7 +88,7 @@ func main() {
 	}
 
 	//
-	// Setup Node Operator Msg
+	// Setup Node Operator Msg in msgbus
 	//
 	nodeOperator := msgbus.NodeOperator{
 		ID:          msgbus.NodeOperatorID(msgbus.GetRandomIDString()),

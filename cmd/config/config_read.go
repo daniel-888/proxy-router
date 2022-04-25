@@ -222,20 +222,17 @@ func ReadConfigs() (configs ConfigRead) {
 		}
 		switch network {
 		case "ropsten":
-			configs.CloneFactoryAddress = "0x15BdE7774F4A69A7d1fdb66CE94CDF26FCd8F45e"
-			configs.LumerinTokenAddress = "0x84E00a18a36dFa31560aC216da1A9bef2164647D"
+			configs.CloneFactoryAddress = "0xe91be01493f4ae28297790277303926aaec604dc"
+			configs.LumerinTokenAddress = "0xC6a30Bc2e1D7D9e9FFa5b45a21b6bDCBc109aE1B"
 			configs.ValidatorAddress = "0x508CD3988E2b4B8f1d243b961a855347349f6F63"
-			configs.ProxyAddress = "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3"
 		case "custom":
 			configs.CloneFactoryAddress = "0xF735F5cFBC65EDcc67FE2F3f34413B3a66bA42E5"
 			configs.LumerinTokenAddress = "0xf84D04A844D9a6F44c7F5bCd01b0852F47631c4e"
 			configs.ValidatorAddress = "0x508CD3988E2b4B8f1d243b961a855347349f6F63"
-			configs.ProxyAddress = "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3"
 		case "mainnet":
-			configs.CloneFactoryAddress = "0x15BdE7774F4A69A7d1fdb66CE94CDF26FCd8F45e"
-			configs.LumerinTokenAddress = "0x84E00a18a36dFa31560aC216da1A9bef2164647D"
+			configs.CloneFactoryAddress = "0xe91be01493f4ae28297790277303926aaec604dc"
+			configs.LumerinTokenAddress = "0xC6a30Bc2e1D7D9e9FFa5b45a21b6bDCBc109aE1B"
 			configs.ValidatorAddress = "0x508CD3988E2b4B8f1d243b961a855347349f6F63"
-			configs.ProxyAddress = "0xF68F06C4189F360D9D1AA7F3B5135E5F2765DAA3"
 		default:
 			panic(fmt.Sprintln("Invalid network input (must be ropsten, custom, or mainnet)"))
 		}

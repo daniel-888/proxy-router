@@ -102,7 +102,6 @@ func Run(Ctx *context.Context, contractManager ContractManager, contractManagerC
 func newConfigMonitor(Ctx *context.Context, contractManagerCtx context.Context, contractManagerCancel context.CancelFunc, contractManager ContractManager, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) {
 	contractConfigCh := msgbus.NewEventChan()
 	cs := contextlib.GetContextStruct(contractManagerCtx)
-	//contractManagerCtx.Value(contextlib.ContextKey).(*contextlib.ContextStruct)
 	Ps := cs.MsgBus
 
 	event, err := Ps.SubWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID, contractConfigCh)
@@ -129,7 +128,6 @@ func newConfigMonitor(Ctx *context.Context, contractManagerCtx context.Context, 
 func (seller *SellerContractManager) init(Ctx *context.Context, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error) {
 	seller.Ctx = *Ctx
 	cs := contextlib.GetContextStruct(seller.Ctx)
-	//seller.Ctx.Value(contextlib.ContextKey).(*contextlib.ContextStruct)
 	seller.Ps = cs.MsgBus
 
 	event, err := seller.Ps.GetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID)
@@ -593,7 +591,6 @@ loop:
 func (buyer *BuyerContractManager) init(Ctx *context.Context, contractManagerConfigID msgbus.IDString, nodeOperatorMsg *msgbus.NodeOperator) (err error) {
 	buyer.Ctx = *Ctx
 	cs := contextlib.GetContextStruct(buyer.Ctx)
-	//buyer.Ctx.Value(contextlib.ContextKey).(*contextlib.ContextStruct)
 	buyer.Ps = cs.MsgBus
 
 	event, err := buyer.Ps.GetWait(msgbus.ContractManagerConfigMsg, contractManagerConfigID)
@@ -634,13 +631,11 @@ func (buyer *BuyerContractManager) start() (err error) {
 		return err
 	}
 
-	// subcribe to events emitted by clonefactory contract to read contract purchase event
+	// routine for listensing to contract purchase events to update buyer with new contracts they purchased
 	cfLogs, cfSub, err := SubscribeToContractEvents(buyer.EthClient, buyer.CloneFactoryAddress)
 	if err != nil {
 		return err
 	}
-
-	// routine for listensing to contract purchase events to update buyer with new contracts they purchased
 	go buyer.watchContractPurchase(cfLogs, cfSub)
 
 	// miner event channel for miner monitor that checks miner publishes, updates, and deletes

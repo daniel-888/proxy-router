@@ -37,9 +37,6 @@ func (m MinerList) Len() int           { return len(m) }
 func (m MinerList) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 func (m MinerList) Less(i, j int) bool { return m[i].hashrate < m[j].hashrate }
 
-//------------------------------------------
-//
-//------------------------------------------
 func New(Ctx *context.Context, NodeOperator *msgbus.NodeOperator, Passthrough bool) (cs *ConnectionScheduler, err error) {
 	ctxStruct := contextlib.GetContextStruct(*Ctx)
 	cs = &ConnectionScheduler{
@@ -56,9 +53,6 @@ func New(Ctx *context.Context, NodeOperator *msgbus.NodeOperator, Passthrough bo
 	return cs, err
 }
 
-//------------------------------------------
-//
-//------------------------------------------
 func (cs *ConnectionScheduler) Start() (err error) {
 	contextlib.Logf(cs.Ctx, log.LevelInfo, "Connection Scheduler Starting")
 
@@ -374,6 +368,8 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 
 //------------------------------------------------------------------------
 //
+// Direct all miners to running contract i.e. miner hashrate calculations to service multiple contracts
+//
 //------------------------------------------------------------------------
 func (cs *ConnectionScheduler) ContractRunningPassthrough(contractId msgbus.ContractID) {
 	contextlib.Logf(cs.Ctx, log.LevelInfo, lumerinlib.FileLine()+"Contract Running in Passthrough Mode: %s", contractId)
@@ -447,6 +443,8 @@ func (cs *ConnectionScheduler) ContractRunningPassthrough(contractId msgbus.Cont
 }
 
 //------------------------------------------------------------------------
+//
+// Continously search for optimal miner combination of online miners to point to running contract
 //
 //------------------------------------------------------------------------
 func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {

@@ -25,8 +25,8 @@
         "ethNodeAddr": "ws://127.0.0.1:7545",
         "claimFunds": true,
         "timeThreshold": 10,
-        "cloneFactoryAddress": "0x15BdE7774F4A69A7d1fdb66CE94CDF26FCd8F45e",
-        "lumerinTokenAddress": "0x84E00a18a36dFa31560aC216da1A9bef2164647D",
+        "cloneFactoryAddress": "0xe91be01493f4ae28297790277303926aaec604dc",
+        "lumerinTokenAddress": "0xC6a30Bc2e1D7D9e9FFa5b45a21b6bDCBc109aE1B",
         "validatorAddress": "0x508CD3988E2b4B8f1d243b961a855347349f6F63"
     },
 
