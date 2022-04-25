@@ -18,6 +18,10 @@ import (
 // there is already a Lumerin Protocol Trunk in place with the target node
 // and redirect the connection across the trunk instead of a new direct connection.
 //
+// Most of the functionality will be implemented in the future, at this point it
+// only supports direct TCP connections.  It is easier to have this here now, then
+// to reto-fit it in later.
+//
 //
 
 const LumerinAcceptChannelLen int = 2
@@ -135,7 +139,7 @@ func NewListen(ctx context.Context, addr net.Addr) (l *LumerinListenStruct, e er
 	case UDPTRUNK:
 		fallthrough
 	case ANYAVAILABLE:
-		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Protocol not implemented:%s", string(lumproto))
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Protocol not implemented, yet:%s", string(lumproto))
 
 	default:
 		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Proto:'%s' not supported\n", lumproto)
@@ -385,7 +389,7 @@ func (l *LumerinSocketStruct) Read(buf []byte) (count int, e error) {
 }
 
 //
-//
+// Write()
 //
 func (l *LumerinSocketStruct) Write(buf []byte) (count int, e error) {
 

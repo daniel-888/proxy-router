@@ -29,12 +29,6 @@ var ErrSocTCPClosed = errors.New("socket TCP: socket closed")
 var ErrSocTCPBadNetwork = errors.New("socket TCP: bad network protocol")
 var ErrSocTCPEmtpyWriteBuf = errors.New("socket TCP: Emtpy Write Buffer")
 
-//var ErrSocTCPReadCopyUnderRun = errors.New("socke TCP: Read() Copy Under Run")
-//var ErrSocTCPTargetNotResponding = errors.New("socke TCP: Target not responding")
-//var ErrSocTCPTargetRejecting = errors.New("socke TCP: Target Rejecting")
-//var ErrSocTCPListenAddrBusy = errors.New("socke TCP: Listen Port Address Busy")
-//var ErrSocTCPIPAddrBusy = errors.New("socket TCP: Listen IP Address Busy")
-
 //
 // ----------------
 //

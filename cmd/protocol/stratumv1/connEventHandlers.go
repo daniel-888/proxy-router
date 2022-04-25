@@ -533,12 +533,6 @@ func (svs *StratumV1Struct) handleSrcReqSubscribe(request *stratumRequest) (e er
 
 	svs.SetSrcState(SrcStateSubscribed)
 
-	//id, e := request.getID()
-	//if e != nil {
-	//	contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" getID() error:%s", e)
-	//	return e
-	//}
-
 	dst := contextlib.GetDest(svs.Ctx())
 	if dst == nil {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDest() returned nil")
@@ -774,14 +768,6 @@ func (svs *StratumV1Struct) handleSrcReqSubmit(request *stratumRequest) (e error
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Src state:%s", state)
 	}
 
-	// Track ID HERE?
-
-	//id, e := request.getID()
-	//if e != nil {
-	//	contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" getID() returned error:%s ", e)
-	//	return e
-	//}
-
 	//
 	// Get the current default route UID
 	//
@@ -819,9 +805,6 @@ func (svs *StratumV1Struct) handleSrcReqSubmit(request *stratumRequest) (e error
 
 	// Call switchDest to change destinations if needed (happens on a submit)
 	svs.switchDest()
-
-	// Change Destination HERE
-	// Log Submission HERE
 
 	return nil
 }
@@ -1090,7 +1073,6 @@ func (svs *StratumV1Struct) handleDstReqSetDifficulty(uid simple.ConnUniqueID, r
 	defRouteUid, _ := svs.protocol.GetDefaultRouteUID()
 	// This is the default route
 	if defRouteUid == uid {
-		// msg, e := request.createRequestMsg()
 		msg, e := request.createRequestSetDifficultyMsg()
 		if e != nil {
 			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" createNoticeSetDifficultyMsg() returned error:%s", e)
@@ -1101,8 +1083,6 @@ func (svs *StratumV1Struct) handleDstReqSetDifficulty(uid simple.ConnUniqueID, r
 
 		svs.protocol.WriteSrc(msg)
 	} else {
-		// Store or drop the message?
-		// contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" uid:%d is not the default dst:%d, should we store or drop the message", uid, defRouteUid)
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" uid:%d is not the default dst:%d, should we store or drop the message", uid, defRouteUid)
 	}
 
@@ -1369,57 +1349,3 @@ func (svs *StratumV1Struct) handleDstNoticeReconnect(uid simple.ConnUniqueID, no
 	return e
 
 }
-
-//
-//
-//
-//func (svs *StratumV1Struct) handleDstNoticeSetVersionMask(uid simple.ConnUniqueID, notice *stratumNotice) (e error) {
-//
-//	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" enter")
-//
-//	// is index the current default destination?
-//	// If not, store the notify?
-//	// If so, pass it to the Src
-//
-//	dststate := svs.GetDstStateUid(uid)
-//	switch dststate {
-//	case DstStateSubscribing:
-//		fallthrough
-//	case DstStateAuthorizing:
-//		fallthrough
-//	case DstStateRunning:
-//		contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" passing set diff for state:%s", dststate)
-//	case DstStateStandBy:
-//		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" state not handled yet:%s", dststate)
-//	// case DstStateError:
-//	// case DstStateNew:
-//	case DstStateClosed:
-//		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Connecton is Marked closed, ignore reopen")
-//		return fmt.Errorf("Connection is marked closed, cant reopen")
-//	default:
-//		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+"  state:%s not handled", dststate)
-//	}
-//
-//	defRouteUid, _ := svs.protocol.GetDefaultRouteUID()
-//
-//	// This is the default route
-//	if defRouteUid == uid {
-//		// msg, e := notice.createNoticeSetDifficultyMsg()
-//		msg, e := notice.createNoticeMsg()
-//		if e != nil {
-//			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createNoticeSetDifficultyMsg() returned error:%s", e)
-//			return e
-//		}
-//
-//		LogJson(svs.Ctx(), lumerinlib.FileLineFunc(), JSON_SEND_DST2SRC, msg)
-//
-//		svs.protocol.WriteSrc(msg)
-//	} else {
-//		// Store or drop the message?
-//		contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" uid:%d is not the default dst:%d, should we store or drop the message", uid, defRouteUid)
-//	}
-//
-//	return e
-//
-//}
-//

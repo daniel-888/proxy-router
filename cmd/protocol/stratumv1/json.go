@@ -304,21 +304,6 @@ func unmarshalMsg(b []byte) (ret interface{}, err error) {
 			case string(SERVER_MINING_NOTIFY):
 				r.Params = msg.Params.([]interface{})
 
-				//for _, v := range msg.Params.([]interface{}) {
-				//	switch v.(type) {
-				//	case string:
-				//		r.Params = append(r.Params, v.(string))
-				//	case []interface{}:
-				//		z := make([]string, 1)
-				//		for _, u := range v.([]string) {
-				//			z = append(z, u)
-				//		}
-				//		r.Params = append(r.Params, z)
-				//	default:
-				//		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Error bad type:%T\n", v))
-				//	}
-				//}
-
 			case string(SERVER_MINING_SET_DIFFICULTY):
 				for _, v := range msg.Params.([]interface{}) {
 					switch v.(type) {
@@ -398,9 +383,6 @@ func (r *stratumRequest) getAuthName() (name string, err error) {
 		return "", fmt.Errorf(lumerinlib.FileLineFunc()+" wrong method, expetecting mining.authorize, got: %s", r.Method)
 	}
 
-	// fmt.Printf(" type:%T", r.Params)
-
-	// name = r.Params[0]
 	name = r.Params[0].(string)
 
 	return name, err
@@ -738,14 +720,6 @@ func (n *stratumNotice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
 		nsd.Params = append(nsd.Params, int(params[0]))
 	}
 
-	//for _, v := range n.Params.([]float64) {
-	//	i := int(v.(float64))
-	//	if err != nil {
-	//		panic("")
-	//	}
-	//	nsd.Params = append(nsd.Params, i)
-	//}
-
 	msg, err = json.Marshal(nsd)
 	if err != nil {
 		fmt.Printf(lumerinlib.FileLineFunc()+"Error Marshaling Request Err:%s\n", err)
@@ -913,8 +887,6 @@ func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 	if len(n.Params.([]interface{})) != 9 {
 		panic("")
 	}
-
-	// nsd.Params = &noticeMiningNotifyParams{}
 
 	for i, v := range n.Params.([]interface{}) {
 		switch i {
@@ -1157,24 +1129,6 @@ func createSetDifficultyNoticeMsg(diff int) (msg []byte, e error) {
 	return notice.createNoticeMsg()
 
 }
-
-//
-// createSetVersionMaskNoticeMsg() - mining.configure....
-//
-//func createSetVersionMaskNoticeMsg(diff int) (msg []byte, e error) {
-//
-//	params := make([]interface{}, 1)
-//	params[0] = diff
-//
-//	notice := &stratumNotice{
-//		ID:     nil,
-//		Method: string(SERVER_MINING_SET_DIFFICULTY),
-//		Params: params,
-//	}
-//
-//	return notice.createNoticeMsg()
-//
-//}
 
 //
 //

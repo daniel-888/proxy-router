@@ -581,7 +581,9 @@ func (s *StratumV1Struct) switchDest() {
 		s.dstState[newUID] = DstStateRunning
 		s.protocol.SetDefaultRouteUID(newUID)
 
+		//
 		// Goose the miner to the correct Extranonce settings.
+		//
 		s.sendSetExtranonceNotice(newUID)
 		s.sendSetDifficultyNotice(newUID)
 		s.sendLastMiningNotice(newUID)
@@ -872,38 +874,3 @@ func (svs *StratumV1Struct) sendLastReqNotice(uid simple.ConnUniqueID) (e error)
 	return e
 
 }
-
-//
-// sendSetVersionMaskNotice()
-//
-//func (svs *StratumV1Struct) sendSetVersionMaskNotice(uid simple.ConnUniqueID) (e error) {
-//
-//	_, ok := svs.dstVersionMask[uid]
-//	if !ok {
-//		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" dstDiff[%d] DNE ", uid)
-//	}
-//
-//	msg, e := createSetVersionMaskNoticeMsg(svs.dstDiff[uid])
-//
-//	if e != nil {
-//		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createSetVersionMaskNoticeMsg() error:%s", e)
-//		return e
-//	}
-//
-//	LogJson(svs.Ctx(), lumerinlib.FileLineFunc(), JSON_SEND_STOR2SRC, msg)
-//
-//	count, e := svs.protocol.WriteSrc(msg)
-//	if e != nil {
-//		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write error:%s", e)
-//		return e
-//	}
-//
-//	if count != len(msg) {
-//		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Write bad count:%d, %d", count, len(msg))
-//		e = fmt.Errorf(lumerinlib.FileLineFunc()+" WriteSrc bad count:%d, %d", count, len(msg))
-//	}
-//
-//	return e
-//
-//}
-//
