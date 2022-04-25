@@ -94,7 +94,7 @@ func (p *ProtocolDstStruct) NewProtocolDstStruct(osce *simple.SimpleConnOpenEven
 //
 
 // ---------------------------------------------------
-// *ProtocolDstStruct)
+// *ProtocolDstStruct()
 
 //
 // Cancel()
