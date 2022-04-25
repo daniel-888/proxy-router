@@ -1,4 +1,4 @@
-package integrationtests
+package integrationtestspass
 
 import (
 	"context"
@@ -163,7 +163,7 @@ func TestDisabled(t *testing.T) {
 	defaultDestID := DisabledSimMain(ps, configs)
 
 	//
-	// 1 miner connecting to lumerin node
+	// miner connecting to lumerin node
 	//
 	fmt.Print("\n\n/// Miner connecting to node ///\n\n\n")
 
@@ -172,41 +172,30 @@ func TestDisabled(t *testing.T) {
 		IP:                   "IpAddress1",
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
-		CurrentHashRate: 	  20,
 		CsMinerHandlerIgnore: false,
 	}
 
 	time.Sleep(sleepTime)
 	
 	_ = miner
-	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), miner)
+	//ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), miner)
 
 	//
-	// seller created 2 contracts found by lumerin node
+	// seller created contract found by lumerin node
 	//
 	fmt.Print("\n\n/// Created contract found by lumerin node ///\n\n\n")
 
-	contract1 := msgbus.Contract{
+	contract := msgbus.Contract{
 		IsSeller: true,
 		ID:       msgbus.ContractID("ContractID01"),
 		State:    msgbus.ContAvailableState,
 		Price:    10,
 		Limit:    10,
-		Speed:    20,
-		Length:   1000,
-	}
-	contract2 := msgbus.Contract{
-		IsSeller: true,
-		ID:       msgbus.ContractID("ContractID02"),
-		State:    msgbus.ContAvailableState,
-		Price:    10,
-		Limit:    10,
-		Speed:    60,
+		Speed:    100,
 		Length:   1000,
 	}
 
-	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract1.ID), contract1)
-	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract2.ID), contract2)
+	ps.PubWait(msgbus.ContractMsg, msgbus.IDString(contract.ID), contract)
 
 	time.Sleep(sleepTime)
 
@@ -229,11 +218,11 @@ func TestDisabled(t *testing.T) {
 	}
 	ps.PubWait(msgbus.DestMsg, msgbus.IDString(targetDest.ID), targetDest)
 
-	contract1.State = msgbus.ContRunningState
-	contract1.Buyer = "BuyerID01"
-	contract1.StartingBlockTimestamp = 63637278298010
-	contract1.Dest = targetDest.ID
-	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract1.ID), contract1)
+	contract.State = msgbus.ContRunningState
+	contract.Buyer = "BuyerID01"
+	contract.StartingBlockTimestamp = 63637278298010
+	contract.Dest = targetDest.ID
+	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract.ID), contract)
 
 	time.Sleep(sleepTime)
 
@@ -246,66 +235,24 @@ func TestDisabled(t *testing.T) {
 	}
 
 	//
-	// More miners connecting to node
+	// target dest was updated while contract running
 	//
-	fmt.Print("\n\n/// More miners connection to node ///\n\n\n")
-	miner2 := msgbus.Miner{
-		ID:                   msgbus.MinerID("MinerID02"),
-		IP:                   "IpAddress2",
-		State:                msgbus.OnlineState,
-		Dest:                 defaultDestID,
-		CurrentHashRate: 	  10,
-		CsMinerHandlerIgnore: false,
-	}
-	miner3 := msgbus.Miner{
-		ID:                   msgbus.MinerID("MinerID03"),
-		IP:                   "IpAddress3",
-		State:                msgbus.OnlineState,
-		Dest:                 defaultDestID,
-		CurrentHashRate: 	  50,
-		CsMinerHandlerIgnore: false,
-	}
+	fmt.Print("\n\n/// Target dest was updated while contract running ///\n\n\n")
 
-	_ = miner2
-	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner2.ID), miner2)
-	_ = miner3
-	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner3.ID), miner3)
-	time.Sleep(sleepTime)
-
-	//
-	// Second contract was purchased and different target dest is inputed in it
-	//
-	fmt.Print("\n\n/// Second contract was purchased ///\n\n\n")
-	targetDest2 := msgbus.Dest{
-		ID:     msgbus.DestID(msgbus.GetRandomIDString()),
-		NetUrl: "stratum+tcp://pool-east.staging.pool.titan.io:4242",
-	}
-	ps.PubWait(msgbus.DestMsg, msgbus.IDString(targetDest2.ID), targetDest2)
-
-	contract2.State = msgbus.ContRunningState
-	contract2.Buyer = "BuyerID02"
-	contract2.StartingBlockTimestamp = 63637278298134
-	contract2.Dest = targetDest2.ID
-	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract2.ID), contract2)
+	targetDest.NetUrl = "stratum+tcp://pool-west.staging.pool.titan.io:4242"
+	ps.SetWait(msgbus.DestMsg, msgbus.IDString(targetDest.ID), targetDest)
 
 	time.Sleep(sleepTime)
 
-	var minersArr []msgbus.Miner
-	minerIDs, _ := ps.MinerGetAllWait()
-	for _, v := range minerIDs {
+	miners, _ = ps.MinerGetAllWait()
+	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		minersArr = append(minersArr, *miner)
+		if miner.Contract != "ContractID01" || miner.Dest != targetDest.ID {
+			t.Errorf("Miner contract and dest not set correctly")
+		}
 	}
 
-	if minersArr[0].Contract != "ContractID01" && miner.Dest != targetDest.ID {
-		t.Errorf("Miner 1 contract and dest not set correctly")
+	if targetDest.NetUrl != "stratum+tcp://pool-west.staging.pool.titan.io:4242" {
+		t.Errorf("Target dest was not updated")
 	}
-	if minersArr[1].Contract != "ContractID02" && miner.Dest != targetDest2.ID {
-		t.Errorf("Miner 2 contract and dest not set correctly")
-	}
-	if minersArr[2].Contract != "ContractID02" && miner.Dest != targetDest2.ID {
-		t.Errorf("Miner 3 contract and dest not set correctly")
-	}
-
-	time.Sleep(sleepTime)
 }

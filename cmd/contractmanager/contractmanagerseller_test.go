@@ -22,7 +22,7 @@ import (
 )
 
 func TestSellerRoutine(t *testing.T) {
-	configPath := "../../ganacheconfig.json"
+	configPath := "../../ropstenconfig.json"
 	ps := msgbus.New(10, nil)
 	ts, _, _ := BeforeEach(configPath)
 	var hashrateContractAddress [4]common.Address

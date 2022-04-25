@@ -997,6 +997,9 @@ func HdWalletKeys(mnemonic string, accountIndex int) (accounts.Account, string) 
 	if err != nil {
 		panic(fmt.Sprintf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err))
 	}
+
+	fmt.Println("Contract Manager Account Address:", Account)
+
 	return Account, PrivateKey
 }
 

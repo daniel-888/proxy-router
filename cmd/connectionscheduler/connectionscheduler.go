@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"sort"
+
 	//"strconv"
 	"sync"
 
@@ -424,49 +425,6 @@ func (cs *ConnectionScheduler) ContractRunningPassthrough(contractId msgbus.Cont
 			}
 			return
 
-			/* Leaving this here in case destids change when dest is updated in the future (not the case currently)
-			event, err = cs.Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contractId))
-			if err != nil {
-				cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", event)
-			}
-			contract = event.Data.(msgbus.Contract)
-
-			if contract.State == msgbus.ContAvailableState {
-				cs.Log.Logf(log.LevelInfo, "Contract state switched to available: cancelling contract running go routine for contract: %v", contract.ID)
-
-				// free up busy miners with contract id
-				miners, err := cs.Ps.MinerGetAllWait()
-				if err != nil {
-					cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
-				}
-				for _, v := range miners {
-					err := cs.Ps.MinerRemoveContractWait(v, cs.NodeOperator.DefaultDest, true)
-					if err != nil {
-						cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
-					}
-				}
-				return
-			}
-
-			destid = contract.Dest
-
-			if destid == "" {
-				cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"DestID is empty")
-			}
-
-			// Find all of the online miners point them to new target
-			miners, err := cs.Ps.MinerGetAllWait()
-			if err != nil {
-				cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
-			}
-
-			for _, v := range miners {
-				err := cs.Ps.MinerSetContractWait(v, contract.ID, destid, true)
-				if err != nil {
-					cs.Log.Logf(log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
-				}
-			}
-			*/
 		case <-minerMapUpdated:
 			miners, err := cs.Ps.MinerGetAllWait()
 			if err != nil {
@@ -500,12 +458,6 @@ func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
 	}
 	contract := event.Data.(msgbus.Contract)
 	hashrateTolerance := float64(contract.Limit) / 100
-
-	/*
-		if josh decides to make limit var a string
-		hashrateTolerance := strconv.ParseFloat(contract.Limit, 64)
-		hashrateTolerance = hashrateTolerance/100
-	*/
 
 	availableHashrate, _ := cs.calculateHashrateAvailability(contractId)
 

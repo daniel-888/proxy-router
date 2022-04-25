@@ -1,4 +1,4 @@
-package integrationtests
+package integrationtestspass
 
 import (
 	"context"
@@ -197,11 +197,12 @@ func EnabledSimMain(ps *msgbus.PubSub, configs EnabledConfig) (msgbus.DestID, co
 func TestEnabled(t *testing.T) {
 	configPath := "../../ganacheconfig.json"
 
-	var hashrateContractAddresses []msgbus.ContractID
-	var purchasedHashrateContractAddresses []msgbus.ContractID
+	var hashrateContractAddress msgbus.ContractID
+	var purchasedHashrateContractAddress msgbus.ContractID
+	var updatedHashrateContractAddress msgbus.ContractID
 
-	targetDest1Url := "stratum+tcp://pool-east.staging.pool.titan.io:4242"
-	targetDest2Url := "stratum+tcp://pool-east.staging.pool.titan.io:4242"
+	targetDest1 := "stratum+tcp://pool-east.staging.pool.titan.io:4242"
+	targetDest2 := "stratum+tcp://pool-west.staging.pool.titan.io:4242"
 
 	configs, err := LoadEnabledTestConfiguration(configPath)
 	if err != nil {
@@ -244,8 +245,6 @@ func TestEnabled(t *testing.T) {
 	clonefactoryContractPurchasedSig := []byte("clonefactoryContractPurchased(address)")
 	clonefactoryContractPurchasedSigHash := crypto.Keccak256Hash(clonefactoryContractPurchasedSig)
 
-	i := 0
-	j := 0
 	go func() {
 		for {
 			select {
@@ -254,14 +253,13 @@ func TestEnabled(t *testing.T) {
 			case cfLog := <-cfLogs:
 				switch {
 				case cfLog.Topics[0].Hex() == contractCreatedSigHash.Hex():
-					hashrateContractAddresses = append(hashrateContractAddresses, msgbus.ContractID(common.HexToAddress(cfLog.Topics[1].Hex()).String())) 
-					fmt.Printf("Address of created Hashrate Contract: %s\n\n", hashrateContractAddresses[i])
-					i++
+					hashrateContractAddress = msgbus.ContractID(common.HexToAddress(cfLog.Topics[1].Hex()).String())
+
+					fmt.Printf("Address of created Hashrate Contract: %s\n\n", hashrateContractAddress)
 
 				case cfLog.Topics[0].Hex() == clonefactoryContractPurchasedSigHash.Hex():
-					purchasedHashrateContractAddresses = append(purchasedHashrateContractAddresses, msgbus.ContractID(common.HexToAddress(cfLog.Topics[1].Hex()).String()))
-					fmt.Printf("Address of purchased Hashrate Contract: %s\n\n", purchasedHashrateContractAddresses[j])
-					j++
+					purchasedHashrateContractAddress = msgbus.ContractID(common.HexToAddress(cfLog.Topics[1].Hex()).String())
+					fmt.Printf("Address of purchased Hashrate Contract: %s\n\n", purchasedHashrateContractAddress)
 				}
 			}
 		}
@@ -277,22 +275,20 @@ func TestEnabled(t *testing.T) {
 		IP:                   "IpAddress1",
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
-		CurrentHashRate: 	  20,
 		CsMinerHandlerIgnore: false,
 	}
 
 	time.Sleep(sleepTime)
 
 	_ = miner
-	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), miner)
+	//ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), miner)
 
 	//
 	// seller created contract found by lumerin node
 	//
-	fmt.Print("\n\n/// Created contracts found by lumerin node ///\n\n\n")
+	fmt.Print("\n\n/// Created contract found by lumerin node ///\n\n\n")
 
-	contractmanager.CreateHashrateContract(cm.EthClient, cm.Account, cm.PrivateKey, cm.CloneFactoryAddress, 0, 10, 20, contractLength, common.HexToAddress(configs.ValidatorAddress))
-	contractmanager.CreateHashrateContract(cm.EthClient, cm.Account, cm.PrivateKey, cm.CloneFactoryAddress, 0, 10, 60, contractLength, common.HexToAddress(configs.ValidatorAddress))
+	contractmanager.CreateHashrateContract(cm.EthClient, cm.Account, cm.PrivateKey, cm.CloneFactoryAddress, 0, 10, 100, contractLength, common.HexToAddress(configs.ValidatorAddress))
 
 	time.Sleep(sleepTime)
 
@@ -304,34 +300,33 @@ func TestEnabled(t *testing.T) {
 		}
 	}
 
-	// wait until created hashrate contracts were found before continuing
+	//
+	// contract was purchased and target dest was inputed in it
+	//
+	fmt.Print("\n\n/// Contract was purchased and target dest was inputed in it ///\n\n\n")
+	// wait until created hashrate contract was found before continuing
 loop1:
 	for {
-		if hashrateContractAddresses[0] != "" && hashrateContractAddresses[1] != "" {
+		if hashrateContractAddress != "" {
 			break loop1
 		}
 	}
 	time.Sleep(time.Second * 2)
 
-	//
-	// contract 1 was purchased and target dest was inputed in it
-	//
-	fmt.Print("\n\n/// Contract 1 was purchased and target dest was inputed in it ///\n\n\n")
-
-	contractmanager.PurchaseHashrateContract(cm.EthClient, buyerAddress, buyerPrivateKey, cm.CloneFactoryAddress, common.HexToAddress(string(hashrateContractAddresses[0])), buyerAddress, targetDest1Url)
+	contractmanager.PurchaseHashrateContract(cm.EthClient, buyerAddress, buyerPrivateKey, cm.CloneFactoryAddress, common.HexToAddress(string(hashrateContractAddress)), buyerAddress, targetDest1)
 	time.Sleep(sleepTime)
 	
 	// wait until hashrate contract was purchased before continuing
 loop2:
 	for {
-		if purchasedHashrateContractAddresses[0] != "" {
+		if purchasedHashrateContractAddress != "" {
 			break loop2
 		}
 	}
 	time.Sleep(time.Second * 2)
 
 	// find dest published by contractmanager
-	var targetDest1 msgbus.DestID
+	var targetDest msgbus.DestID
 	event, err := ps.GetWait(msgbus.DestMsg, "")
 	if err != nil {
 		panic(fmt.Sprintf("Getting all dests failed: %s", err))
@@ -341,85 +336,74 @@ loop2:
 		if err != nil {
 			panic(fmt.Sprintf("Getting dest failed: %s", err))
 		}
-		if dest.NetUrl == msgbus.DestNetUrl(targetDest1Url) {
-			targetDest1 = msgbus.DestID(v)
+		if dest.NetUrl == msgbus.DestNetUrl(targetDest1) {
+			targetDest = msgbus.DestID(v)
 		}
 	}
 
-	if targetDest1 == "" {
+	if targetDest == "" {
 		t.Errorf("Contract manager did not publish target dest after contract was purchased")
 	}
 
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != hashrateContractAddresses[0] || miner.Dest != targetDest1 {
+		if miner.Contract != hashrateContractAddress || miner.Dest != targetDest {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
 
 	//
-	// More miners connecting to node
+	// target dest was updated while contract running
 	//
-	fmt.Print("\n\n/// More miners connection to node ///\n\n\n")
-	miner2 := msgbus.Miner{
-		ID:                   msgbus.MinerID("MinerID02"),
-		IP:                   "IpAddress2",
-		State:                msgbus.OnlineState,
-		Dest:                 defaultDestID,
-		CurrentHashRate: 	  10,
-		CsMinerHandlerIgnore: false,
-	}
-	miner3 := msgbus.Miner{
-		ID:                   msgbus.MinerID("MinerID03"),
-		IP:                   "IpAddress3",
-		State:                msgbus.OnlineState,
-		Dest:                 defaultDestID,
-		CurrentHashRate: 	  50,
-		CsMinerHandlerIgnore: false,
-	}
+	fmt.Print("\n\n/// Target dest was updated while contract running ///\n\n\n")
 
-	_ = miner2
-	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner2.ID), miner2)
-	_ = miner3
-	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner3.ID), miner3)
-	time.Sleep(sleepTime)
+	// subcribe to events emitted by hashrate contract
+	hrLogs, hrSub, _ := contractmanager.SubscribeToContractEvents(cm.EthClient, common.HexToAddress(string(hashrateContractAddress)))
+	// create event signature for cipher text updated event
+	contractUpdatedSig := []byte("cipherTextUpdated(string)")
+	ccontractUpdatedSigHash := crypto.Keccak256Hash(contractUpdatedSig)
 
-	//
-	// contract 2 was purchased and target dest was inputed in it
-	//
-	fmt.Print("\n\n/// Contract 2 was purchased and target dest 2 was inputed in it ///\n\n\n")
+	go func() {
+		for {
+			select {
+			case err := <-hrSub.Err():
+				panic(fmt.Sprintf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err))
+			case hrLog := <-hrLogs:
+				if hrLog.Topics[0].Hex() == ccontractUpdatedSigHash.Hex() {
+					updatedHashrateContractAddress = hashrateContractAddress
+					fmt.Printf("Hashrate Contract target dest updated")
+				}
+			}
+		}
+	}()
 
-	contractmanager.PurchaseHashrateContract(cm.EthClient, buyerAddress, buyerPrivateKey, cm.CloneFactoryAddress, common.HexToAddress(string(hashrateContractAddresses[1])), buyerAddress, targetDest2Url)
-	time.Sleep(sleepTime)
-	
-	// wait until hashrate contract was purchased before continuing
+	contractmanager.UpdateCipherText(cm.EthClient, buyerAddress, buyerPrivateKey, common.HexToAddress(string(hashrateContractAddress)), targetDest2)
+
+	// wait until hashrate contract was update before continuing
 loop3:
 	for {
-		if purchasedHashrateContractAddresses[1] != "" {
+		if updatedHashrateContractAddress != "" {
 			break loop3
 		}
 	}
 	time.Sleep(time.Second * 2)
 
-	// find dest published by contractmanager
-	var targetDest2 msgbus.DestID
-	event, err = ps.GetWait(msgbus.DestMsg, "")
+	targetDestMsg, err := ps.DestGetWait(targetDest)
 	if err != nil {
-		panic(fmt.Sprintf("Getting all dests failed: %s", err))
-	}
-	for _, v := range event.Data.(msgbus.IDIndex) {
-		dest, err := ps.DestGetWait(msgbus.DestID(v))
-		if err != nil {
-			panic(fmt.Sprintf("Getting dest failed: %s", err))
-		}
-		if dest.NetUrl == msgbus.DestNetUrl(targetDest2Url) {
-			targetDest2 = msgbus.DestID(v)
-		}
+		panic(fmt.Sprintf("Getting dest failed: %s", err))
 	}
 
-	if targetDest2 == "" {
-		t.Errorf("Contract manager did not publish target dest after contract was purchased")
+	if targetDestMsg.NetUrl != msgbus.DestNetUrl(targetDest2) {
+		t.Errorf("Target dest was not updated")
+	}
+
+	miners, _ = ps.MinerGetAllWait()
+	for _, v := range miners {
+		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
+		if miner.Contract != hashrateContractAddress || miner.Dest != targetDest {
+			t.Errorf("Miner contract and dest not set correctly")
+		}
 	}
 
 	//
@@ -433,7 +417,7 @@ loop3:
 	}
 
 	// subcribe to contract closed event emitted by hashrate contract
-	hrLogs, hrSub, _ := contractmanager.SubscribeToContractEvents(cm.EthClient, common.HexToAddress(string(hashrateContractAddresses[1])))
+	hrLogs, hrSub, _ = contractmanager.SubscribeToContractEvents(cm.EthClient, common.HexToAddress(string(hashrateContractAddress)))
 	// create event signature to parse out creation, purchase, and close event
 	contractClosedSig := []byte("contractClosed()")
 	contractClosedSigHash := crypto.Keccak256Hash(contractClosedSig)
@@ -449,15 +433,13 @@ loop4:
 		}
 	}
 
-	time.Sleep(2 * time.Second)
-
 	// contract back to available
-	event, err = ps.GetWait(msgbus.ContractMsg, msgbus.IDString(hashrateContractAddresses[0]))
+	event, err = ps.GetWait(msgbus.ContractMsg, msgbus.IDString(hashrateContractAddress))
 	if err != nil {
 		panic(fmt.Sprintf("Getting contract failed: %s", err))
 	}
 	contract := event.Data.(msgbus.Contract)
-	if contract.State != msgbus.ContAvailableState || cm.NodeOperator.Contracts[hashrateContractAddresses[0]] != msgbus.ContAvailableState {
+	if contract.State != msgbus.ContAvailableState || cm.NodeOperator.Contracts[hashrateContractAddress] != msgbus.ContAvailableState {
 		t.Errorf("Contract not back to available")
 	}
 
