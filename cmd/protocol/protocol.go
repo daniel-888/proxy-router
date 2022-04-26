@@ -31,7 +31,6 @@ type ProtocolStruct struct {
 	eventchan chan *simple.SimpleEvent
 	srcconn   *ProtocolConnectionStruct
 	dstconn   *ProtocolDstStruct
-	msgbus    *ProtocolMsgBusStruct
 }
 
 //
@@ -212,7 +211,6 @@ func NewProtocolStruct(ctx context.Context, s *simple.SimpleStruct) (n *Protocol
 			ctx:  ctx,
 			conn: make(map[simple.ConnUniqueID]*ProtocolConnectionStruct),
 		},
-		msgbus: &ProtocolMsgBusStruct{},
 	}
 
 	return n
