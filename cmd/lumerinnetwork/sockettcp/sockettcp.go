@@ -543,6 +543,7 @@ func (s *SocketTCPStruct) Done() bool {
 }
 
 //
+// getAddr()
 // Returns the local address of the socket
 //
 func getAddr(ctx context.Context, addr string) (host string, port int, e error) {

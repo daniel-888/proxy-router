@@ -480,37 +480,14 @@ func (s *SimpleStruct) Cancel() {
 	s.cancel()
 }
 
-// Set IO buffer parameters
-// this IO buffer parameters apply to the deque used to stage/proess messages
-// for stage 1 this can be assumed to be unconfigurable and use defaults only
-// func (s *SimpleStruct) SetBuffer() {}
-
-// Set message buffering to a certain delimiter, for example a newline character: ‘\n’
-// for stage 1 this will assumed to be unconfigurable and only use '\n' as the
-// new line
-//func (s *SimpleStruct) SetMessageDelimiterDefault() {}
-
-// Set message buffering to be of a certain size
-//func (s *SimpleStruct) SetMessageSizeDefault(mSize uint) {
-//	s.maxMessageSize = mSize
-//}
-
-// TODO not part of stage 1
-// Set encryption parameters
-//func (s *SimpleStruct) SetEncryptionDefault() {}
-
-// TODO not part of stage 1
-// Set Compression parameters
-// func (s *SimpleStruct) SetCompressionDefault() {}
-
-/*
-Dial the a destination address (DST)
-takes in a net.Addr object and feeds into the net.Dial function
-the resulting Conn is then added to the SimpleStructs mapping and and associated
-ConnUniqueID is returned from this function
-
-id is the calling ID info, the uid is returned from the connectionmanager layer, and is used to index the connection
-*/
+//
+// Dial the a destination address (DST)
+// takes in a net.Addr object and feeds into the net.Dial function
+// the resulting Conn is then added to the SimpleStructs mapping and and associated
+// ConnUniqueID is returned from this function
+//
+// id is the calling ID info, the uid is returned from the connectionmanager layer, and is used to index the connection
+//
 func (s *SimpleStruct) AsyncDial(dest *msgbus.Dest) (e error) {
 
 	contextlib.Logf(s.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
