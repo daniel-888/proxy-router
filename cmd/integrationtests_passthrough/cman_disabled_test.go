@@ -136,7 +136,7 @@ func DisabledSimMain(ps *msgbus.PubSub, configs DisabledConfig) msgbus.DestID {
 	//
 	// Fire up schedule manager
 	//
-	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
+	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, true, 0)
 	if err != nil {
 		panic(fmt.Sprintf("Schedule manager failed: %v", err))
 	}

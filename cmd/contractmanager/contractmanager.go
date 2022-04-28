@@ -33,8 +33,6 @@ const (
 	RunningState   uint8 = 1
 )
 
-const HASHRATE_TOLERANCE = .10
-
 type hashrateContractValues struct {
 	State                  uint8
 	Price                  int
@@ -959,7 +957,8 @@ func (buyer *BuyerContractManager) checkHashRate(contractId msgbus.ContractID) b
 		}
 	}
 
-	promisedHashrateMin := int(float32(contract.Speed) * (1 - HASHRATE_TOLERANCE))
+	hashrateTolerance := float64(contract.Limit) / 100
+	promisedHashrateMin := int(float64(contract.Speed) * (1 - hashrateTolerance))
 
 	contextlib.Logf(buyer.Ctx, log.LevelInfo, "Hashrate being sent to contract %s: %d\n", contractId, totalHashrate)
 	if totalHashrate <= promisedHashrateMin {

@@ -15,7 +15,8 @@
 
     "schedule": {
         "disable": false,
-        "passthrough": false
+        "passthrough": false,
+        "hashrateCalcLagTime": 20
     },
 
     "contract": {
