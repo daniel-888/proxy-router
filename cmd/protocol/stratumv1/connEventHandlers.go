@@ -396,11 +396,9 @@ func (svs *StratumV1Struct) handleResponse(uid simple.ConnUniqueID, response *st
 
 			svs.SetDstStateUid(uid, DstStateStandBy)
 
-			// Called in case this is the only connection opened.
-			svs.switchDest()
-
-			//svs.sendConfigure()
-			//svs.sendExtranonce()
+			if svs.scheduler == OnDemand {
+				svs.switchDest()
+			}
 
 		//
 		// Pass response messages when in Running State
@@ -803,8 +801,10 @@ func (svs *StratumV1Struct) handleSrcReqSubmit(request *stratumRequest) (e error
 		return e
 	}
 
-	// Call switchDest to change destinations if needed (happens on a submit)
-	svs.switchDest()
+	// Call switchDest to change destinations if needed and we are set for OnSubmit
+	if svs.scheduler == OnSubmit {
+		svs.switchDest()
+	}
 
 	return nil
 }
@@ -1322,7 +1322,7 @@ func (svs *StratumV1Struct) handleDstNoticeReconnect(uid simple.ConnUniqueID, no
 	// case DstStateNew:
 	case DstStateClosed:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Connecton is Marked closed, ignore reopen")
-		return fmt.Errorf("Connection is marked closed, cant reopen")
+		return fmt.Errorf("connection is marked closed, cant reopen")
 	default:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+"  state:%s not handled", dststate)
 	}

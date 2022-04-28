@@ -92,10 +92,12 @@ func (svs *StratumV1Struct) handleMsgUpdateEvent(event *simple.SimpleMsgBusEvent
 		// Did the Dest ID change?
 		if svs.minerRec.Dest != minerrec.Dest {
 			contextlib.Logf(svs.Ctx(), contextlib.LevelInfo, lumerinlib.FileLineFunc()+" Miner:%s Dest changed to: %s from %s", minerrec.ID, minerrec.Dest, svs.minerRec.Dest)
-
+			//
 			// Destination has changed...
+			//
+			// If the destination has a connection open the uid will be greater then -1
+			//
 			switch_to_uid := svs.GetDstUIDDestID(minerrec.Dest)
-
 			svs.switchToDestID = minerrec.Dest
 
 			// Is Dest already open and running?
@@ -106,10 +108,22 @@ func (svs *StratumV1Struct) handleMsgUpdateEvent(event *simple.SimpleMsgBusEvent
 				if e != nil {
 					contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Get() error:%s", e)
 				}
+
+				// Yes it is open
+			} else {
+				// Are we set to on demand, if so then switch now
+				if svs.scheduler == OnDemand {
+					svs.switchDest()
+				}
+
+				// if we are not set to on demand, then the next submit will trigger the change
 			}
 
+			// Update the minerRec
+			svs.minerRec.Dest = minerrec.Dest
+
 		} else {
-			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Recieved Miner update, but dest did not change:%s:%s", event.EventType, event.ID)
+			contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Recieved Miner update, but dest did not change:'%s':'%s'", event.EventType, event.ID)
 		}
 
 	// Ignore all others

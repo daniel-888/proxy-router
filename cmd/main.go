@@ -118,8 +118,16 @@ func main() {
 		}
 
 		stratum, err := stratumv1.NewListener(mainContext, src, dest)
+		switch configs.Scheduler {
+		case "ondemand":
+			stratum.SetScheduler(stratumv1.OnDemand)
+		case "onsubmit":
+			stratum.SetScheduler(stratumv1.OnSubmit)
+		default:
+			l.Logf(log.LevelPanic, "Scheduler value: %s Not Supported", err)
+		}
 		if err != nil {
-			panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
+			panic(fmt.Sprintf("Stratum Protocol New() failed:%s", configs.Scheduler))
 		}
 
 		stratum.Run()

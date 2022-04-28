@@ -29,7 +29,7 @@ type LocalConfig struct {
 
 func TestConnMgr(t *testing.T) {
 
-	var sleepTime time.Duration = 60 * time.Second
+	var sleepTime time.Duration = 15 * time.Second
 
 	//
 	// Load configuration

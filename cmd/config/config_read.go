@@ -28,6 +28,7 @@ type ConfigRead struct {
 	ApiPort             string
 	LogLevel            int
 	LogFilePath         string
+	Scheduler           string
 }
 
 func ReadConfigs() (configs ConfigRead) {
@@ -58,6 +59,7 @@ func ReadConfigs() (configs ConfigRead) {
 		configs.ListenIP = connectionConfig["listenIP"].(string)
 		configs.ListenPort = connectionConfig["listenPort"].(string)
 		configs.DefaultPoolAddr = connectionConfig["defaultPoolAddr"].(string)
+		configs.Scheduler = connectionConfig["schedulermethod"].(string)
 
 		//
 		// Scheduler Configs

@@ -21,6 +21,11 @@ var ErrMaxRedialExceeded = errors.New("StratumV1: DST Maximum number of redials 
 type SrcState string
 type DstState string
 
+type StratumConnectionScheduler string
+
+const OnDemand StratumConnectionScheduler = "OnDemand"
+const OnSubmit StratumConnectionScheduler = "OnSubmit"
+
 //
 // New->Subscribed->Authorized->??
 //
@@ -48,6 +53,7 @@ const MaxRedials int = 2
 
 type StratumV1ListenStruct struct {
 	protocollisten *protocol.ProtocolListenStruct
+	scheduler      StratumConnectionScheduler
 }
 
 type StratumV1Struct struct {
@@ -55,6 +61,7 @@ type StratumV1Struct struct {
 	cancel              func()
 	protocol            *protocol.ProtocolStruct
 	minerRec            *msgbus.Miner
+	scheduler           StratumConnectionScheduler
 	srcSubscribeRequest *stratumRequest // Copy of recieved Subscribe Request from Source
 	srcAuthRequest      *stratumRequest // Copy of recieved Authorize Request from Source
 	srcConfigure        *stratumRequest // Copy of recieved Configure Request from Source
@@ -125,10 +132,26 @@ func NewListener(ctx context.Context, src net.Addr, dest *msgbus.Dest) (sls *Str
 	} else {
 		sls = &StratumV1ListenStruct{
 			protocollisten: protocollisten,
+			scheduler:      OnDemand, // OnDemand is the Default
 		}
 	}
 
 	return sls, e
+}
+
+//
+//
+//
+func (s *StratumV1ListenStruct) SetScheduler(scheduler StratumConnectionScheduler) {
+	s.scheduler = scheduler
+}
+
+//
+//
+//
+func (s *StratumV1ListenStruct) GetScheduler() (scheduler StratumConnectionScheduler) {
+	scheduler = s.scheduler
+	return scheduler
 }
 
 //
@@ -148,7 +171,7 @@ FORLOOP:
 			contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" context canceled")
 			break FORLOOP
 		case ps := <-protocolStructChan:
-			ss := NewStratumV1Struct(s.Ctx(), ps)
+			ss := NewStratumV1Struct(s.Ctx(), ps, s.scheduler)
 			ss.Run()
 		}
 	}
@@ -169,7 +192,7 @@ func (s *StratumV1ListenStruct) goListenAcceptOnce() {
 	case <-s.Ctx().Done():
 		contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" context canceled")
 	case ps := <-protocolStructChan:
-		ss := NewStratumV1Struct(s.Ctx(), ps)
+		ss := NewStratumV1Struct(s.Ctx(), ps, s.scheduler)
 		ss.Run()
 	}
 
@@ -227,7 +250,7 @@ func (s *StratumV1ListenStruct) Cancel() {
 //
 //
 //
-func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct) (n *StratumV1Struct) {
+func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct, scheduler StratumConnectionScheduler) (n *StratumV1Struct) {
 	ctx, cancel := context.WithCancel(ctx)
 	ds := make(map[simple.ConnUniqueID]DstState)
 	dd := make(map[simple.ConnUniqueID]*msgbus.Dest)
@@ -261,6 +284,7 @@ func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct) (n *St
 		cancel:              cancel,
 		protocol:            ps,
 		minerRec:            miner,
+		scheduler:           scheduler,
 		srcSubscribeRequest: nil,
 		srcAuthRequest:      nil,
 		srcConfigure:        nil,
@@ -279,6 +303,14 @@ func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct) (n *St
 	}
 
 	return n
+}
+
+//
+//
+//
+func (svs *StratumV1Struct) GetScheduler() (scheduler StratumConnectionScheduler) {
+	scheduler = svs.scheduler
+	return scheduler
 }
 
 //
@@ -544,6 +576,7 @@ func (s *StratumV1Struct) switchDest() {
 	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Called ")
 
 	if s.switchToDestID == "" {
+		contextlib.Logf(s.Ctx(), contextlib.LevelInfo, fmt.Sprintf(lumerinlib.FileLineFunc()+" called with no designated next dest, ignoring"))
 		return
 	}
 
@@ -565,12 +598,18 @@ func (s *StratumV1Struct) switchDest() {
 				if s.dstState[currentUID] != DstStateRunning {
 					s.dstState[currentUID] = DstStateRunning
 				}
+
+				contextlib.Logf(s.Ctx(), contextlib.LevelInfo, fmt.Sprintf(lumerinlib.FileLineFunc()+" New Dest is current Dest: %s, UID:[%d] ", v.ID, currentUID))
+
 				return
 			}
 		}
 	}
 
 	newUID := s.GetDstUIDDestID(s.switchToDestID)
+
+	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Current:%d New:%d ", currentUID, newUID)
+
 	if s.dstState[newUID] == DstStateStandBy {
 
 		contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Switch from UID:%d to UID:%d ", currentUID, newUID)
@@ -593,8 +632,7 @@ func (s *StratumV1Struct) switchDest() {
 		s.switchToDestID = ""
 
 	} else {
-
-		contextlib.Logf(s.Ctx(), contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" Ignore... next dest not in standby mode %s", s.dstState[newUID]))
+		contextlib.Logf(s.Ctx(), contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" Ignore... next dest not in standby mode, state:%s", s.dstState[newUID]))
 	}
 
 }
