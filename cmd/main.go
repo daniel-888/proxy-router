@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/config"
@@ -118,16 +119,20 @@ func main() {
 		}
 
 		stratum, err := stratumv1.NewListener(mainContext, src, dest)
-		switch configs.Scheduler {
+		scheduler := configs.Scheduler
+		scheduler = strings.ToLower(scheduler)
+
+		switch scheduler {
 		case "ondemand":
 			stratum.SetScheduler(stratumv1.OnDemand)
 		case "onsubmit":
 			stratum.SetScheduler(stratumv1.OnSubmit)
 		default:
-			l.Logf(log.LevelPanic, "Scheduler value: %s Not Supported", err)
+			l.Logf(log.LevelPanic, "Scheduler value: %s Not Supported", scheduler)
 		}
+
 		if err != nil {
-			panic(fmt.Sprintf("Stratum Protocol New() failed:%s", configs.Scheduler))
+			panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
 		}
 
 		stratum.Run()
