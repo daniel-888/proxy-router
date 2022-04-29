@@ -69,7 +69,7 @@ func ReadConfigs() (configs ConfigRead) {
 		}
 		configs.DisableSchedule = scheduleConfig["disable"].(bool)
 		configs.SchedulePassthrough = scheduleConfig["passthrough"].(bool)
-		configs.HashrateCalcLagTime = scheduleConfig["hashrateCalcLagTime"].(int)
+		configs.HashrateCalcLagTime = int(scheduleConfig["hashrateCalcLagTime"].(float64))
 
 		//
 		// Contract Configs

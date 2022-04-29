@@ -329,7 +329,7 @@ loop6:
 	var wg sync.WaitGroup
 	wg.Add(1)
 	fmt.Print("Closeout From Buyer: ")
-	setContractCloseOut(cman.EthClient, buyerAddress, buyerPrivateKey, hashrateContractAddress[2], &wg, &cman.CurrentNonce, 0)
+	setContractCloseOut(cman.EthClient, buyerAddress, buyerPrivateKey, hashrateContractAddress[2], &wg, &cman.CurrentNonce, 0, ps, NodeOperator)
 	wg.Wait()
 	time.Sleep(time.Millisecond * time.Duration(sleepTime*3))
 	if cman.NodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContAvailableState {
