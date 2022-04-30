@@ -715,9 +715,33 @@ func (n *stratumNotice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
 	nsd.Method = n.Method
 	nsd.Params = make([]int, 0)
 
+	var p interface{}
+	var ok bool = false
+
 	switch params := n.Params.(type) {
-	case []float64:
-		nsd.Params = append(nsd.Params, int(params[0]))
+	case []interface{}:
+		p, ok = params[0].(interface{})
+		if !ok {
+			panic(fmt.Sprintf(lumerinlib.FileLineFunc() + " Params is empty"))
+		}
+
+	default:
+		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" type:%t not supported", n.Params))
+	}
+
+	switch p.(type) {
+	case float32:
+		nsd.Params = append(nsd.Params, int(p.(float32)))
+	case float64:
+		nsd.Params = append(nsd.Params, int(p.(float64)))
+	case int:
+		nsd.Params = append(nsd.Params, p.(int))
+	case int32:
+		nsd.Params = append(nsd.Params, int(p.(int32)))
+	case int64:
+		nsd.Params = append(nsd.Params, int(p.(int64)))
+	default:
+		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" type:%t not supported", n.Params))
 	}
 
 	msg, err = json.Marshal(nsd)

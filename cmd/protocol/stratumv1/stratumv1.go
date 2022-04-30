@@ -48,6 +48,7 @@ const DstStateDialing DstState = "stateDialing"         // Inactive, initiating 
 const DstStateRedialing DstState = "stateRedialing"     // Inactive, reinitiating a connection
 const DstStateError DstState = "stateError"
 const DstStateClosed DstState = "stateClosed"
+const DstStateNotFound DstState = "stateNotFound"
 
 const MaxRedials int = 2
 
@@ -434,10 +435,15 @@ func (s *StratumV1Struct) Cancel() {
 }
 
 //
+// CloseUid()
 //
+// should the uid entry be removed at this point?
 //
 func (s *StratumV1Struct) CloseUid(uid simple.ConnUniqueID) {
-	s.dstState[uid] = DstStateClosed
+
+	contextlib.Logf(s.ctx, contextlib.LevelInfo, fmt.Sprint(lumerinlib.FileLineFunc()+" UID:%d", uid))
+
+	s.SetDstStateUid(uid, DstStateClosed)
 	s.dstDest[uid] = nil
 	s.protocol.CloseDst(uid)
 }
@@ -446,7 +452,10 @@ func (s *StratumV1Struct) CloseUid(uid simple.ConnUniqueID) {
 //
 //
 func (s *StratumV1Struct) DstRedialUid(uid simple.ConnUniqueID) (e error) {
-	s.dstState[uid] = DstStateRedialing
+
+	contextlib.Logf(s.ctx, contextlib.LevelInfo, fmt.Sprint(lumerinlib.FileLineFunc()+" UID:%d", uid))
+
+	s.SetDstStateUid(uid, DstStateRedialing)
 	s.dstReDialCount[uid]++
 	if s.dstReDialCount[uid] > MaxRedials {
 		s.CloseUid(uid)
@@ -468,7 +477,11 @@ func (s *StratumV1Struct) SetDstStateUid(uid simple.ConnUniqueID, state DstState
 //
 //
 func (s *StratumV1Struct) GetDstStateUid(uid simple.ConnUniqueID) (state DstState) {
-	return s.dstState[uid]
+	v, ok := s.dstState[uid]
+	if !ok {
+		return DstStateNotFound
+	}
+	return v
 }
 
 //
@@ -523,19 +536,18 @@ func (s *StratumV1Struct) GetDstUIDDestID(id msgbus.DestID) (uid simple.ConnUniq
 		contextlib.Logf(s.ctx, contextlib.LevelPanic, fmt.Sprint(lumerinlib.FileLineFunc()+" id is blank"))
 	}
 
-	if s.dstDest != nil {
-		for u, v := range s.dstDest {
-			if v == nil {
-				contextlib.Logf(s.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" v is nil"))
-				continue
-			}
+	for u, v := range s.dstDest {
+		if v == nil {
+			contextlib.Logf(s.ctx, contextlib.LevelError, fmt.Sprint(lumerinlib.FileLineFunc()+" v is nil"))
+			continue
+		}
 
-			if v.ID == id {
-				uid = u
-				break
-			}
+		if v.ID == id {
+			uid = u
+			break
 		}
 	}
+
 	return uid
 }
 
@@ -586,33 +598,50 @@ func (s *StratumV1Struct) switchDest() {
 	// Is the current Route the same as the new route?
 	//
 	if currentUID >= 0 {
-		v, ok := s.dstDest[currentUID]
 
-		if v == nil {
-			contextlib.Logf(s.Ctx(), contextlib.LevelPanic, fmt.Sprintf(lumerinlib.FileLineFunc()+" dstDest[%d] ", currentUID))
-		}
+		state := s.GetDstStateUid(currentUID)
+		switch state {
+		case DstStateRunning:
+			v, ok := s.dstDest[currentUID]
 
-		if ok {
-			if s.switchToDestID == v.ID {
-				s.switchToDestID = ""
-				if s.dstState[currentUID] != DstStateRunning {
-					s.dstState[currentUID] = DstStateRunning
-				}
-
-				contextlib.Logf(s.Ctx(), contextlib.LevelInfo, fmt.Sprintf(lumerinlib.FileLineFunc()+" New Dest is current Dest: %s, UID:[%d] ", v.ID, currentUID))
-
-				return
+			if v == nil {
+				contextlib.Logf(s.Ctx(), contextlib.LevelPanic, fmt.Sprintf(lumerinlib.FileLineFunc()+" dstDest[%d] ", currentUID))
+				panic("")
 			}
+
+			if ok {
+				if s.switchToDestID == v.ID {
+					s.switchToDestID = ""
+					contextlib.Logf(s.Ctx(), contextlib.LevelWarn, fmt.Sprintf(lumerinlib.FileLineFunc()+" New Dest is current Dest: %s, UID:[%d] ", v.ID, currentUID))
+					return
+				}
+			}
+
+		case DstStateStandBy:
+			contextlib.Logf(s.Ctx(), contextlib.LevelWarn, fmt.Sprintf(lumerinlib.FileLineFunc()+" UID:[%d] is in standby mode... huh? ", currentUID))
+		case DstStateClosed:
+			contextlib.Logf(s.Ctx(), contextlib.LevelWarn, fmt.Sprintf(lumerinlib.FileLineFunc()+" UID:[%d] is closed... huh? ", currentUID))
+		default:
+			contextlib.Logf(s.Ctx(), contextlib.LevelPanic, fmt.Sprintf(lumerinlib.FileLineFunc()+" UID:[%d] is in state:%s ", currentUID, state))
 		}
+
 	}
 
 	newUID := s.GetDstUIDDestID(s.switchToDestID)
+	if newUID < 0 {
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, fmt.Sprintf(lumerinlib.FileLineFunc()+" switchToDestID:%s has no UID ", s.switchToDestID))
+		return // Because LevelPanic does not seem to be panicing like it should
+	}
 
 	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Current:%d New:%d ", currentUID, newUID)
 
-	if s.dstState[newUID] == DstStateStandBy {
+	state := s.GetDstStateUid(newUID)
+	switch state {
+	case DstStateStandBy:
 
 		contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Switch from UID:%d to UID:%d ", currentUID, newUID)
+
+		s.minerRec.Dest = s.switchToDestID
 
 		if currentUID >= 0 {
 			s.dstState[currentUID] = DstStateStandBy
@@ -628,11 +657,21 @@ func (s *StratumV1Struct) switchDest() {
 		s.sendLastMiningNotice(newUID)
 		s.sendLastReqNotice(newUID)
 
-		// Reset the switch to state
+		// Reset the switchToState
 		s.switchToDestID = ""
 
-	} else {
-		contextlib.Logf(s.Ctx(), contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" Ignore... next dest not in standby mode, state:%s", s.dstState[newUID]))
+	case DstStateRunning:
+		contextlib.Logf(s.Ctx(), contextlib.LevelWarn, fmt.Sprintf(lumerinlib.FileLineFunc()+" UID:%d already in RunningState", newUID))
+
+	case DstStateRedialing:
+		// Set switch event timer HERE say after a few seconds, and have it reset if another event takes its place?
+		contextlib.Logf(s.Ctx(), contextlib.LevelInfo, fmt.Sprintf(lumerinlib.FileLineFunc()+" UID:%d Redialing", newUID))
+
+	case DstStateClosed:
+		contextlib.Logf(s.Ctx(), contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" UID:%d Redialing", newUID))
+
+	default:
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, fmt.Sprintf(lumerinlib.FileLineFunc()+" UID:%d State:%s", newUID, state))
 	}
 
 }
@@ -836,7 +875,7 @@ func (svs *StratumV1Struct) sendLastMiningNotice(uid simple.ConnUniqueID) (e err
 
 	_, ok := svs.dstLastMiningNotice[uid]
 	if !ok {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" dstLastMiningNotice[%d] DNE ", uid)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" dstLastMiningNotice[%d] DNE, skipping ", uid)
 		return nil
 	}
 

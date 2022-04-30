@@ -71,11 +71,14 @@ func TestConnMgr(t *testing.T) {
 
 	mainContext := context.Background()
 
-	defaultdst := "stratum+tcp://seanmcadam.switcher0:@mining.pool.titan.io:4242"
-	seconddst := "stratum+tcp://seanmcadam.switcher1:@mining.pool.titan.io:4242/"
+	//defaultdst := "stratum+tcp://seanmcadam.switcher0:@mining.pool.titan.io:4242"
+	//seconddst := "stratum+tcp://seanmcadam.switcher1:@mining.pool.titan.io:4242/"
 
 	//defaultdst := "stratum+tcp://seanmcadam.switcher0:@pooltesta1.sbx.lumerin.io:4242/"
 	//seconddst := "stratum+tcp://seanmcadam.switcher1:@pooltesta1.sbx.lumerin.io:4242/"
+
+	defaultdst := "stratum+tcp://seanmcadam.switcher0:@localhost:33335/"
+	seconddst := "stratum+tcp://seanmcadam.switcher1:@localhost:33335/"
 
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, configs.ListenIP+":"+configs.ListenPort)
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, defaultdst)
