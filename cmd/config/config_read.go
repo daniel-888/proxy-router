@@ -14,6 +14,7 @@ type ConfigRead struct {
 	DefaultPoolAddr     string
 	DisableSchedule     bool
 	SchedulePassthrough bool
+	HashrateCalcLagTime int
 	DisableContract     bool
 	Mnemonic            string
 	AccountIndex        int
@@ -70,6 +71,7 @@ func ReadConfigs() (configs ConfigRead) {
 		}
 		configs.DisableSchedule = scheduleConfig["disable"].(bool)
 		configs.SchedulePassthrough = scheduleConfig["passthrough"].(bool)
+		configs.HashrateCalcLagTime = int(scheduleConfig["hashrateCalcLagTime"].(float64))
 
 		//
 		// Contract Configs

@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"sort"
+	"time"
 
 	//"strconv"
 	"sync"
@@ -23,6 +24,7 @@ type ConnectionScheduler struct {
 	MinerUpdatedChans    lumerinlib.ConcurrentMap
 	ContractUpdatedChans lumerinlib.ConcurrentMap
 	Passthrough          bool
+	HashrateCalcLagTime	 int
 	Ctx                  context.Context
 }
 
@@ -37,12 +39,13 @@ func (m MinerList) Len() int           { return len(m) }
 func (m MinerList) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 func (m MinerList) Less(i, j int) bool { return m[i].hashrate < m[j].hashrate }
 
-func New(Ctx *context.Context, NodeOperator *msgbus.NodeOperator, Passthrough bool) (cs *ConnectionScheduler, err error) {
+func New(Ctx *context.Context, NodeOperator *msgbus.NodeOperator, Passthrough bool, HashrateCalcLagTime	int) (cs *ConnectionScheduler, err error) {
 	ctxStruct := contextlib.GetContextStruct(*Ctx)
 	cs = &ConnectionScheduler{
 		Ps:           ctxStruct.MsgBus,
 		NodeOperator: *NodeOperator,
 		Passthrough:  Passthrough,
+		HashrateCalcLagTime: HashrateCalcLagTime,
 		Ctx:          *Ctx,
 	}
 	cs.Contracts.M = make(map[string]interface{})
@@ -154,6 +157,7 @@ func (cs *ConnectionScheduler) goContractHandler(ch msgbus.EventChan) {
 					if cs.Passthrough {
 						go cs.ContractRunningPassthrough(id)
 					} else {
+						time.Sleep(time.Duration(cs.HashrateCalcLagTime)) // allow validator to calculate hashrate of connected miners for this amount of time at startup
 						go cs.ContractRunning(id)
 					}
 				}
@@ -502,7 +506,6 @@ func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
 			return
 
 		case <-minerMapUpdated:
-			//availableHashrate, contractHashrate := cs.calculateHashrateAvailability(contractId)
 			availableHashrate, _ := cs.calculateHashrateAvailability(contractId)
 
 			if availableHashrate >= MIN {
