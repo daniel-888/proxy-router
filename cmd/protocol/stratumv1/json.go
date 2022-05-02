@@ -11,6 +11,7 @@ package stratumv1
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -909,7 +910,7 @@ func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 	nsd.Method = n.Method
 
 	if len(n.Params.([]interface{})) != 9 {
-		panic("")
+		return nil, errors.New(lumerinlib.FileLineFunc() + " wrong number of params")
 	}
 
 	for i, v := range n.Params.([]interface{}) {
@@ -960,6 +961,30 @@ func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 
 	msg = []byte(string(msg) + "\n")
 	return msg, err
+}
+
+//
+//
+//
+func (n *stratumNotice) setNoticeMiningNotifyCleanJobsTrue() (err error) {
+
+	if n.Method != string(SERVER_MINING_NOTIFY) {
+		err = fmt.Errorf(lumerinlib.FileLineFunc()+" wrong Method:%s", n.Method)
+	} else if len(n.Params.([]interface{})) != 9 {
+		err = fmt.Errorf(lumerinlib.FileLineFunc() + " wrong number of params")
+	} else {
+		switch n.Params.([]interface{})[8].(type) {
+		case bool:
+			if n.Params.([]interface{})[8].(bool) == false {
+				n.Params.([]interface{})[8] = true
+			}
+
+		default:
+			err = fmt.Errorf(lumerinlib.FileLineFunc()+" params[8] wrong type:%t", n.Params.([]interface{})[8])
+		}
+	}
+
+	return err
 }
 
 // ---------------------------------------------------------------------------------------

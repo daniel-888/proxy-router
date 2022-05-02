@@ -1114,6 +1114,11 @@ func (svs *StratumV1Struct) handleDstNoticeNotify(uid simple.ConnUniqueID, notic
 	case DstStateStandBy:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" State:%s... Store the message", dststate)
 
+		e = notice.setNoticeMiningNotifyCleanJobsTrue()
+		if e != nil {
+			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" error:%s", e)
+		}
+
 		svs.dstLastMiningNotice[uid] = notice
 		return nil
 

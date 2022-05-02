@@ -66,7 +66,7 @@ type StratumV1Struct struct {
 	srcSubscribeRequest *stratumRequest // Copy of recieved Subscribe Request from Source
 	srcAuthRequest      *stratumRequest // Copy of recieved Authorize Request from Source
 	srcConfigure        *stratumRequest // Copy of recieved Configure Request from Source
-	srcExtranonce       *stratumRequest // Copy of recieved Configure Request from Source
+	srcExtranonce       *stratumRequest // Copy of recieved Extranonce Request from Source
 	srcState            SrcState
 	dstState            map[simple.ConnUniqueID]DstState
 	dstDest             map[simple.ConnUniqueID]*msgbus.Dest
@@ -593,9 +593,21 @@ func (s *StratumV1Struct) switchDest() {
 	}
 
 	currentUID, _ := s.protocol.GetDefaultRouteUID()
+	newUID := s.GetDstUIDDestID(s.switchToDestID)
+
+	if newUID < 0 {
+		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, fmt.Sprintf(lumerinlib.FileLineFunc()+" switchToDestID:%s has no UID ", s.switchToDestID))
+		return // Because LevelPanic does not seem to be panicing like it should
+	}
+
+	if currentUID == newUID {
+		contextlib.Logf(s.Ctx(), contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" new destis the current dest, skipping switch"))
+		s.switchToDestID = ""
+		return
+	}
 
 	//
-	// Is the current Route the same as the new route?
+	// Verify the state of the current route
 	//
 	if currentUID >= 0 {
 
@@ -627,12 +639,6 @@ func (s *StratumV1Struct) switchDest() {
 
 	}
 
-	newUID := s.GetDstUIDDestID(s.switchToDestID)
-	if newUID < 0 {
-		contextlib.Logf(s.Ctx(), contextlib.LevelPanic, fmt.Sprintf(lumerinlib.FileLineFunc()+" switchToDestID:%s has no UID ", s.switchToDestID))
-		return // Because LevelPanic does not seem to be panicing like it should
-	}
-
 	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Current:%d New:%d ", currentUID, newUID)
 
 	state := s.GetDstStateUid(newUID)
@@ -651,6 +657,7 @@ func (s *StratumV1Struct) switchDest() {
 
 		//
 		// Goose the miner to the correct Extranonce settings.
+		// Then set the difficulty, the feed the last mining notice in
 		//
 		s.sendSetExtranonceNotice(newUID)
 		s.sendSetDifficultyNotice(newUID)
@@ -884,7 +891,7 @@ func (svs *StratumV1Struct) sendLastMiningNotice(uid simple.ConnUniqueID) (e err
 	}
 
 	notice := svs.dstLastMiningNotice[uid]
-	svs.dstLastMiningNotice[uid] = nil
+	// svs.dstLastMiningNotice[uid] = nil
 
 	msg, e := notice.createNoticeMsg()
 
@@ -926,7 +933,7 @@ func (svs *StratumV1Struct) sendLastReqNotice(uid simple.ConnUniqueID) (e error)
 	}
 
 	request := svs.dstLastReqNotice[uid]
-	svs.dstLastReqNotice[uid] = nil
+	// svs.dstLastReqNotice[uid] = nil
 
 	msg, e := request.createRequestMsg()
 
