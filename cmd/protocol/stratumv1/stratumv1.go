@@ -73,10 +73,10 @@ type StratumV1Struct struct {
 	dstReDialCount      map[simple.ConnUniqueID]int
 	dstExtranonce       map[simple.ConnUniqueID]string
 	dstExtranonce2size  map[simple.ConnUniqueID]int
-	dstDiff             map[simple.ConnUniqueID]int
 	dstVersionMask      map[simple.ConnUniqueID]string
+	dstLastSetDiff      map[simple.ConnUniqueID]int
 	dstLastMiningNotice map[simple.ConnUniqueID]*stratumNotice
-	dstLastReqNotice    map[simple.ConnUniqueID]*stratumRequest
+	dstLastReqNotify    map[simple.ConnUniqueID]*stratumRequest
 	switchToDestID      msgbus.DestID
 
 	// Add in stratum state information here
@@ -258,7 +258,7 @@ func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct, schedu
 	rd := make(map[simple.ConnUniqueID]int)
 	de := make(map[simple.ConnUniqueID]string)
 	de2 := make(map[simple.ConnUniqueID]int)
-	di := make(map[simple.ConnUniqueID]int)
+	lsd := make(map[simple.ConnUniqueID]int)
 	vm := make(map[simple.ConnUniqueID]string)
 	lmn := make(map[simple.ConnUniqueID]*stratumNotice)
 	lrn := make(map[simple.ConnUniqueID]*stratumRequest)
@@ -296,10 +296,10 @@ func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct, schedu
 		dstReDialCount:      rd,
 		dstExtranonce:       de,
 		dstExtranonce2size:  de2,
-		dstDiff:             di,
+		dstLastSetDiff:      lsd,
 		dstVersionMask:      vm,
 		dstLastMiningNotice: lmn,
-		dstLastReqNotice:    lrn,
+		dstLastReqNotify:    lrn,
 		switchToDestID:      "",
 	}
 
@@ -660,9 +660,9 @@ func (s *StratumV1Struct) switchDest() {
 		// Then set the difficulty, the feed the last mining notice in
 		//
 		s.sendSetExtranonceNotice(newUID)
-		s.sendSetDifficultyNotice(newUID)
+		s.sendLastSetDifficultyNotice(newUID)
 		s.sendLastMiningNotice(newUID)
-		s.sendLastReqNotice(newUID)
+		s.sendLastReqNotify(newUID)
 
 		// Reset the switchToState
 		s.switchToDestID = ""
@@ -837,19 +837,51 @@ func (svs *StratumV1Struct) sendSetExtranonceNotice(uid simple.ConnUniqueID) (e 
 }
 
 //
+// setLastSetDifficultyNotice()
+//
+func (svs *StratumV1Struct) setLastSetDifficultyNotice(uid simple.ConnUniqueID, n *stratumNotice) (e error) {
+
+	if n.Method != string(SERVER_MINING_SET_DIFFICULTY) {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" bad Method[%s]", n.Method)
+	}
+
+	diff, e := n.getSetDifficulty()
+	svs.dstLastSetDiff[uid] = diff
+
+	return e
+
+}
+
+//
+// setLastReqSetDifficulty()
+//
+func (svs *StratumV1Struct) setLastReqSetDifficulty(uid simple.ConnUniqueID, r *stratumRequest) (e error) {
+
+	if r.Method != string(SERVER_MINING_SET_DIFFICULTY) {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" bad Method[%s]", r.Method)
+	}
+
+	diff, e := r.getSetDifficulty()
+	svs.dstLastSetDiff[uid] = diff
+
+	return e
+
+}
+
+//
 // sendSetDifficultyNotice()
 //
-func (svs *StratumV1Struct) sendSetDifficultyNotice(uid simple.ConnUniqueID) (e error) {
+func (svs *StratumV1Struct) sendLastSetDifficultyNotice(uid simple.ConnUniqueID) (e error) {
 
 	contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" on  UID:%d", uid)
 
-	_, ok := svs.dstDiff[uid]
+	diff, ok := svs.dstLastSetDiff[uid]
 	if !ok {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" dstDiff[%d] DNE ", uid)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelWarn, lumerinlib.FileLineFunc()+" dstLastSetDiffNotice[%d] DNE ", uid)
 		return nil
 	}
 
-	msg, e := createSetDifficultyNoticeMsg(svs.dstDiff[uid])
+	msg, e := createSetDifficultyNoticeMsg(diff)
 
 	if e != nil {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" createSetDifficultyNoticeMsg() error:%s", e)
@@ -874,6 +906,21 @@ func (svs *StratumV1Struct) sendSetDifficultyNotice(uid simple.ConnUniqueID) (e 
 }
 
 //
+// setLastMiningNotice()
+//
+func (svs *StratumV1Struct) setLastMiningNotice(uid simple.ConnUniqueID, n *stratumNotice) (e error) {
+
+	if n.Method != string(SERVER_MINING_NOTIFY) {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" bad Method[%s]", n.Method)
+	}
+
+	svs.dstLastMiningNotice[uid] = n
+
+	return e
+
+}
+
+//
 // sendLastMiningNotice()
 //
 func (svs *StratumV1Struct) sendLastMiningNotice(uid simple.ConnUniqueID) (e error) {
@@ -891,7 +938,6 @@ func (svs *StratumV1Struct) sendLastMiningNotice(uid simple.ConnUniqueID) (e err
 	}
 
 	notice := svs.dstLastMiningNotice[uid]
-	// svs.dstLastMiningNotice[uid] = nil
 
 	msg, e := notice.createNoticeMsg()
 
@@ -918,22 +964,36 @@ func (svs *StratumV1Struct) sendLastMiningNotice(uid simple.ConnUniqueID) (e err
 }
 
 //
-// sendLastReqNotice()
+// setLastReqNotify()
 //
-func (svs *StratumV1Struct) sendLastReqNotice(uid simple.ConnUniqueID) (e error) {
+func (svs *StratumV1Struct) setLastReqNotify(uid simple.ConnUniqueID, r *stratumRequest) (e error) {
 
-	_, ok := svs.dstLastReqNotice[uid]
+	if r.Method != string(SERVER_MINING_NOTIFY) {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" bad Method[%s]", r.Method)
+	}
+
+	svs.dstLastReqNotify[uid] = r
+
+	return e
+
+}
+
+//
+// sendLastReqNotify()
+//
+func (svs *StratumV1Struct) sendLastReqNotify(uid simple.ConnUniqueID) (e error) {
+
+	_, ok := svs.dstLastReqNotify[uid]
 	if !ok {
-		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" dstLastReqNotice[%d] DNE ", uid)
+		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" dstLastReqNotify[%d] DNE ", uid)
 		return nil
 	}
 
-	if svs.dstLastReqNotice[uid] == nil {
+	if svs.dstLastReqNotify[uid] == nil {
 		return nil
 	}
 
-	request := svs.dstLastReqNotice[uid]
-	// svs.dstLastReqNotice[uid] = nil
+	request := svs.dstLastReqNotify[uid]
 
 	msg, e := request.createRequestMsg()
 
@@ -956,5 +1016,4 @@ func (svs *StratumV1Struct) sendLastReqNotice(uid simple.ConnUniqueID) (e error)
 	}
 
 	return e
-
 }
