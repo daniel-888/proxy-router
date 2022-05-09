@@ -436,7 +436,7 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 			contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 		}
 
-		contract1 := cs.RunningContracts[0]
+		contract1 := cs.RunningContracts[0] // if slicing between multiple contracts only make miner updates for that miner in one contract running routine
 
 		if len(slicedMiner.Contracts) == 1 {
 			miner,err := cs.Ps.MinerSetDestWait(slicedMiner.ID, destid)

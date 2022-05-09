@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -182,11 +183,15 @@ func TestCreateValidator(t *testing.T) {
 		t.Errorf("incorrect hash: %v", hashingResult.Message)
 	}
 
+	fmt.Println(hashingMessage)
+	fmt.Println(hashingResult)
+
 	//closing the validator
 	closingResult := validator.SendMessageToValidator(createCloseMethod())
 	if strings.Contains(closingResult.Message, "ERROR") { //need to update this functionality
 		t.Errorf("error closing validator: %v", closingResult.Message)
 	}
+	fmt.Println(closingResult)
 }
 
 func TestHashRatePerAsic(t *testing.T) {
@@ -212,9 +217,14 @@ func TestHashRatePerAsic(t *testing.T) {
 		}
 		time.Sleep(5*time.Second)
 	}
-	
-	
-
+	//creating hash request message
+	hashRequestMessage := createHashCounterRequestMessage()
+	hashCount := validator.SendMessageToValidator(hashRequestMessage)
+	resultingHashCount, receiveHashCountErr := ReceiveHashCount(hashCount.Message)
+	if receiveHashCountErr != nil{
+		//error handling for ReceiveHashCount
+	}
+	fmt.Println(resultingHashCount.HashCount)
 }
 
 //create a validator, send a hash, confirm hash results in true, close validator
