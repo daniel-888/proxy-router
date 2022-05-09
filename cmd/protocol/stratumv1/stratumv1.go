@@ -271,6 +271,7 @@ func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct, schedu
 		ID:                      msgbus.MinerID(id),
 		Name:                    "",
 		IP:                      "",
+		Port:                    0,
 		MAC:                     "",
 		State:                   msgbus.OnlineState,
 		Contract:                "",
