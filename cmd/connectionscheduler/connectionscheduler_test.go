@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 	"time"
-	
+
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
@@ -35,7 +35,7 @@ func TestSellerConnectionScheduler(t *testing.T) {
 		IsBuyer:     false,
 	}
 
-	cs, err := New(&mainCtx, &nodeOperator, false)
+	cs, err := New(&mainCtx, &nodeOperator, false, &miners.ConnectionCollection{})
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -355,7 +355,7 @@ func TestBuyerConnectionScheduler(t *testing.T) {
 		IsBuyer:     true,
 	}
 
-	cs, err := New(&mainCtx, &nodeOperator, false)
+	cs, err := New(&mainCtx, &nodeOperator, false, &miners.ConnectionCollection{})
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -490,7 +490,7 @@ func TestPassthroughConnectionScheduler(t *testing.T) {
 		IsBuyer:     true,
 	}
 
-	cs, err := New(&mainCtx, &nodeOperator, true)
+	cs, err := New(&mainCtx, &nodeOperator, true, miners.CreateMinerCollection())
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}

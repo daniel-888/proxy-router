@@ -10,6 +10,7 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/interfaces"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
@@ -24,6 +25,7 @@ type ConnectionScheduler struct {
 	ContractUpdatedChans lumerinlib.ConcurrentMap
 	Passthrough          bool
 	Ctx                  context.Context
+	connectionController interfaces.IConnectionController
 }
 
 // implement golang sort interface
@@ -37,7 +39,7 @@ func (m MinerList) Len() int           { return len(m) }
 func (m MinerList) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 func (m MinerList) Less(i, j int) bool { return m[i].hashrate < m[j].hashrate }
 
-func New(Ctx *context.Context, NodeOperator *msgbus.NodeOperator, Passthrough bool) (cs *ConnectionScheduler, err error) {
+func New(Ctx *context.Context, NodeOperator *msgbus.NodeOperator, Passthrough bool, minerController interfaces.IConnectionController) (cs *ConnectionScheduler, err error) {
 	ctxStruct := contextlib.GetContextStruct(*Ctx)
 	cs = &ConnectionScheduler{
 		Ps:           ctxStruct.MsgBus,
@@ -50,6 +52,7 @@ func New(Ctx *context.Context, NodeOperator *msgbus.NodeOperator, Passthrough bo
 	cs.BusyMiners.M = make(map[string]interface{})
 	cs.MinerUpdatedChans.M = make(map[string]interface{})
 	cs.ContractUpdatedChans.M = make(map[string]interface{})
+	cs.connectionController = minerController
 	return cs, err
 }
 
@@ -94,10 +97,26 @@ func (cs *ConnectionScheduler) Start() (err error) {
 			contextlib.Logf(cs.Ctx, log.LevelError, "Failed to get miner, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 			return err
 		}
+
+		dest, err := cs.Ps.DestGetWait(miner.Dest)
+
+		if err != nil {
+			contextlib.Logf(cs.Ctx, log.LevelError, "Failed to get miner destination, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+		}
+
+		connection, err := cs.connectionController.AddConnection(miner.IP, string(dest.NetUrl), string(miner.State), string(miner.ID))
+
+		if err != nil {
+			contextlib.Logf(cs.Ctx, log.LevelError, "Failed to add miner connection, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+		}
+
 		if miner.State == msgbus.OnlineState {
+
 			if miner.Dest == cs.NodeOperator.DefaultDest {
+				connection.SetAvailable(true)
 				cs.ReadyMiners.Set(string(miners[i]), *miner)
 			} else {
+				connection.SetAvailable(false)
 				cs.BusyMiners.Set(string(miners[i]), *miner)
 			}
 		}
@@ -247,23 +266,41 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 		case event := <-ch:
 			id := msgbus.MinerID(event.ID)
 
+			var miner msgbus.Miner
+
+			switch event.Data.(type) {
+			case msgbus.Miner:
+				miner = event.Data.(msgbus.Miner)
+			case *msgbus.Miner:
+				m := event.Data.(*msgbus.Miner)
+				miner = *m
+			}
+
+			dest, err := cs.Ps.DestGetWait(miner.Dest)
+
+			if err != nil {
+				if miner.Dest == "" {
+					dest = &msgbus.Dest{NetUrl: ""}
+				}
+
+				contextlib.Logf(cs.Ctx, log.LevelWarn, "Failed to get miner destination, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+			}
+
+			connection, err := cs.connectionController.GetOrAddConnection(miner.IP, string(dest.NetUrl), string(miner.State), string(miner.ID))
+
+			if err != nil {
+				contextlib.Logf(cs.Ctx, log.LevelError, "Failed to get or add connection, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+			}
+
 		loop:
 			switch event.EventType {
 			//
 			// Publish Event
 			//
 			case msgbus.PublishEvent:
-				var miner msgbus.Miner
-
-				switch event.Data.(type) {
-				case msgbus.Miner:
-					miner = event.Data.(msgbus.Miner)
-				case *msgbus.Miner:
-					m := event.Data.(*msgbus.Miner)
-					miner = *m
-				}
 
 				if miner.State != msgbus.OnlineState {
+					cs.connectionController.RemoveConnection(connection.GetId())
 					break loop
 				}
 
@@ -273,6 +310,7 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 				case "": // no contract
 					if !cs.ReadyMiners.Exists(string(id)) {
 						cs.ReadyMiners.Set(string(id), miner)
+						connection.SetAvailable(true)
 						contracts := cs.Contracts.GetAll()
 						for _, v := range contracts {
 							if v.(msgbus.Contract).State == msgbus.ContRunningState {
@@ -285,6 +323,7 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 				default:
 					if !cs.BusyMiners.Exists(string(id)) {
 						cs.BusyMiners.Set(string(id), miner)
+						connection.SetAvailable(false)
 						contracts := cs.Contracts.GetAll()
 						for _, v := range contracts {
 							if v.(msgbus.Contract).State == msgbus.ContRunningState {
@@ -302,19 +341,11 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 				// Update Event
 				//
 			case msgbus.UpdateEvent:
-				var miner msgbus.Miner
-
-				switch event.Data.(type) {
-				case msgbus.Miner:
-					miner = event.Data.(msgbus.Miner)
-				case *msgbus.Miner:
-					m := event.Data.(*msgbus.Miner)
-					miner = *m
-				}
 
 				if miner.State != msgbus.OnlineState {
 					cs.BusyMiners.Delete(string(id))
 					cs.ReadyMiners.Delete(string(id))
+					cs.connectionController.RemoveConnection(string(id))
 					break loop
 				}
 
@@ -325,6 +356,7 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 					// Update the current miner data
 					cs.BusyMiners.Delete(string(id))
 					cs.ReadyMiners.Set(string(id), miner)
+					connection.SetAvailable(true)
 					contracts := cs.Contracts.GetAll()
 					for _, v := range contracts {
 						if v.(msgbus.Contract).State == msgbus.ContRunningState && !miner.CsMinerHandlerIgnore {
@@ -335,6 +367,8 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 					// Update the current miner data
 					cs.ReadyMiners.Delete(string(id))
 					cs.BusyMiners.Set(string(id), miner)
+					connection.SetAvailable(false)
+
 					contracts := cs.Contracts.GetAll()
 					for _, v := range contracts {
 						if v.(msgbus.Contract).State == msgbus.ContRunningState && !miner.CsMinerHandlerIgnore {
@@ -352,6 +386,7 @@ func (cs *ConnectionScheduler) goMinerHandler(ch msgbus.EventChan, mux *sync.Mut
 				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Unpublish/Unsubscribe Event: %v", event)
 				cs.BusyMiners.Delete(string(id))
 				cs.ReadyMiners.Delete(string(id))
+				cs.connectionController.RemoveConnection(connection.GetId())
 				contracts := cs.Contracts.GetAll()
 				for _, v := range contracts {
 					if v.(msgbus.Contract).State == msgbus.ContRunningState {

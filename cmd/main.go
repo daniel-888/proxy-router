@@ -15,6 +15,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
+	"gitlab.com/TitanInd/lumerin/connections"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
@@ -55,6 +56,11 @@ func main() {
 	ps := msgbus.New(10, l)
 
 	//
+	// Create Connection Collection
+	//
+
+	connectionCollection := connections.CreateConnectionCollection()
+
 	// Add the various Context variables here
 	// msgbus, logger, default listen address, defalt desitnation address
 	//
@@ -108,14 +114,14 @@ func main() {
 	//
 	if !configs.DisableStratumv1 {
 
-		src, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", configs.ListenIP, configs.ListenPort))
+		listenAddress := fmt.Sprintf("%s:%s", configs.ListenIP, configs.ListenPort)
+
+		src, err := net.ResolveTCPAddr("tcp", listenAddress)
 		if err != nil {
 			lumerinlib.PanicHere("")
 		}
 
-		if err != nil {
-			lumerinlib.PanicHere("")
-		}
+		fmt.Printf("Listening for stratum messages on %v\n\n", src.String())
 
 		stratum, err := stratumv1.NewListener(mainContext, src, dest)
 		if err != nil {
@@ -130,7 +136,7 @@ func main() {
 	// Fire up schedule manager
 	//
 	if !configs.DisableSchedule {
-		cs, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
+		cs, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough, connectionCollection)
 		if err != nil {
 			l.Logf(log.LevelPanic, "Schedule manager failed: %v", err)
 		}
@@ -175,7 +181,7 @@ func main() {
 	//Fire up external api
 	//
 	if !configs.DisableApi {
-		api := externalapi.New(ps)
+		api := externalapi.New(ps, connectionCollection)
 		go api.Run(configs.ApiPort, l)
 	}
 
