@@ -1,7 +1,10 @@
 package validator
 
-import "testing"
-import "strings"
+import (
+	"strings"
+	"testing"
+	"time"
+)
 
 /*
 feature tests of the validator system.
@@ -195,7 +198,23 @@ func TestHashRatePerAsic(t *testing.T) {
 		3. call the function to get the calculated hashrate in the validator
 		4. compare to the expected hashrate
 	*/
-	//validator := createTestValidator()
+	//creating a validator
+	creationMessage := createTestValidator()
+	validator := MakeNewValidator()
+	validator.SendMessageToValidator(creationMessage)
+
+	for i := 0; i < 5; i++ {
+		//sending a hash message to the validator
+		hashingMessage := createHashSubmissionMessage()
+		hashingResult := validator.SendMessageToValidator(hashingMessage)
+		if strings.Contains(hashingResult.Message, "ERROR") { //need to update this functionality
+			t.Errorf("incorrect hash: %v", hashingResult.Message)
+		}
+		time.Sleep(5*time.Second)
+	}
+	
+	
+
 }
 
 //create a validator, send a hash, confirm hash results in true, close validator

@@ -954,7 +954,7 @@ func (buyer *BuyerContractManager) checkHashRate(contractId msgbus.ContractID) b
 		if err != nil {
 			contextlib.Logf(buyer.Ctx, log.LevelPanic, fmt.Sprintf("Failed to get miner, Fileline::%s, Error::", lumerinlib.FileLine()), err)
 		}
-		if miner.Contract == contractId {
+		if _,ok := miner.Contracts[contractId]; !ok {
 			totalHashrate += miner.CurrentHashRate
 		}
 	}
