@@ -137,15 +137,6 @@ func (cs *ConnectionScheduler) Start() (err error) {
 		}
 	}
 
-	connections, _ := cs.connectionController.GetConnections()
-
-	if err != nil {
-
-		contextlib.Logf(cs.Ctx, log.LevelError, "Failed to get miner connections, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
-	}
-
-	contextlib.Logf(cs.Ctx, log.LevelInfo, "Created miner connections %+v\n, Fileline::%s, Error::%v", connections, lumerinlib.FileLine(), err)
-
 	return err
 }
 
