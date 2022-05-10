@@ -88,7 +88,7 @@ func TestBuyerRoutine(t *testing.T) {
 	}
 
 	// start connection scheduler look at miners
-	cs, err := connectionscheduler.New(&mainCtx, &NodeOperator, false)
+	cs, err := connectionscheduler.New(&mainCtx, &NodeOperator, false, 0)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -192,7 +192,10 @@ loop2:
 	// connection scheduler sets contract to correct miners
 	m1, _ := ps.MinerGetWait(miner1.ID)
 	m2, _ := ps.MinerGetWait(miner2.ID)
-	if m1.Contract != msgbus.ContractID(hashrateContractAddress[0].Hex()) || m2.Contract != msgbus.ContractID(hashrateContractAddress[0].Hex()) {
+	if m1.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if m2.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] {
 		t.Errorf("Miner contracts not set correctly")
 	}
 
@@ -233,7 +236,13 @@ loop4:
 	m2, _ = ps.MinerGetWait(miner2.ID)
 	m3, _ := ps.MinerGetWait(miner3.ID)
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	if m1.Contract != msgbus.ContractID(hashrateContractAddress[0].Hex()) || m2.Contract != msgbus.ContractID(hashrateContractAddress[0].Hex()) || m3.Contract != msgbus.ContractID(hashrateContractAddress[1].Hex()) {
+	if m1.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if m2.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if m3.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] {
 		t.Errorf("Miner contracts not set correctly")
 	}
 
@@ -307,7 +316,16 @@ loop6:
 	m3, _ = ps.MinerGetWait(miner3.ID)
 	m4, _ := ps.MinerGetWait(miner4.ID)
 	time.Sleep(time.Millisecond * time.Duration(sleepTime/5))
-	if m1.Contract != msgbus.ContractID(hashrateContractAddress[0].Hex()) || m2.Contract != msgbus.ContractID(hashrateContractAddress[0].Hex()) || m3.Contract != msgbus.ContractID(hashrateContractAddress[1].Hex()) || m4.Contract != msgbus.ContractID(hashrateContractAddress[2].Hex()) {
+	if m1.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if m2.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if m3.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if m4.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] {
 		t.Errorf("Miner contracts not set correctly")
 	}
 
@@ -366,8 +384,14 @@ loop6:
 	m1, _ = ps.MinerGetWait(miner1.ID)
 	m3, _ = ps.MinerGetWait(miner3.ID)
 	m4, _ = ps.MinerGetWait(miner4.ID)
-	if m1.Contract != "" || m3.Contract != "" || m4.Contract != "" {
-		t.Errorf("Miner contracts not removed after being closed out")
+	if len(m1.Contracts) == 0 {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if len(m3.Contracts) == 0 {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if len(m4.Contracts) == 0 {
+		t.Errorf("Miner contracts not set correctly")
 	}
 
 	//

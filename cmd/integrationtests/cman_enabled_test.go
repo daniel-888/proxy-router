@@ -157,7 +157,7 @@ func EnabledSimMain(ps *msgbus.PubSub, configs EnabledConfig) (msgbus.DestID, co
 	//
 	// Fire up schedule manager
 	//
-	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
+	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, false, 0)
 	if err != nil {
 		panic(fmt.Sprintf("Schedule manager failed: %v", err))
 	}
@@ -278,7 +278,6 @@ func TestEnabled(t *testing.T) {
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
 		CurrentHashRate: 	  20,
-		CsMinerHandlerIgnore: false,
 	}
 
 	time.Sleep(sleepTime)
@@ -299,7 +298,7 @@ func TestEnabled(t *testing.T) {
 	miners, _ := ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != "" || miner.Dest != defaultDestID {
+		if len(miner.Contracts) != 0 || miner.Dest != defaultDestID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -353,7 +352,7 @@ loop2:
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != hashrateContractAddresses[0] || miner.Dest != targetDest1 {
+		if !miner.Contracts[hashrateContractAddresses[0]] || miner.Dest != targetDest1 {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -368,7 +367,6 @@ loop2:
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
 		CurrentHashRate: 	  10,
-		CsMinerHandlerIgnore: false,
 	}
 	miner3 := msgbus.Miner{
 		ID:                   msgbus.MinerID("MinerID03"),
@@ -376,7 +374,6 @@ loop2:
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
 		CurrentHashRate: 	  50,
-		CsMinerHandlerIgnore: false,
 	}
 
 	_ = miner2
@@ -464,7 +461,7 @@ loop4:
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != "" || miner.Dest != defaultDestID {
+		if len(miner.Contracts) != 0 || miner.Dest != defaultDestID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}

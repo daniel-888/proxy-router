@@ -157,7 +157,7 @@ func EnabledSimMain(ps *msgbus.PubSub, configs EnabledConfig) (msgbus.DestID, co
 	//
 	// Fire up schedule manager
 	//
-	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
+	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, true, 0)
 	if err != nil {
 		panic(fmt.Sprintf("Schedule manager failed: %v", err))
 	}
@@ -275,7 +275,6 @@ func TestEnabled(t *testing.T) {
 		IP:                   "IpAddress1",
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
-		CsMinerHandlerIgnore: false,
 	}
 
 	time.Sleep(sleepTime)
@@ -295,7 +294,7 @@ func TestEnabled(t *testing.T) {
 	miners, _ := ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != "" || miner.Dest != defaultDestID {
+		if len(miner.Contracts) != 0 || miner.Dest != defaultDestID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -348,7 +347,7 @@ loop2:
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != hashrateContractAddress || miner.Dest != targetDest {
+		if !miner.Contracts[hashrateContractAddress] || miner.Dest != targetDest {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -401,7 +400,7 @@ loop3:
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != hashrateContractAddress || miner.Dest != targetDest {
+		if !miner.Contracts[hashrateContractAddress] || miner.Dest != targetDest {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -446,7 +445,7 @@ loop4:
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != "" || miner.Dest != defaultDestID {
+		if len(miner.Contracts) != 0 || miner.Dest != defaultDestID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}

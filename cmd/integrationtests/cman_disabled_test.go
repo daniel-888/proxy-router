@@ -136,7 +136,7 @@ func DisabledSimMain(ps *msgbus.PubSub, configs DisabledConfig) msgbus.DestID {
 	//
 	// Fire up schedule manager
 	//
-	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
+	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, false, 0)
 	if err != nil {
 		panic(fmt.Sprintf("Schedule manager failed: %v", err))
 	}
@@ -173,7 +173,6 @@ func TestDisabled(t *testing.T) {
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
 		CurrentHashRate: 	  20,
-		CsMinerHandlerIgnore: false,
 	}
 
 	time.Sleep(sleepTime)
@@ -213,7 +212,7 @@ func TestDisabled(t *testing.T) {
 	miners, _ := ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != "" || miner.Dest != defaultDestID {
+		if len(miner.Contracts) != 0 || miner.Dest != defaultDestID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -240,7 +239,7 @@ func TestDisabled(t *testing.T) {
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != "ContractID01" || miner.Dest != targetDest.ID {
+		if !miner.Contracts["ContractID01"] || miner.Dest != targetDest.ID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -255,7 +254,6 @@ func TestDisabled(t *testing.T) {
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
 		CurrentHashRate: 	  10,
-		CsMinerHandlerIgnore: false,
 	}
 	miner3 := msgbus.Miner{
 		ID:                   msgbus.MinerID("MinerID03"),
@@ -263,7 +261,6 @@ func TestDisabled(t *testing.T) {
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
 		CurrentHashRate: 	  50,
-		CsMinerHandlerIgnore: false,
 	}
 
 	_ = miner2
@@ -297,13 +294,13 @@ func TestDisabled(t *testing.T) {
 		minersArr = append(minersArr, *miner)
 	}
 
-	if minersArr[0].Contract != "ContractID01" && miner.Dest != targetDest.ID {
+	if !minersArr[0].Contracts["ContractID01"] && miner.Dest != targetDest.ID {
 		t.Errorf("Miner 1 contract and dest not set correctly")
 	}
-	if minersArr[1].Contract != "ContractID02" && miner.Dest != targetDest2.ID {
+	if !minersArr[1].Contracts["ContractID02"] && miner.Dest != targetDest2.ID {
 		t.Errorf("Miner 2 contract and dest not set correctly")
 	}
-	if minersArr[2].Contract != "ContractID02" && miner.Dest != targetDest2.ID {
+	if !minersArr[2].Contracts["ContractID03"] && miner.Dest != targetDest2.ID {
 		t.Errorf("Miner 3 contract and dest not set correctly")
 	}
 

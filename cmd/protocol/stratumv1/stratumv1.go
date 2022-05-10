@@ -249,11 +249,10 @@ func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct) (n *St
 		IP:                      "",
 		MAC:                     "",
 		State:                   msgbus.OnlineState,
-		Contract:                "",
+		Contracts:               make(map[msgbus.ContractID]bool),
 		Dest:                    defdest.ID,
 		InitialMeasuredHashRate: 0,
 		CurrentHashRate:         0,
-		CsMinerHandlerIgnore:    false,
 	}
 
 	n = &StratumV1Struct{

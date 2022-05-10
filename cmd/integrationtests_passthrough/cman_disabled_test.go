@@ -136,7 +136,7 @@ func DisabledSimMain(ps *msgbus.PubSub, configs DisabledConfig) msgbus.DestID {
 	//
 	// Fire up schedule manager
 	//
-	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
+	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, true, 0)
 	if err != nil {
 		panic(fmt.Sprintf("Schedule manager failed: %v", err))
 	}
@@ -172,7 +172,6 @@ func TestDisabled(t *testing.T) {
 		IP:                   "IpAddress1",
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
-		CsMinerHandlerIgnore: false,
 	}
 
 	time.Sleep(sleepTime)
@@ -202,7 +201,7 @@ func TestDisabled(t *testing.T) {
 	miners, _ := ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != "" || miner.Dest != defaultDestID {
+		if len(miner.Contracts) != 0 || miner.Dest != defaultDestID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -229,7 +228,7 @@ func TestDisabled(t *testing.T) {
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != "ContractID01" || miner.Dest != targetDest.ID {
+		if !miner.Contracts["ContractID01"] || miner.Dest != targetDest.ID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -247,7 +246,7 @@ func TestDisabled(t *testing.T) {
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if miner.Contract != "ContractID01" || miner.Dest != targetDest.ID {
+		if !miner.Contracts["ContractID01"] || miner.Dest != targetDest.ID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
