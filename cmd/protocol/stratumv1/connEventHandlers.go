@@ -782,24 +782,17 @@ func (svs *StratumV1Struct) handleSrcReqSubmit(request *stratumRequest) (e error
 	// Is validator running?
 
 	// Lots of error checking needed here, or a better way of pulling out parameters in a controlled manner
-	id := fmt.Sprintf("SubmitID:%d", <-SubmitCountChan)
 	minerID := string(svs.minerRec.ID)
 	destID := string(svs.minerRec.Dest)
 	jobID := request.Params[1].(string)
 	extranonce := request.Params[2].(string)
 	ntime := request.Params[3].(string)
 	nonce := request.Params[4].(string)
-	submit := &msgbus.Submit{
-		ID:        msgbus.SubmitID(id),
-		MinerID:   minerID,
-		DestID:    destID,
-		JobID:     jobID,
-		Extraonce: extranonce,
-		NTime:     ntime,
-		NOnce:     nonce,
-	}
+	id := fmt.Sprintf("SubmitID:%d", <-SubmitCountChan)
+	submit := msgbus.NewSubmit(jobID, extranonce, ntime, nonce)
+	validate := msgbus.NewValidate(msgbus.ValidateID(id), minerID, destID, submit)
 
-	_, e = svs.protocol.Pub(simple.MsgType(msgbus.SubmitMsg), simple.IDString(id), submit)
+	_, e = svs.protocol.Pub(simple.MsgType(msgbus.ValidateMsg), simple.IDString(id), validate)
 	if e != nil {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Pub() error:%s", e)
 	}

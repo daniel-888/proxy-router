@@ -14,7 +14,6 @@ type ConfigID IDString
 type ContractManagerConfigID IDString
 type NodeOperatorID IDString
 type ContractID IDString
-type SubmitID IDString
 
 // Do we still need this with the config package in place?
 
@@ -58,14 +57,4 @@ type Contract struct {
 	Length                 int
 	StartingBlockTimestamp int
 	Dest                   DestID
-}
-
-type Submit struct {
-	ID        SubmitID // "Random ID value"
-	MinerID   string
-	DestID    string
-	JobID     string
-	Extraonce string
-	NTime     string
-	NOnce     string
 }

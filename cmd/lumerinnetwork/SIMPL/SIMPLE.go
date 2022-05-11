@@ -37,7 +37,7 @@ const (
 	MinerMsg                 MsgType = MsgType(msgbus.MinerMsg)
 	ConnectionMsg            MsgType = MsgType(msgbus.ConnectionMsg)
 	LogMsg                   MsgType = MsgType(msgbus.LogMsg)
-	SubmitMsg                MsgType = MsgType(msgbus.SubmitMsg)
+	ValidateMsg              MsgType = MsgType(msgbus.ValidateMsg)
 )
 
 type SimpleListenStruct struct {

@@ -283,7 +283,8 @@ func (svs *StratumV1Struct) handleMsgPublishEvent(event *simple.SimpleMsgBusEven
 			contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" event message:%s:%s, subscribe", event.EventType, event.ID)
 		}
 
-	case simple.SubmitMsg:
+	case simple.ValidateMsg:
+		contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" event message:%s:%s, subscribe", event.EventType, event.ID)
 
 	default:
 		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Unknown event message:%s:%s", event.EventType, event.ID)
