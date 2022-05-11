@@ -173,7 +173,7 @@ func createCloseMethod() Message {
 func TestCreateValidator(t *testing.T) {
 	//creating a validator
 	creationMessage := createTestValidator()
-	validator := MakeNewValidator()
+	validator := MakeNewValidator(nil)
 	validator.SendMessageToValidator(creationMessage)
 
 	//sending a hash message to the validator
@@ -205,7 +205,7 @@ func TestHashRatePerAsic(t *testing.T) {
 	*/
 	//creating a validator
 	creationMessage := createTestValidator()
-	validator := MakeNewValidator()
+	validator := MakeNewValidator(nil)
 	validator.SendMessageToValidator(creationMessage)
 
 	for i := 0; i < 5; i++ {
@@ -231,7 +231,7 @@ func TestHashRatePerAsic(t *testing.T) {
 func TestCreateValidatorValidateHashCloseValidator(t *testing.T) {
 	//creating a validator
 	creationMessage := createTestValidator()
-	validator := MakeNewValidator()
+	validator := MakeNewValidator(nil)
 	validator.SendMessageToValidator(creationMessage)
 
 	//sending a hash message to the validator
@@ -254,7 +254,7 @@ func TestCreateValidatorValidateHashCloseValidator(t *testing.T) {
 func TestSubmit2HashesVerifyCount(t *testing.T) {
 	//creating a validator
 	creationMessage := createTestValidator()
-	validator := MakeNewValidator()
+	validator := MakeNewValidator(nil)
 	validator.SendMessageToValidator(creationMessage)
 
 	//sending 2 mining.submit messages to validator

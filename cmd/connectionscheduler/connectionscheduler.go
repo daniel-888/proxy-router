@@ -179,20 +179,6 @@ func (cs *ConnectionScheduler) ContractHandler(ch msgbus.EventChan) {
 					switch event.Data.(msgbus.Contract).State {
 					case msgbus.ContAvailableState:
 						contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Found Available Contract: %v", event)
-						if currentContract.State != msgbus.ContAvailableState {
-							// // free up busy miners with this contract id
-							// miners := cs.BusyMiners.GetAll()
-							// for _, v := range miners {
-							// 	if _,ok := v.(msgbus.Miner).Contracts[id]; ok {
-							// 		cs.BusyMiners.Delete(string(v.(msgbus.Miner).ID))
-							// 		m, err := cs.Ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, id, cs.NodeOperator.DefaultDest)
-							// 		if err != nil {
-							// 			contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
-							// 		}
-							// 		cs.ReadyMiners.Set(string(m.ID), *m)
-							// 	}
-							// }					
-						}
 
 					case msgbus.ContRunningState:
 						contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Found Running Contract: %v", event)

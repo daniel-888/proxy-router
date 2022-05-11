@@ -15,6 +15,7 @@ type ConfigRead struct {
 	DisableSchedule     bool
 	SchedulePassthrough bool
 	HashrateCalcLagTime int
+	DisableValidate		bool
 	DisableContract     bool
 	Mnemonic            string
 	AccountIndex        int
@@ -72,6 +73,15 @@ func ReadConfigs() (configs ConfigRead) {
 		configs.DisableSchedule = scheduleConfig["disable"].(bool)
 		configs.SchedulePassthrough = scheduleConfig["passthrough"].(bool)
 		configs.HashrateCalcLagTime = int(scheduleConfig["hashrateCalcLagTime"].(float64))
+
+		//
+		// Validate Configs
+		//
+		validateConfig, err := LoadConfiguration("validate")
+		if err != nil {
+			panic(fmt.Sprintf("Failed to load validate configuration: %v", err))
+		}
+		configs.DisableValidate = validateConfig["disable"].(bool)
 
 		//
 		// Contract Configs
@@ -173,6 +183,18 @@ func ReadConfigs() (configs ConfigRead) {
 		}
 		if passthroughStr == "true" {
 			configs.SchedulePassthrough = true
+		}
+
+		//
+		// Validate Configs
+		//
+		configs.DisableValidate = false
+		disableValidateStr, err := ConfigGetVal(DisableValidate)
+		if err != nil {
+			panic(fmt.Sprintf("Getting Disable Validate val failed: %s\n", err))
+		}
+		if disableValidateStr == "true" {
+			configs.DisableValidate = true
 		}
 
 		//

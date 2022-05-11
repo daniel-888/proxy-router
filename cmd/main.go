@@ -11,6 +11,7 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/config"
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
+	"gitlab.com/TitanInd/lumerin/cmd/validator/validator"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/externalapi"
 	"gitlab.com/TitanInd/lumerin/cmd/log"
@@ -149,7 +150,18 @@ func main() {
 		}
 		err = cs.Start()
 		if err != nil {
-			l.Logf(log.LevelPanic, "Schedule manager to start: %v", err)
+			l.Logf(log.LevelPanic, "Schedule manager failed to start: %v", err)
+		}
+	}
+
+	//
+	// Fire up validator
+	//
+	if !configs.DisableValidate {
+		v := validator.MakeNewValidator(&mainContext)
+		err = v.Start()
+		if err != nil {
+			l.Logf(log.LevelPanic, "Validator failed to start: %v", err)
 		}
 	}
 
