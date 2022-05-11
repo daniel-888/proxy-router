@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
+	"strings"
 
 	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
@@ -83,6 +85,7 @@ type StratumV1Struct struct {
 }
 
 var MinerCountChan chan int
+var SubmitCountChan chan int
 
 //
 // init()
@@ -90,14 +93,16 @@ var MinerCountChan chan int
 //
 func init() {
 	MinerCountChan = make(chan int, 5)
-	go goMinerCounter(MinerCountChan)
+	SubmitCountChan = make(chan int, 5)
+	go goCounter(MinerCountChan)
+	go goCounter(SubmitCountChan)
 }
 
 //
-// goDstCounter()
+// goCounter()
 // Generates a UniqueID for the destination handles
 //
-func goMinerCounter(c chan int) {
+func goCounter(c chan int) {
 	counter := 10000
 	for {
 		c <- counter
@@ -267,12 +272,26 @@ func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct, schedu
 	if defdest == nil {
 		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetDest() return nil")
 	}
+
+	addr, e := ps.GetSrcRemoteAddr()
+	if e != nil {
+		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetSrcRemoteAddr() error:%s", e)
+	}
+
+	addrstr := strings.Split(addr.String(), ":")
+	ip := addrstr[0]
+	port, e := strconv.Atoi(addrstr[1])
+	if e != nil {
+		port = 0
+		contextlib.Logf(ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" strconv.Atoi() for str:%s error:%s", addrstr, e)
+	}
+
 	miner := &msgbus.Miner{
 		ID:                      msgbus.MinerID(id),
 		Name:                    "",
-		IP:                      "",
-		Port:                    0,
-		MAC:                     "",
+		IP:                      ip,
+		Port:                    port,
+		MAC:                     "", // Future... maybe
 		State:                   msgbus.OnlineState,
 		Contract:                "",
 		Dest:                    defdest.ID,

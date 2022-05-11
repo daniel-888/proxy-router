@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/log"
@@ -601,7 +602,13 @@ network connection functions
 //
 //
 //
-func (s *SimpleStruct) GetRemoteAddr(uid ConnUniqueID) {
+func (s *SimpleStruct) GetRemoteAddrIdx(uid ConnUniqueID) (addr net.Addr, e error) {
+
+	if uid < 0 {
+		return s.ConnectionStruct.SrcGetRemoteAddr()
+	} else {
+		return s.connectionMapping[uid].GetRemoteAddr()
+	}
 
 }
 

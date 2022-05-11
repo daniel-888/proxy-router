@@ -61,7 +61,10 @@ type Contract struct {
 }
 
 type Submit struct {
-	ID        SubmitID // "MinerID:DestID:MessageID"
+	ID        SubmitID // "Random ID value"
+	MinerID   string
+	DestID    string
+	JobID     string
 	Extraonce string
 	NTime     string
 	NOnce     string

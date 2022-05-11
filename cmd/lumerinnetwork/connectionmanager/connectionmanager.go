@@ -395,6 +395,39 @@ func (cs *ConnectionStruct) Dial(addr net.Addr) (idx int, e error) {
 }
 
 //
+//
+//
+func (cs *ConnectionStruct) GetRemoteAddrIdx(idx int) (addr net.Addr, e error) {
+
+	if cs == nil {
+		panic("ConnectionStruct is nil...")
+	}
+
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" called idx:%d", idx))
+
+	if idx < 0 {
+		addr, e = cs.src.GetRemoteAddr()
+	} else {
+		_, ok := cs.dst[idx]
+		if !ok {
+			contextlib.Logf(cs.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Bad IDX:%d, dst:%v", idx, cs.dst)
+			return nil, ErrConnMgrBadDest
+		}
+
+		// Verify the slot is NOT empty
+		if cs.dst[idx] == nil {
+			contextlib.Logf(cs.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Bad IDX:%d", idx)
+			return nil, ErrConnMgrBadDest
+		}
+
+		addr, e = cs.dst[idx].GetRemoteAddr()
+	}
+
+	return addr, e
+
+}
+
+//
 // ReDialIdx() will attempt to reconnect to the same dst, first checking the the line is closed
 // It is used in case a connection is severed
 //
@@ -422,7 +455,7 @@ func (cs *ConnectionStruct) ReDialIdx(idx int) (e error) {
 		contextlib.Logf(cs.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" cannot be here, idx:%d", idx)
 	}
 
-	addr := cs.dst[idx].GetAddr()
+	addr, e := cs.dst[idx].GetRemoteAddr()
 
 	if !cs.dst[idx].Done() {
 		cs.dst[idx].Close()
@@ -487,6 +520,16 @@ func (cs *ConnectionStruct) SrcGetSocket() (s *lumerinconnection.LumerinSocketSt
 //
 //
 //
+func (cs *ConnectionStruct) SrcGetRemoteAddr() (addr net.Addr, e error) {
+
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	return cs.src.GetRemoteAddr()
+}
+
+//
+//
+//
 func (cs *ConnectionStruct) SrcRead(buf []byte) (count int, e error) {
 
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
@@ -530,9 +573,29 @@ func (cs *ConnectionStruct) DstGetSocket() (s *lumerinconnection.LumerinSocketSt
 	if cs.dst[cs.defidx] == nil {
 		e = ErrConnMgrBadDefDest
 		return nil, e
-
 	}
+
 	return cs.dst[cs.defidx], e
+}
+
+//
+//
+//
+func (cs *ConnectionStruct) DstGetRemoteAddr() (addr net.Addr, e error) {
+
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	if cs.defidx < 0 {
+		e = ErrConnMgrNoDefIndex
+		return nil, e
+	}
+
+	if cs.dst[cs.defidx] == nil {
+		e = ErrConnMgrBadDefDest
+		return nil, e
+	}
+
+	return cs.dst[cs.defidx].GetRemoteAddr()
 }
 
 //
@@ -619,6 +682,26 @@ func (cs *ConnectionStruct) IdxGetSocket(idx int) (s *lumerinconnection.LumerinS
 	}
 
 	return cs.dst[idx], e
+}
+
+//
+//
+//
+func (cs *ConnectionStruct) IdxGetRemoteAddr(idx int) (addr net.Addr, e error) {
+
+	contextlib.Logf(cs.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+
+	if cs.defidx < 0 {
+		e = ErrConnMgrNoDefIndex
+		return nil, e
+	}
+
+	if cs.dst[cs.defidx] == nil {
+		e = ErrConnMgrBadDefDest
+		return nil, e
+	}
+
+	return cs.dst[idx].GetRemoteAddr()
 }
 
 //
