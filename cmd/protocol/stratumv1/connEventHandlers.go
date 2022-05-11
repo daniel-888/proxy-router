@@ -5,6 +5,7 @@ import (
 
 	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
 	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/connectionmanager"
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
@@ -772,6 +773,29 @@ func (svs *StratumV1Struct) handleSrcReqSubmit(request *stratumRequest) (e error
 	if e != nil {
 		contextlib.Logf(svs.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+" Default Route error:%s", e)
 		return e
+	}
+
+	//
+	// Create Submit if validator is running
+	//
+
+	// Is validator running?
+
+	// Lots of error checking needed here, or a better way of pulling out parameters in a controlled manner
+	id := fmt.Sprintf("%s:%s:%d", svs.minerRec.ID, svs.minerRec.Dest, request.ID)
+	extranonce := request.Params[2].(string)
+	ntime := request.Params[3].(string)
+	nonce := request.Params[4].(string)
+	submit := &msgbus.Submit{
+		ID:        msgbus.SubmitID(id),
+		Extraonce: extranonce,
+		NTime:     ntime,
+		NOnce:     nonce,
+	}
+
+	_, e = svs.protocol.Pub(simple.MsgType(msgbus.SubmitMsg), simple.IDString(id), submit)
+	if e != nil {
+		contextlib.Logf(svs.Ctx(), contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Pub() error:%s", e)
 	}
 
 	//

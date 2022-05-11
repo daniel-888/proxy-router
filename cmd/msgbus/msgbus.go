@@ -51,6 +51,7 @@ const (
 	MinerMsg                 MsgType = "MinerMsg"
 	ConnectionMsg            MsgType = "ConnectionMsg"
 	LogMsg                   MsgType = "LogMsg"
+	SubmitMsg                MsgType = "SubmitMsg"
 )
 
 type Event struct {
@@ -854,6 +855,7 @@ func (ps *PubSub) start() {
 	reg.data[ContractMsg] = make(map[IDString]registryData)
 	reg.data[MinerMsg] = make(map[IDString]registryData)
 	reg.data[ConnectionMsg] = make(map[IDString]registryData)
+	reg.data[SubmitMsg] = make(map[IDString]registryData)
 
 	reg.notify[ConfigMsg] = make(map[chan *Event]interface{})
 	reg.notify[ContractManagerConfigMsg] = make(map[chan *Event]interface{})
@@ -862,6 +864,7 @@ func (ps *PubSub) start() {
 	reg.notify[ContractMsg] = make(map[chan *Event]interface{})
 	reg.notify[MinerMsg] = make(map[chan *Event]interface{})
 	reg.notify[ConnectionMsg] = make(map[chan *Event]interface{})
+	reg.notify[SubmitMsg] = make(map[chan *Event]interface{})
 
 loop:
 	for cmdptr := range ps.cmdChan {

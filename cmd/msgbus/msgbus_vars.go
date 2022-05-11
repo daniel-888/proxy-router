@@ -61,7 +61,7 @@ type Contract struct {
 }
 
 type Submit struct {
-	ID        SubmitID // "MinerID:DestID"
+	ID        SubmitID // "MinerID:DestID:MessageID"
 	Extraonce string
 	NTime     string
 	NOnce     string

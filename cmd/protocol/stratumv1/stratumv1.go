@@ -27,7 +27,7 @@ const OnDemand StratumConnectionScheduler = "OnDemand"
 const OnSubmit StratumConnectionScheduler = "OnSubmit"
 
 //
-// New->Subscribed->Authorized->??
+// New->Subscribed->Authorized->Running??
 //
 const SrcStateNew SrcState = "stateNew"               // Freshly created Connection
 const SrcStateSubscribed SrcState = "stateSubscribed" // Recieve Subscribe
@@ -50,7 +50,7 @@ const DstStateError DstState = "stateError"
 const DstStateClosed DstState = "stateClosed"
 const DstStateNotFound DstState = "stateNotFound"
 
-const MaxRedials int = 2
+const MaxRedials int = 5
 
 type StratumV1ListenStruct struct {
 	protocollisten *protocol.ProtocolListenStruct
@@ -182,7 +182,7 @@ FORLOOP:
 }
 
 //
-//
+// Used for testing
 //
 func (s *StratumV1ListenStruct) goListenAcceptOnce() {
 
