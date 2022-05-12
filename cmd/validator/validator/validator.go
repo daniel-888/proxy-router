@@ -25,9 +25,10 @@ import (
 
 //creates a channel object which can be used to access created validators
 type MainValidator struct {
-	channel	Channels
-	Ps		*msgbus.PubSub
-	Ctx     context.Context
+	channel		Channels
+	Ps			*msgbus.PubSub
+	Ctx     	context.Context
+	MinerDiffs	lumerinlib.ConcurrentMap //miners being with a validation channel
 }
 
 //creates a validator
@@ -171,37 +172,19 @@ func MakeNewValidator(Ctx *context.Context) MainValidator {
 func (v *MainValidator) Start() error {
 	contextlib.Logf(v.Ctx, log.LevelInfo, "Validator Starting")
 
-	// Monitor Miners
-	minerEventChan := msgbus.NewEventChan()
-	_, err := v.Ps.Sub(msgbus.MinerMsg, "", minerEventChan)
+	// Monitor Validation Stratum Messages
+	validateEventChan := msgbus.NewEventChan()
+	_, err := v.Ps.Sub(msgbus.ValidateMsg, "", validateEventChan)
 	if err != nil {
-		contextlib.Logf(v.Ctx, log.LevelError, "Failed to subscribe to miner events, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+		contextlib.Logf(v.Ctx, log.LevelError, "Failed to subscribe to validate events, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 		return err
 	}
-	go v.minerHandler(minerEventChan)
-
-	// Monitor Miner Submits
-	submitEventChan := msgbus.NewEventChan()
-	_, err = v.Ps.Sub(msgbus.SubmitMsg, "", submitEventChan)
-	if err != nil {
-		contextlib.Logf(v.Ctx, log.LevelError, "Failed to subscribe to miner submit events, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
-		return err
-	}
-	go v.submitHandler(submitEventChan)
+	go v.validateHandler(validateEventChan)
 
 	return nil
 }
 
-func (v *MainValidator) minerHandler(ch msgbus.EventChan) {
-	blockHeader := ConvertBlockHeaderToString(BlockHeader{
-		Version:           "00000002",                                                         //bitcoin difficulty big endian
-		PreviousBlockHash: "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e", //big-endian expected
-		MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", //big-endian expected
-		Time:              "1399703554",                                                       //timestamp, not necessay and overwritten with a submission attempt
-		Difficulty:        "1900896c",                                                         //big-endian the difficulty target that a block needs to meet
-	})
-	difficulty := "1d00ffff"
-
+func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 	for {
 		select {
 		case <-v.Ctx.Done():
@@ -209,127 +192,77 @@ func (v *MainValidator) minerHandler(ch msgbus.EventChan) {
 			return
 
 		case event := <-ch:
-			id := msgbus.MinerID(event.ID)
+			if event.EventType == msgbus.PublishEvent {
+				id := msgbus.ValidateID(event.ID)
+				validateMsg := event.Data.(msgbus.Validate)
+				minerID := validateMsg.MinerID
+				destID := validateMsg.DestID
+				msgType := validateMsg.Data.(type)
 
-			switch event.EventType {
-
-			//
-			// Publish Event
-			//
-			case msgbus.PublishEvent:
-				miner := event.Data.(msgbus.Miner)
-				minerDest,err := v.Ps.DestGetWait(miner.Dest)
-				if err != nil {
-					contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to get miner dest, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
-				}
-				workername := minerDest.Username() + ":" + minerDest.Password()
-
-				if miner.State == msgbus.OnlineState {
-					// create new validator for miner
-					var createMessage = Message{}
-					createMessage.Address = string(id)
-					createMessage.MessageType = "createNew"
-					createMessage.Message = ConvertMessageToString(NewValidator{
-						BH:         blockHeader,
-						HashRate:   "",        // not needed for now
-						Limit:      "",        // not needed for now
-						Diff:       difficulty,  //highest difficulty allowed using difficulty encoding
-						WorkerName: workername, //worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
-					})
-					v.SendMessageToValidator(createMessage)
-				}
-
-				//
-				// Unpublish Event
-				//
-			case msgbus.UnpublishEvent:
-				var closeMessage = Message{}
-				closeMessage.Address = string(id)
-				closeMessage.MessageType = "closeValidator"
-				closeMessage.Message = ""
-				v.SendMessageToValidator(closeMessage)
-
-				//
-				// Update Event
-				//
-			case msgbus.UpdateEvent:
-				miner := event.Data.(msgbus.Miner)
-				if miner.State == msgbus.OfflineState {
-					var closeMessage = Message{}
-					closeMessage.Address = string(id)
-					closeMessage.MessageType = "closeValidator"
-					closeMessage.Message = ""
-					v.SendMessageToValidator(closeMessage)
-				}
-				
-			default:
-
-			}
-		}
-	}
-}
-
-func (v *MainValidator) submitHandler(ch msgbus.EventChan) {
-	for {
-		select {
-		case <-v.Ctx.Done():
-			contextlib.Logf(v.Ctx, log.LevelInfo, "Cancelling current validator context: cancelling submitHandler go routine")
-			return
-
-		case event := <-ch:
-			id := msgbus.SubmitID(event.ID)
-		
-
-			switch event.EventType {
-
-			//
-			// Publish Event
-			//
-			case msgbus.PublishEvent:
-				submit := event.Data.(msgbus.Submit)
-				miner,err := v.Ps.MinerGetWait(submit.Miner)
+				miner,err := v.Ps.MinerGetWait(minerID)
 				if err != nil {
 					contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to get miner, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 				}
-				minerDest,err := v.Ps.DestGetWait(miner.Dest)
-				if err != nil {
-					contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to get miner dest, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+			
+				switch msgType {
+				case msgbus.SetDifficulty:
+					setDifficultyMsg := validateMsg.Data.(msgbus.SetDifficulty)
+					if !v.MinerDiffs.Exists(minerID) {
+						v.MinerDiffs.Set(minerID, setDifficultyMsg.Diff)
+					} else {
+
+					}
+
+				case msgbus.Notify:
+					notifyMsg := validateMsg.Data.(msgbus.Notify)
+					version := notifyMsg.Version
+					previousBlockHash := notifyMsg.PrevBlockHash
+					time := notifyMsg.Ntime
+					difficulty := v.MinerDiffs.Get(minerID).(int)
+					difficultyStr := strconv.Itoa(difficulty)
+					merkleBranches := notifyMsg.MerkleBranches
+					
+					blockHeader := ConvertBlockHeaderToString(BlockHeader{
+						Version:           version,
+						PreviousBlockHash: previousBlockHash,
+						MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", 
+						Time:              time,
+						Difficulty:        difficultyStr,
+					})
+
+					var createMessage = Message{}
+					createMessage.Address = string(minerID)
+					createMessage.MessageType = "createNew"
+					v.SendMessageToValidator(createMessage)
+
+				case msgbus.Submit:
+					submitMsg := validateMsg.Data.(msgbus.Submit)
+					jobID := submitMsg.JobID
+					extraNonce := submitMsg.Extraonce
+					nTime := submitMsg.NTime
+					nonce := submitMsg.NOnce
+
+					var tabulationMessage = Message{}
+					mySubmit := MiningSubmit{}
+					mySubmit.WorkerName = ""
+					mySubmit.JobID = jobID
+					mySubmit.ExtraNonce2 = extraNonce
+					mySubmit.NTime = nTime
+					mySubmit.NOnce = nonce
+					tabulationMessage.Address = string(minerID)
+					tabulationMessage.MessageType = "tabulate"
+					tabulationMessage.Message = ConvertMessageToString(mySubmit)
+
+					m := v.SendMessageToValidator(tabulationMessage)
+					hashrate,err := strconv.Atoi(m.Message)
+					if err != nil {
+						contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to convert hashrate string to int, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+					}
+
+					// set hashrate in miner
+					miner.CurrentHashRate = hashrate
+					v.Ps.MinerSetWait(*miner)
 				}
-				workername := minerDest.Username() + ":" + minerDest.Password()
-
-				var tabulationMessage = Message{}
-				mySubmit := MiningSubmit{}
-				mySubmit.WorkerName = workername
-				mySubmit.JobID = string(id)
-				mySubmit.ExtraNonce2 = submit.Extraonce
-				mySubmit.NTime = submit.NTime
-				mySubmit.NOnce = submit.NOnce
-				tabulationMessage.Address = string(submit.ID)
-				tabulationMessage.MessageType = "tabulate"
-				tabulationMessage.Message = ConvertMessageToString(mySubmit)
-
-				m := v.SendMessageToValidator(tabulationMessage)
-				hashrate,err := strconv.Atoi(m.Message)
-				if err != nil {
-					contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to convert hashrate string to int, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
-				}
-
-				// set hashrate in miner
-				miner.CurrentHashRate = hashrate
-				v.Ps.MinerSetWait(*miner)
-
-				//
-				// Unpublish Event
-				//
-			case msgbus.UnpublishEvent:
-
-				//
-				// Update Event
-				//
-			case msgbus.UpdateEvent:
-				
-			default:
-
 			}
 		}
 	}
