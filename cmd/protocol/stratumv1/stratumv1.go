@@ -85,7 +85,6 @@ type StratumV1Struct struct {
 }
 
 var MinerCountChan chan int
-var SubmitCountChan chan int
 
 //
 // init()
@@ -93,21 +92,7 @@ var SubmitCountChan chan int
 //
 func init() {
 	MinerCountChan = make(chan int, 5)
-	SubmitCountChan = make(chan int, 5)
-	go goCounter(MinerCountChan)
-	go goCounter(SubmitCountChan)
-}
-
-//
-// goCounter()
-// Generates a UniqueID for the destination handles
-//
-func goCounter(c chan int) {
-	counter := 10000
-	for {
-		c <- counter
-		counter += 1
-	}
+	lumerinlib.RunGoCounter(MinerCountChan)
 }
 
 //
@@ -900,6 +885,10 @@ func (svs *StratumV1Struct) sendLastSetDifficultyNotice(uid simple.ConnUniqueID)
 		return nil
 	}
 
+	cs := contextlib.GetContextStruct(svs.Ctx())
+	ps := cs.GetMsgBus()
+	ps.SendValidateSetDiff(svs.Ctx(), svs.minerRec.ID, svs.dstDest[uid].ID, diff)
+
 	msg, e := createSetDifficultyNoticeMsg(diff)
 
 	if e != nil {
@@ -957,6 +946,22 @@ func (svs *StratumV1Struct) sendLastMiningNotice(uid simple.ConnUniqueID) (e err
 	}
 
 	notice := svs.dstLastMiningNotice[uid]
+	minerID := svs.minerRec.ID
+	destID := svs.minerRec.Dest
+	n := notice.Params.([]interface{})
+	jobID := n[0].(string)
+	prevblock := n[1].(string)
+	gen1 := n[2].(string)
+	gen2 := n[3].(string)
+	merkel := n[4].([]interface{})
+	version := n[5].(string)
+	nbits := n[6].(string)
+	ntime := n[7].(string)
+	clean := n[8].(bool)
+
+	cs := contextlib.GetContextStruct(svs.Ctx())
+	ps := cs.GetMsgBus()
+	ps.SendValidateNotify(svs.Ctx(), minerID, destID, jobID, prevblock, gen1, gen2, merkel, version, nbits, ntime, clean)
 
 	msg, e := notice.createNoticeMsg()
 
