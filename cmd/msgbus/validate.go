@@ -17,10 +17,11 @@ type Validate struct {
 }
 
 type Submit struct {
-	JobID     string
-	Extraonce string
-	NTime     string
-	NOnce     string
+	WorkerName string
+	JobID      string
+	Extraonce  string
+	NTime      string
+	NOnce      string
 }
 
 type Notify struct {
@@ -51,13 +52,14 @@ func newValidate(id ValidateID, minerID string, destID string, data interface{})
 	return v
 }
 
-func newSubmit(jobid string, extranonce string, ntime string, nonce string) (s *Submit) {
+func newSubmit(workername string, jobid string, extranonce string, ntime string, nonce string) (s *Submit) {
 
 	s = &Submit{
-		JobID:     jobid,
-		Extraonce: extranonce,
-		NTime:     ntime,
-		NOnce:     nonce,
+		WorkerName: workername,
+		JobID:      jobid,
+		Extraonce:  extranonce,
+		NTime:      ntime,
+		NOnce:      nonce,
 	}
 
 	return s
@@ -101,9 +103,9 @@ func getValidateID() ValidateID {
 //
 //
 //
-func (ps *PubSub) SendValidateSubmit(ctx context.Context, m MinerID, d DestID, jobID string, extranonce string, ntime string, nonce string) {
+func (ps *PubSub) SendValidateSubmit(ctx context.Context, workername string, m MinerID, d DestID, jobID string, extranonce string, ntime string, nonce string) {
 
-	submit := newSubmit(jobID, extranonce, ntime, nonce)
+	submit := newSubmit(workername, jobID, extranonce, ntime, nonce)
 	id := getValidateID()
 	validate := newValidate(id, string(m), string(d), submit)
 
