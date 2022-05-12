@@ -781,6 +781,7 @@ func (svs *StratumV1Struct) handleSrcReqSubmit(request *stratumRequest) (e error
 	// Is validator running?
 
 	// Lots of error checking needed here, or a better way of pulling out parameters in a controlled manner
+	username := svs.dstDest[uid].Username()
 	minerID := svs.minerRec.ID
 	destID := svs.minerRec.Dest
 	jobID := request.Params[1].(string)
@@ -790,12 +791,11 @@ func (svs *StratumV1Struct) handleSrcReqSubmit(request *stratumRequest) (e error
 
 	cs := contextlib.GetContextStruct(svs.Ctx())
 	ps := cs.GetMsgBus()
-	ps.SendValidateSubmit(svs.Ctx(), minerID, destID, jobID, extranonce, ntime, nonce)
+	ps.SendValidateSubmit(svs.Ctx(), username, minerID, destID, jobID, extranonce, ntime, nonce)
 
 	//
 	// Get the username of the default route
 	//
-	username := svs.dstDest[uid].Username()
 
 	// msg, e := request.createRequestMsg()
 	msg, e := request.createSubmitRequestMsg(username)

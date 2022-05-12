@@ -456,6 +456,10 @@ func (cs *ConnectionStruct) ReDialIdx(idx int) (e error) {
 	}
 
 	addr, e := cs.dst[idx].GetRemoteAddr()
+	if e != nil {
+		contextlib.Logf(cs.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" GetRemoteAddr() IDX:%d, error:%s", idx, e)
+		return ErrConnMgrBadDest
+	}
 
 	if !cs.dst[idx].Done() {
 		cs.dst[idx].Close()
