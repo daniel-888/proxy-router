@@ -183,10 +183,13 @@ func getGID() uint64 {
 // goCounter()
 // Generates a UniqueID (int) and returns via supplied channel
 //
-func goCounter(c chan int) {
-	counter := 10000
-	for {
-		c <- counter
-		counter += 1
-	}
+func RunGoCounter(c chan int) {
+	go func() {
+
+		counter := 10000
+		for {
+			c <- counter
+			counter += 1
+		}
+	}()
 }

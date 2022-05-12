@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
-	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
-	"gitlab.com/TitanInd/lumerin/msgbus"
 )
 
 type ValidateID IDString
@@ -30,7 +28,7 @@ type Notify struct {
 	PrevBlockHash   string
 	GenTransaction1 string
 	GenTransaction2 string
-	MerkelBranches  []string
+	MerkelBranches  []interface{}
 	Version         string
 	Nbits           string
 	Ntime           string
@@ -41,7 +39,7 @@ type SetDifficulty struct {
 	Diff int
 }
 
-func NewValidate(id ValidateID, minerID string, destID string, data interface{}) (v *Validate) {
+func newValidate(id ValidateID, minerID string, destID string, data interface{}) (v *Validate) {
 
 	v = &Validate{
 		ID:      id,
@@ -53,7 +51,7 @@ func NewValidate(id ValidateID, minerID string, destID string, data interface{})
 	return v
 }
 
-func NewSubmit(jobid string, extranonce string, ntime string, nonce string) (s *Submit) {
+func newSubmit(jobid string, extranonce string, ntime string, nonce string) (s *Submit) {
 
 	s = &Submit{
 		JobID:     jobid,
@@ -65,7 +63,7 @@ func NewSubmit(jobid string, extranonce string, ntime string, nonce string) (s *
 	return s
 }
 
-func NewNotify(jobid string, prevblock string, gen1 string, gen2 string, merkel []string, version string, nbits string, ntime string, clean bool) (n *Notify) {
+func newNotify(jobid string, prevblock string, gen1 string, gen2 string, merkel []interface{}, version string, nbits string, ntime string, clean bool) (n *Notify) {
 
 	n = &Notify{
 
@@ -83,7 +81,7 @@ func NewNotify(jobid string, prevblock string, gen1 string, gen2 string, merkel 
 	return n
 }
 
-func NewSetDiff(diff int) (d *SetDifficulty) {
+func newSetDiff(diff int) (d *SetDifficulty) {
 
 	d = &SetDifficulty{
 		Diff: diff,
@@ -95,28 +93,52 @@ func NewSetDiff(diff int) (d *SetDifficulty) {
 //
 //
 //
-func SendValidateSubmit() {
-
+func getValidateID() ValidateID {
+	id := fmt.Sprintf("ValidateID:%d", <-SubmitCountChan)
+	return ValidateID(id)
 }
 
 //
 //
 //
-func SendValidateNotify() {
+func (ps *PubSub) SendValidateSubmit(ctx context.Context, m MinerID, d DestID, jobID string, extranonce string, ntime string, nonce string) {
 
-}
+	submit := newSubmit(jobID, extranonce, ntime, nonce)
+	id := getValidateID()
+	validate := newValidate(id, string(m), string(d), submit)
 
-//
-//
-//
-func SendValidateSetDiff(ctx context.Context, ps *PubSub, m MinerID, d DestID, diff int) {
-
-	id := fmt.Sprintf("SubmitID:%d", <-SubmitCountChan)
-	setdiff := msgbus.NewSetDiff(diff)
-	validate := msgbus.NewValidate(msgbus.ValidateID(id), string(m), string(d), setdiff)
-
-	_, e = ps.Pub(ValidateMsg, IDString(id), validate)
+	_, e := ps.Pub(ValidateMsg, IDString(id), validate)
 	if e != nil {
-		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Pub() error:%s", e)
+		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Pub() error:%s", e))
+	}
+}
+
+//
+//
+//
+func (ps *PubSub) SendValidateNotify(ctx context.Context, m MinerID, d DestID, jobid string, prevblock string, gen1 string, gen2 string, merkel []interface{}, version string, nbits string, ntime string, clean bool) {
+
+	notify := newNotify(jobid, prevblock, gen1, gen2, merkel, version, nbits, ntime, clean)
+	id := getValidateID()
+	validate := newValidate(id, string(m), string(d), notify)
+
+	_, e := ps.Pub(ValidateMsg, IDString(id), validate)
+	if e != nil {
+		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Pub() error:%s", e))
+	}
+}
+
+//
+//
+//
+func (ps *PubSub) SendValidateSetDiff(ctx context.Context, m MinerID, d DestID, diff int) {
+
+	setdiff := newSetDiff(diff)
+	id := getValidateID()
+	validate := newValidate(id, string(m), string(d), setdiff)
+
+	_, e := ps.Pub(ValidateMsg, IDString(id), validate)
+	if e != nil {
+		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" Pub() error:%s", e))
 	}
 }

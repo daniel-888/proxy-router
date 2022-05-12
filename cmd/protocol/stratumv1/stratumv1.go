@@ -92,7 +92,7 @@ var MinerCountChan chan int
 //
 func init() {
 	MinerCountChan = make(chan int, 5)
-	go lumerinlib.goCounter(MinerCountChan)
+	lumerinlib.RunGoCounter(MinerCountChan)
 }
 
 //
@@ -886,7 +886,9 @@ func (svs *StratumV1Struct) sendLastSetDifficultyNotice(uid simple.ConnUniqueID)
 		return nil
 	}
 
-	msgbus.SendValidateSetDiff(svs.Ctx(), svs.minerRec.ID, svs.dstDest[uid].ID, diff)
+	cs := contextlib.GetContextStruct(svs.Ctx())
+	ps := cs.GetMsgBus()
+	ps.SendValidateSetDiff(svs.Ctx(), svs.minerRec.ID, svs.dstDest[uid].ID, diff)
 
 	msg, e := createSetDifficultyNoticeMsg(diff)
 
@@ -945,6 +947,22 @@ func (svs *StratumV1Struct) sendLastMiningNotice(uid simple.ConnUniqueID) (e err
 	}
 
 	notice := svs.dstLastMiningNotice[uid]
+	minerID := svs.minerRec.ID
+	destID := svs.minerRec.Dest
+	n := notice.Params.([]interface{})
+	jobID := n[0].(string)
+	prevblock := n[1].(string)
+	gen1 := n[2].(string)
+	gen2 := n[3].(string)
+	merkel := n[4].([]interface{})
+	version := n[5].(string)
+	nbits := n[6].(string)
+	ntime := n[7].(string)
+	clean := n[8].(bool)
+
+	cs := contextlib.GetContextStruct(svs.Ctx())
+	ps := cs.GetMsgBus()
+	ps.SendValidateNotify(svs.Ctx(), minerID, destID, jobID, prevblock, gen1, gen2, merkel, version, nbits, ntime, clean)
 
 	msg, e := notice.createNoticeMsg()
 

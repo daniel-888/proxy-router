@@ -133,7 +133,7 @@ var SubmitCountChan chan int
 //
 func init() {
 	SubmitCountChan = make(chan int, 5)
-	go lumerinlib.goCounter(SubmitCountChan)
+	lumerinlib.RunGoCounter(SubmitCountChan)
 }
 
 //--------------------------------------------------------------------------------
