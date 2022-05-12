@@ -28,7 +28,8 @@ type MainValidator struct {
 	channel		Channels
 	Ps			*msgbus.PubSub
 	Ctx     	context.Context
-	MinerDiffs	lumerinlib.ConcurrentMap //miners being with a validation channel
+	MinerDiffs	lumerinlib.ConcurrentMap // current difficulty target for each miner
+	MinersVal	lumerinlib.ConcurrentMap // miners with a validation channel open for them
 }
 
 //creates a validator
@@ -193,33 +194,36 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 
 		case event := <-ch:
 			if event.EventType == msgbus.PublishEvent {
-				id := msgbus.ValidateID(event.ID)
+				//id := msgbus.ValidateID(event.ID)
 				validateMsg := event.Data.(msgbus.Validate)
-				minerID := validateMsg.MinerID
-				destID := validateMsg.DestID
-				msgType := validateMsg.Data.(type)
-
+				minerID := msgbus.MinerID(validateMsg.MinerID)
+				destID := msgbus.DestID(validateMsg.DestID)
 				miner,err := v.Ps.MinerGetWait(minerID)
 				if err != nil {
 					contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to get miner, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 				}
+				dest,err := v.Ps.DestGetWait(destID)
+				if err != nil {
+					contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to get miner dest, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+				}
+				workerName := dest.Username() + ":" + dest.Password()
 			
-				switch msgType {
+				switch validateMsg.Data.(type) {
 				case msgbus.SetDifficulty:
 					setDifficultyMsg := validateMsg.Data.(msgbus.SetDifficulty)
-					if !v.MinerDiffs.Exists(minerID) {
-						v.MinerDiffs.Set(minerID, setDifficultyMsg.Diff)
-					} else {
-
-					}
+					v.MinerDiffs.Set(string(minerID), setDifficultyMsg.Diff)
+					if !v.MinersVal.Exists(string(minerID)) { // first time seeing miner 
+						v.MinersVal.Set(string(minerID), false)
+					} 
 
 				case msgbus.Notify:
 					notifyMsg := validateMsg.Data.(msgbus.Notify)
 					version := notifyMsg.Version
 					previousBlockHash := notifyMsg.PrevBlockHash
 					time := notifyMsg.Ntime
-					difficulty := v.MinerDiffs.Get(minerID).(int)
+					difficulty := v.MinerDiffs.Get(string(minerID)).(int)
 					difficultyStr := strconv.Itoa(difficulty)
+
 					merkleBranches := notifyMsg.MerkleBranches
 					
 					blockHeader := ConvertBlockHeaderToString(BlockHeader{
@@ -230,11 +234,32 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 						Difficulty:        difficultyStr,
 					})
 
-					var createMessage = Message{}
-					createMessage.Address = string(minerID)
-					createMessage.MessageType = "createNew"
-					v.SendMessageToValidator(createMessage)
-
+					if !v.MinersVal.Get(string(minerID)).(bool) { // no validation channel for miner yet
+						var createMessage = Message{}
+						createMessage.Address = string(minerID)
+						createMessage.MessageType = "createNew"
+						createMessage.Message = ConvertMessageToString(NewValidator{
+							BH:         blockHeader,
+							HashRate:   "",        // not needed for now
+							Limit:      "",        // not needed for now
+							Diff:       difficultyStr,  //highest difficulty allowed using difficulty encoding
+							WorkerName: workerName, //worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
+						})
+						v.SendMessageToValidator(createMessage)
+					} else { // update block header in existing validation channel
+						var updateMessage = Message{}
+						updateMessage.Address = string(minerID)
+						updateMessage.MessageType = "createNew"
+						updateMessage.Message = ConvertMessageToString(UpdateBlockHeader{
+							Version:           version,
+							PreviousBlockHash: previousBlockHash,
+							MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", 
+							Time:              time,
+							Difficulty:        difficultyStr,
+						})
+						v.SendMessageToValidator(updateMessage)
+					}
+					
 				case msgbus.Submit:
 					submitMsg := validateMsg.Data.(msgbus.Submit)
 					jobID := submitMsg.JobID
@@ -244,7 +269,7 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 
 					var tabulationMessage = Message{}
 					mySubmit := MiningSubmit{}
-					mySubmit.WorkerName = ""
+					mySubmit.WorkerName = workerName
 					mySubmit.JobID = jobID
 					mySubmit.ExtraNonce2 = extraNonce
 					mySubmit.NTime = nTime
