@@ -167,6 +167,8 @@ func MakeNewValidator(Ctx *context.Context) MainValidator {
 		Ps: ctxStruct.MsgBus,
 		Ctx: *Ctx,
 	}
+	validator.MinerDiffs.M = make(map[string]interface{})
+	validator.MinersVal.M = make(map[string]interface{})
 	return validator
 }
 
@@ -195,43 +197,61 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 		case event := <-ch:
 			if event.EventType == msgbus.PublishEvent {
 				//id := msgbus.ValidateID(event.ID)
-				validateMsg := event.Data.(msgbus.Validate)
+				validateMsg := event.Data.(*msgbus.Validate)
 				minerID := msgbus.MinerID(validateMsg.MinerID)
-				destID := msgbus.DestID(validateMsg.DestID)
+				//destID := msgbus.DestID(validateMsg.DestID)
 				miner,err := v.Ps.MinerGetWait(minerID)
 				if err != nil {
 					contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to get miner, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 				}
-				dest,err := v.Ps.DestGetWait(destID)
-				if err != nil {
-					contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to get miner dest, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
-				}
-				workerName := dest.Username() + ":" + dest.Password()
+				// dest,err := v.Ps.DestGetWait(destID)
+				// if err != nil {
+				// 	contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to get miner dest, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+				// }
+				//workerName := dest.Username() + ":" + dest.Password()
 			
 				switch validateMsg.Data.(type) {
-				case msgbus.SetDifficulty:
-					setDifficultyMsg := validateMsg.Data.(msgbus.SetDifficulty)
-					v.MinerDiffs.Set(string(minerID), setDifficultyMsg.Diff)
+				case *msgbus.SetDifficulty:
+					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Set Difficulty Msg: %v", event)
+					setDifficultyMsg := validateMsg.Data.(*msgbus.SetDifficulty)
+					diffStr := strconv.Itoa(setDifficultyMsg.Diff)
+					diffEndian,_ := uintToLittleEndian(diffStr)
+					v.MinerDiffs.Set(string(minerID), diffEndian)
 					if !v.MinersVal.Exists(string(minerID)) { // first time seeing miner 
 						v.MinersVal.Set(string(minerID), false)
 					} 
 
-				case msgbus.Notify:
-					notifyMsg := validateMsg.Data.(msgbus.Notify)
+				case *msgbus.Notify:
+					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Notify Msg: %v", event)
+					notifyMsg := validateMsg.Data.(*msgbus.Notify)
 					version := notifyMsg.Version
 					previousBlockHash := notifyMsg.PrevBlockHash
+					nBits := notifyMsg.Nbits
 					time := notifyMsg.Ntime
-					difficulty := v.MinerDiffs.Get(string(minerID)).(int)
-					difficultyStr := strconv.Itoa(difficulty)
+					difficulty := v.MinerDiffs.Get(string(minerID)).(string)
 
-					merkleBranches := notifyMsg.MerkleBranches
+					merkelBranches := notifyMsg.MerkelBranches
+					merkelBranchesStr := []string{}
+					for _,m := range merkelBranches {
+						merkelBranchesStr = append(merkelBranchesStr, m.(string))
+					}
 					
+					merkelRoot,err := ConvertMerkleBranchesToRoot(merkelBranchesStr)
+					if err != nil {
+						contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to convert merkel branches to merkel root, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+					}
+					// Version:           "00000002",                                                         //bitcoin difficulty big endian
+					// PreviousBlockHash: "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e", //big-endian expected
+					// MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", //big-endian expected
+					// Time:              "1399703554",                                                       //timestamp, not necessay and overwritten with a submission attempt
+					// Difficulty:        "1900896c",                                                         //big-endian the difficulty target that a block needs to meet
+
 					blockHeader := ConvertBlockHeaderToString(BlockHeader{
 						Version:           version,
 						PreviousBlockHash: previousBlockHash,
-						MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", 
+						MerkleRoot:        merkelRoot.String(), 
 						Time:              time,
-						Difficulty:        difficultyStr,
+						Difficulty:        nBits,
 					})
 
 					if !v.MinersVal.Get(string(minerID)).(bool) { // no validation channel for miner yet
@@ -242,26 +262,29 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 							BH:         blockHeader,
 							HashRate:   "",        // not needed for now
 							Limit:      "",        // not needed for now
-							Diff:       difficultyStr,  //highest difficulty allowed using difficulty encoding
-							WorkerName: workerName, //worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
+							Diff:       difficulty,  //highest difficulty allowed using difficulty encoding
+							WorkerName: "prod.s9x8", //worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
 						})
 						v.SendMessageToValidator(createMessage)
+						v.MinersVal.Set(string(minerID), true)
 					} else { // update block header in existing validation channel
 						var updateMessage = Message{}
 						updateMessage.Address = string(minerID)
 						updateMessage.MessageType = "createNew"
 						updateMessage.Message = ConvertMessageToString(UpdateBlockHeader{
-							Version:           version,
-							PreviousBlockHash: previousBlockHash,
-							MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", 
-							Time:              time,
-							Difficulty:        difficultyStr,
+							Version:           "00000002", //version,
+							PreviousBlockHash: "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e", //previousBlockHash,
+							MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", //merkelRoot.String(), 
+							Time:              "1399703554",//time,
+							Difficulty:        nBits,
 						})
 						v.SendMessageToValidator(updateMessage)
 					}
 					
-				case msgbus.Submit:
-					submitMsg := validateMsg.Data.(msgbus.Submit)
+				case *msgbus.Submit:
+					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Submit Msg: %v", event)
+					submitMsg := validateMsg.Data.(*msgbus.Submit)
+					workername := submitMsg.WorkerName
 					jobID := submitMsg.JobID
 					extraNonce := submitMsg.Extraonce
 					nTime := submitMsg.NTime
@@ -269,7 +292,7 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 
 					var tabulationMessage = Message{}
 					mySubmit := MiningSubmit{}
-					mySubmit.WorkerName = workerName
+					mySubmit.WorkerName = workername
 					mySubmit.JobID = jobID
 					mySubmit.ExtraNonce2 = extraNonce
 					mySubmit.NTime = nTime
@@ -279,14 +302,32 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 					tabulationMessage.Message = ConvertMessageToString(mySubmit)
 
 					m := v.SendMessageToValidator(tabulationMessage)
-					hashrate,err := strconv.Atoi(m.Message)
+					hashCountRunes := []rune{}
+					startFound := false
+					for _,v := range m.Message {
+						if v == ')' {
+							break
+						}
+						if startFound {
+							hashCountRunes = append(hashCountRunes, v)
+						}
+						if v == '=' {
+							startFound = true
+						} 
+					}
+					hashCountStr := string(hashCountRunes)
+					fmt.Println(hashCountStr)
+					
+					hashCount,err := strconv.Atoi(hashCountStr)
 					if err != nil {
 						contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to convert hashrate string to int, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 					}
 
 					// set hashrate in miner
-					miner.CurrentHashRate = hashrate
+					miner.CurrentHashRate = hashCount
 					v.Ps.MinerSetWait(*miner)
+				default:
+					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+" Got Validate Msg with different type: %v", event)
 				}
 			}
 		}

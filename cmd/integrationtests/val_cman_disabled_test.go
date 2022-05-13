@@ -225,14 +225,14 @@ func TestValDisabled(t *testing.T) {
 	*/
 
 	
-	//workerNames := [7]string{"prod.s9x8","prod.s9x8","prod.s9x8","stage.s9x211","prod.s9x8","prod.s9x8","prod.s9x8"}
+	workerNames := [7]string{"prod.s9x8","prod.s9x8","prod.s9x8","stage.s9x211","prod.s9x8","prod.s9x8","prod.s9x8"}
 	jobIDs := [7]string{"d73b189a","d73b189a","d73b189a","783647bc","616c4a28","616c4a28","616c4a28"}
 	extraNonce2s := [7]string{"4900020000000000","40d0020000000000","d9e9020000000000","8372000000000000","5a7a010000000000","77f9020000000000","5035030000000000"}
 	nTimes := [7]string{"61e6f630","61e6f630","61e6f630","61e6f66c","61e6f66c","61e6f66c","61e6f66c"}
 	nOnces := [7]string{"70010699","c38a8042","11745e4a","0a3f74a7","e6b732f5","d83d2cf9","602849db"}
 
 	for i:=0;i<10;i++ {
-		ps.SendValidateSubmit(context.Background(), miner1.ID, defaultDestID, jobIDs[i], extraNonce2s[i], nTimes[i], nOnces[i])
+		ps.SendValidateSubmit(context.Background(), workerNames[i], miner1.ID, defaultDestID, jobIDs[i], extraNonce2s[i], nTimes[i], nOnces[i])
 		time.Sleep((time.Second * hashrateCalcLagTime)/10)
 	}
 
