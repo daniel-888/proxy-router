@@ -25,11 +25,11 @@ import (
 
 //creates a channel object which can be used to access created validators
 type MainValidator struct {
-	channel		Channels
-	Ps			*msgbus.PubSub
-	Ctx     	context.Context
-	MinerDiffs	lumerinlib.ConcurrentMap // current difficulty target for each miner
-	MinersVal	lumerinlib.ConcurrentMap // miners with a validation channel open for them
+	channel    Channels
+	Ps         *msgbus.PubSub
+	Ctx        context.Context
+	MinerDiffs lumerinlib.ConcurrentMap // current difficulty target for each miner
+	MinersVal  lumerinlib.ConcurrentMap // miners with a validation channel open for them
 }
 
 //creates a validator
@@ -104,7 +104,7 @@ func (v *MainValidator) SendMessageToValidator(m Message) *Message {
 	if m.MessageType == "createNew" {
 		newChannel := v.channel.AddChannel(m.Address)
 		//need to extract the block header out of m.Message
-		creation, creationErr  := ReceiveNewValidatorRequest(m.Message)
+		creation, creationErr := ReceiveNewValidatorRequest(m.Message)
 		if creationErr != nil {
 			//error handling for validator creation
 		}
@@ -150,9 +150,8 @@ func (v *MainValidator) ReceiveJSONMessage(b []byte, id string) {
 		msg.MessageType = "blockHeaderUpdate"
 		msg.Message = ConvertMessageToString(notify)
 	}
-	//send message to validator. 
+	//send message to validator.
 	v.SendMessageToValidator(msg)
-
 
 }
 
@@ -164,8 +163,8 @@ func MakeNewValidator(Ctx *context.Context) MainValidator {
 	ctxStruct := contextlib.GetContextStruct(*Ctx)
 	validator := MainValidator{
 		channel: ch,
-		Ps: ctxStruct.MsgBus,
-		Ctx: *Ctx,
+		Ps:      ctxStruct.MsgBus,
+		Ctx:     *Ctx,
 	}
 	validator.MinerDiffs.M = make(map[string]interface{})
 	validator.MinersVal.M = make(map[string]interface{})
@@ -200,7 +199,7 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 				validateMsg := event.Data.(*msgbus.Validate)
 				minerID := msgbus.MinerID(validateMsg.MinerID)
 				//destID := msgbus.DestID(validateMsg.DestID)
-				miner,err := v.Ps.MinerGetWait(minerID)
+				miner, err := v.Ps.MinerGetWait(minerID)
 				if err != nil {
 					contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to get miner, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 				}
@@ -209,17 +208,17 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 				// 	contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to get miner dest, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 				// }
 				//workerName := dest.Username() + ":" + dest.Password()
-			
+
 				switch validateMsg.Data.(type) {
 				case *msgbus.SetDifficulty:
 					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Set Difficulty Msg: %v", event)
 					setDifficultyMsg := validateMsg.Data.(*msgbus.SetDifficulty)
 					diffStr := strconv.Itoa(setDifficultyMsg.Diff)
-					diffEndian,_ := uintToLittleEndian(diffStr)
+					diffEndian, _ := uintToLittleEndian(diffStr)
 					v.MinerDiffs.Set(string(minerID), diffEndian)
-					if !v.MinersVal.Exists(string(minerID)) { // first time seeing miner 
+					if !v.MinersVal.Exists(string(minerID)) { // first time seeing miner
 						v.MinersVal.Set(string(minerID), false)
-					} 
+					}
 
 				case *msgbus.Notify:
 					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Notify Msg: %v", event)
@@ -232,11 +231,11 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 
 					merkelBranches := notifyMsg.MerkelBranches
 					merkelBranchesStr := []string{}
-					for _,m := range merkelBranches {
+					for _, m := range merkelBranches {
 						merkelBranchesStr = append(merkelBranchesStr, m.(string))
 					}
-					
-					merkelRoot,err := ConvertMerkleBranchesToRoot(merkelBranchesStr)
+
+					merkelRoot, err := ConvertMerkleBranchesToRoot(merkelBranchesStr)
 					if err != nil {
 						contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to convert merkel branches to merkel root, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 					}
@@ -249,7 +248,7 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 					blockHeader := ConvertBlockHeaderToString(BlockHeader{
 						Version:           version,
 						PreviousBlockHash: previousBlockHash,
-						MerkleRoot:        merkelRoot.String(), 
+						MerkleRoot:        merkelRoot.String(),
 						Time:              time,
 						Difficulty:        nBits,
 					})
@@ -260,10 +259,10 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 						createMessage.MessageType = "createNew"
 						createMessage.Message = ConvertMessageToString(NewValidator{
 							BH:         blockHeader,
-							HashRate:   "",        // not needed for now
-							Limit:      "",        // not needed for now
-							Diff:       difficulty,  //highest difficulty allowed using difficulty encoding
-							WorkerName: "prod.s9x8", //worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
+							HashRate:   "",                   // not needed for now
+							Limit:      "",                   // not needed for now
+							Diff:       difficulty,           //highest difficulty allowed using difficulty encoding
+							WorkerName: "seanmcadam.worker0", //worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
 						})
 						v.SendMessageToValidator(createMessage)
 						v.MinersVal.Set(string(minerID), true)
@@ -272,15 +271,15 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 						updateMessage.Address = string(minerID)
 						updateMessage.MessageType = "createNew"
 						updateMessage.Message = ConvertMessageToString(UpdateBlockHeader{
-							Version:           "00000002", //version,
-							PreviousBlockHash: "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e", //previousBlockHash,
-							MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", //merkelRoot.String(), 
-							Time:              "1399703554",//time,
+							Version:           version,
+							PreviousBlockHash: previousBlockHash,
+							MerkleRoot:        merkelRoot.String(),
+							Time:              time,
 							Difficulty:        nBits,
 						})
 						v.SendMessageToValidator(updateMessage)
 					}
-					
+
 				case *msgbus.Submit:
 					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Submit Msg: %v", event)
 					submitMsg := validateMsg.Data.(*msgbus.Submit)
@@ -304,7 +303,7 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 					m := v.SendMessageToValidator(tabulationMessage)
 					hashCountRunes := []rune{}
 					startFound := false
-					for _,v := range m.Message {
+					for _, v := range m.Message {
 						if v == ')' {
 							break
 						}
@@ -313,12 +312,12 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 						}
 						if v == '=' {
 							startFound = true
-						} 
+						}
 					}
 					hashCountStr := string(hashCountRunes)
 					fmt.Println(hashCountStr)
-					
-					hashCount,err := strconv.Atoi(hashCountStr)
+
+					hashCount, err := strconv.Atoi(hashCountStr)
 					if err != nil {
 						contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to convert hashrate string to int, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 					}
