@@ -90,28 +90,28 @@ func (s *ContextStruct) SetLog(x *log.Logger) {
 //
 //
 //
-func (s *ContextStruct) GetMsgBus() (x *msgbus.PubSub) {
+func (s *ContextStruct) GetMsgBus() *msgbus.PubSub {
 	return s.MsgBus
 }
 
 //
 //
 //
-func (s *ContextStruct) GetSrc() (x net.Addr) {
+func (s *ContextStruct) GetSrc() net.Addr {
 	return s.Src
 }
 
 //
 //
 //
-func (s *ContextStruct) GetDest() (x *msgbus.Dest) {
+func (s *ContextStruct) GetDest() *msgbus.Dest {
 	return s.Dest
 }
 
 //
 //
 //
-func (s *ContextStruct) GetLog() (x *log.Logger) {
+func (s *ContextStruct) GetLog() *log.Logger {
 	return s.Log
 }
 

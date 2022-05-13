@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -18,11 +19,12 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
+	"gitlab.com/TitanInd/lumerin/cmd/validator/validator"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
-type EnabledConfig struct {
+type ValEnabledConfig struct {
 	BuyerNode           bool
 	ListenIP            string
 	ListenPort          string
@@ -40,7 +42,7 @@ type EnabledConfig struct {
 	LogFilePath         string
 }
 
-func LoadEnabledTestConfiguration(filePath string) (configs EnabledConfig, err error) {
+func LoadValEnabledTestConfiguration(filePath string) (configs ValEnabledConfig, err error) {
 	var data map[string]interface{}
 	currDir, _ := os.Getwd()
 	defer os.Chdir(currDir)
@@ -86,7 +88,7 @@ func LoadEnabledTestConfiguration(filePath string) (configs EnabledConfig, err e
 	return configs, err
 }
 
-func EnabledSimMain(ps *msgbus.PubSub, configs EnabledConfig) (msgbus.DestID, contractmanager.SellerContractManager) {
+func ValEnabledSimMain(ps *msgbus.PubSub, configs ValEnabledConfig, hashrateCalcLagTime time.Duration) (msgbus.DestID, contractmanager.SellerContractManager) {
 	mainContext := context.Background()
 
 	//
@@ -157,7 +159,7 @@ func EnabledSimMain(ps *msgbus.PubSub, configs EnabledConfig) (msgbus.DestID, co
 	//
 	// Fire up schedule manager
 	//
-	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, false, 0)
+	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, false, int(hashrateCalcLagTime))
 	if err != nil {
 		panic(fmt.Sprintf("Schedule manager failed: %v", err))
 	}
@@ -167,6 +169,15 @@ func EnabledSimMain(ps *msgbus.PubSub, configs EnabledConfig) (msgbus.DestID, co
 	}
 
 	//
+	// Fire up validator
+	//
+	v := validator.MakeNewValidator(&mainContext)
+	err = v.Start()
+	if err != nil {
+		panic(fmt.Sprintf("Validator failed to start: %v", err))
+	}
+
+		//
 	// Fire up contract manager
 	//
 	var contractManagerConfig msgbus.ContractManagerConfig
@@ -190,11 +201,11 @@ func EnabledSimMain(ps *msgbus.PubSub, configs EnabledConfig) (msgbus.DestID, co
 	if err != nil {
 		panic(fmt.Sprintf("Contract manager failed to run: %v", err))
 	}
-
+	
 	return dest.ID, sellerCM
 }
 
-func TestEnabled(t *testing.T) {
+func TestValEnabled(t *testing.T) {
 	configPath := "../../ganacheconfig.json"
 
 	var hashrateContractAddresses []msgbus.ContractID
@@ -203,7 +214,7 @@ func TestEnabled(t *testing.T) {
 	targetDest1Url := "stratum+tcp://pool-east.staging.pool.titan.io:4242"
 	targetDest2Url := "stratum+tcp://pool-east.staging.pool.titan.io:4242"
 
-	configs, err := LoadEnabledTestConfiguration(configPath)
+	configs, err := LoadValEnabledTestConfiguration(configPath)
 	if err != nil {
 		panic(fmt.Sprintf("Loading Config Failed: %s", err))
 	}
@@ -211,11 +222,6 @@ func TestEnabled(t *testing.T) {
 	ts, ltransaction, cftransaction := contractmanager.BeforeEach(configPath)
 	configs.LumerinTokenAddress = ts.LumerinAddress.String()
 	configs.CloneFactoryAddress = ts.CloneFactoryAddress.String()
-
-	contractLength := 100
-	if configs.EthNodeAddr == "ws://127.0.0.1:7545" {
-		contractLength = 20 // when running in ganache
-	}
 
 	var sleepTime time.Duration = 10 * time.Second
 
@@ -230,7 +236,12 @@ func TestEnabled(t *testing.T) {
 		time.Sleep(time.Second * 10)
 	}
 
-	defaultDestID, cm := EnabledSimMain(ps, configs)
+	var hashrateCalcLagTime time.Duration = 20
+	var reAdjustmentTime time.Duration = 3
+
+	contractLength := int(hashrateCalcLagTime)*4
+
+	defaultDestID, cm := ValEnabledSimMain(ps, configs, hashrateCalcLagTime)
 
 	Account, PrivateKey := contractmanager.HdWalletKeys(configs.Mnemonic, configs.AccountIndex+1)
 	buyerAddress := Account.Address
@@ -267,61 +278,92 @@ func TestEnabled(t *testing.T) {
 		}
 	}()
 
-	//
-	// miner connecting to lumerin node
-	//
-	fmt.Print("\n\n/// Miner connecting to node ///\n\n\n")
+	time.Sleep(sleepTime*10)
 
-	miner := msgbus.Miner{
+	fmt.Print("\n\n/// Multiple miners connecting to node ///\n\n\n")
+
+	miner1 := msgbus.Miner{
 		ID:                   msgbus.MinerID("MinerID01"),
 		IP:                   "IpAddress1",
+		CurrentHashRate:      0,
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
-		CurrentHashRate: 	  20,
+		Contracts: 			  make(map[msgbus.ContractID]bool),	
+	}
+	miner2 := msgbus.Miner{
+		ID:                   msgbus.MinerID("MinerID02"),
+		IP:                   "IpAddress2",
+		CurrentHashRate:      0,
+		State:                msgbus.OnlineState,
+		Dest:                 defaultDestID,
+		Contracts: 			  make(map[msgbus.ContractID]bool),
+	}
+	miner3 := msgbus.Miner{
+		ID:                   msgbus.MinerID("MinerID03"),
+		IP:                   "IpAddress3",
+		CurrentHashRate:      0,
+		State:                msgbus.OnlineState,
+		Dest:                 defaultDestID,
+		Contracts: 			  make(map[msgbus.ContractID]bool),
+	}
+	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner1.ID), miner1)
+	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner2.ID), miner2)
+	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner3.ID), miner3)
+	time.Sleep(time.Second * 2)
+
+	fmt.Print("\n\n/// Validator getting submits and updating miner hashrates ///\n\n\n")
+
+	for i:=0;i<10;i++ {
+		jobId1 := "JobId1-" + strconv.FormatInt(int64(i), 10)
+		jobId2 := "JobId2-" + strconv.FormatInt(int64(i), 10)
+		jobId3 := "JobId3-" + strconv.FormatInt(int64(i), 10)
+		miningSubmit1 := msgbus.Submit{
+			ID: msgbus.SubmitID(jobId1),
+			Miner: miner1.ID,
+		}
+		miningSubmit2 := msgbus.Submit{
+			ID: msgbus.SubmitID(jobId2),
+			Miner: miner2.ID,
+		}
+		miningSubmit3 := msgbus.Submit{
+			ID: msgbus.SubmitID(jobId3),
+			Miner: miner3.ID,
+		}
+		ps.PubWait(msgbus.SubmitMsg, msgbus.IDString(jobId1), miningSubmit1)
+		ps.PubWait(msgbus.SubmitMsg, msgbus.IDString(jobId2), miningSubmit2)
+		ps.PubWait(msgbus.SubmitMsg, msgbus.IDString(jobId3), miningSubmit3)
+		time.Sleep((time.Second * hashrateCalcLagTime)/10)
 	}
 
-	time.Sleep(sleepTime)
+	m1,_ := ps.MinerGetWait(miner1.ID)
+	m2,_ := ps.MinerGetWait(miner2.ID)
+	m3,_ := ps.MinerGetWait(miner3.ID)
 
-	_ = miner
-	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), miner)
+	fmt.Println("Miner 1 Current Hashrate: ", m1.CurrentHashRate)
+	fmt.Println("Miner 2 Current Hashrate: ", m2.CurrentHashRate)
+	fmt.Println("Miner 3 Current Hashrate: ", m3.CurrentHashRate)
+	time.Sleep(time.Second * 2)
 
-	//
-	// seller created contract found by lumerin node
-	//
-	fmt.Print("\n\n/// Created contracts found by lumerin node ///\n\n\n")
+	fmt.Print("\n\n/// 2 New available contracts found ///\n\n\n")
 
 	contractmanager.CreateHashrateContract(cm.EthClient, cm.Account, cm.PrivateKey, cm.CloneFactoryAddress, 0, 10, 20, contractLength, common.HexToAddress(configs.ValidatorAddress))
 	contractmanager.CreateHashrateContract(cm.EthClient, cm.Account, cm.PrivateKey, cm.CloneFactoryAddress, 0, 10, 60, contractLength, common.HexToAddress(configs.ValidatorAddress))
 
-	time.Sleep(sleepTime)
-
-	miners, _ := ps.MinerGetAllWait()
-	for _, v := range miners {
-		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if len(miner.Contracts) != 0 || miner.Dest != defaultDestID {
-			t.Errorf("Miner contract and dest not set correctly")
-		}
-	}
-
 	// wait until created hashrate contracts were found before continuing
-loop1:
+	loop1:
 	for {
 		if hashrateContractAddresses[0] != "" && hashrateContractAddresses[1] != "" {
 			break loop1
 		}
 	}
 	time.Sleep(time.Second * 2)
-
-	//
-	// contract 1 was purchased and target dest was inputed in it
-	//
-	fmt.Print("\n\n/// Contract 1 was purchased and target dest was inputed in it ///\n\n\n")
+	
+	fmt.Print("\n\n/// Contract 1 purchased and now running ///\n\n\n")
 
 	contractmanager.PurchaseHashrateContract(cm.EthClient, buyerAddress, buyerPrivateKey, cm.CloneFactoryAddress, common.HexToAddress(string(hashrateContractAddresses[0])), buyerAddress, targetDest1Url)
-	time.Sleep(sleepTime)
 	
 	// wait until hashrate contract was purchased before continuing
-loop2:
+	loop2:
 	for {
 		if purchasedHashrateContractAddresses[0] != "" {
 			break loop2
@@ -348,50 +390,53 @@ loop2:
 	if targetDest1 == "" {
 		t.Errorf("Contract manager did not publish target dest after contract was purchased")
 	}
+	time.Sleep(reAdjustmentTime*time.Second)
 
-	miners, _ = ps.MinerGetAllWait()
-	for _, v := range miners {
-		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if !miner.Contracts[hashrateContractAddresses[0]] || miner.Dest != targetDest1 {
-			t.Errorf("Miner contract and dest not set correctly")
+	var slicedMiner *msgbus.Miner
+	var fullMiner1 *msgbus.Miner
+	var fullMiner2 *msgbus.Miner
+	minerIDs,_ := ps.MinerGetAllWait()
+	for _,m := range minerIDs {
+		miner,_ := ps.MinerGetWait(m)
+		if miner.TimeSlice {
+			slicedMiner = miner
+		} else if miner.Contracts[hashrateContractAddresses[0]] && !miner.TimeSlice{
+			fullMiner1 = miner
+		} else {
+			fullMiner2 = miner
 		}
 	}
-
-	//
-	// More miners connecting to node
-	//
-	fmt.Print("\n\n/// More miners connection to node ///\n\n\n")
-	miner2 := msgbus.Miner{
-		ID:                   msgbus.MinerID("MinerID02"),
-		IP:                   "IpAddress2",
-		State:                msgbus.OnlineState,
-		Dest:                 defaultDestID,
-		CurrentHashRate: 	  10,
-	}
-	miner3 := msgbus.Miner{
-		ID:                   msgbus.MinerID("MinerID03"),
-		IP:                   "IpAddress3",
-		State:                msgbus.OnlineState,
-		Dest:                 defaultDestID,
-		CurrentHashRate: 	  50,
+	if slicedMiner.Dest != targetDest1 {
+		t.Errorf("Sliced miner dest field incorrect")
 	}
 
-	_ = miner2
-	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner2.ID), miner2)
-	_ = miner3
-	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner3.ID), miner3)
-	time.Sleep(sleepTime)
+	if fullMiner1.Dest != targetDest1 {
+		t.Errorf("Full miner dest field incorrect")
+	}
 
-	//
-	// contract 2 was purchased and target dest was inputed in it
-	//
-	fmt.Print("\n\n/// Contract 2 was purchased and target dest 2 was inputed in it ///\n\n\n")
+	time.Sleep((hashrateCalcLagTime/2 - reAdjustmentTime - 2)*time.Second)
+
+	time.Sleep(reAdjustmentTime*time.Second)
+
+	slicedMiner,_ = ps.MinerGetWait(slicedMiner.ID)
+	fullMiner1,_ = ps.MinerGetWait(fullMiner1.ID)
+	if slicedMiner.Dest != defaultDestID {
+		t.Errorf("Sliced miner dest field incorrect")
+	}
+
+	if fullMiner1.Dest != targetDest1 {
+		t.Errorf("Full miner dest field incorrect")
+	}
+
+	time.Sleep((hashrateCalcLagTime/2 - reAdjustmentTime)*time.Second)
+
+	fmt.Print("\n\n/// Contract 2 purchased and now running ///\n\n\n")
 
 	contractmanager.PurchaseHashrateContract(cm.EthClient, buyerAddress, buyerPrivateKey, cm.CloneFactoryAddress, common.HexToAddress(string(hashrateContractAddresses[1])), buyerAddress, targetDest2Url)
 	time.Sleep(sleepTime)
 	
 	// wait until hashrate contract was purchased before continuing
-loop3:
+	loop3:
 	for {
 		if purchasedHashrateContractAddresses[1] != "" {
 			break loop3
@@ -419,10 +464,47 @@ loop3:
 		t.Errorf("Contract manager did not publish target dest after contract was purchased")
 	}
 
-	//
-	// contract length expires
-	//
-	fmt.Print("\n\n/// Contract length expires ///\n\n\n")
+	time.Sleep(hashrateCalcLagTime*time.Second)
+	time.Sleep(reAdjustmentTime*time.Second)
+
+	slicedMiner,_ = ps.MinerGetWait(slicedMiner.ID)
+	fullMiner1,_ = ps.MinerGetWait(fullMiner1.ID)
+	fullMiner2,_ = ps.MinerGetWait(fullMiner2.ID)
+	if slicedMiner.Dest != targetDest1 {
+		t.Errorf("Sliced miner dest field incorrect, Dest in Miner: %s", slicedMiner.Dest)
+	}
+
+	if fullMiner1.Dest != targetDest1 {
+		t.Errorf("Full miner 1 dest field incorrect, Dest in Miner: %s", fullMiner1.Dest)
+	}
+
+	if fullMiner2.Dest != targetDest2 {
+		t.Errorf("Full miner 2 dest field incorrect, Dest in Miner: %s", fullMiner2.Dest)
+	}
+
+	time.Sleep((hashrateCalcLagTime/2 - reAdjustmentTime - 2)*time.Second)
+
+	time.Sleep(reAdjustmentTime*time.Second)
+
+	slicedMiner,_ = ps.MinerGetWait(slicedMiner.ID)
+	fullMiner1,_ = ps.MinerGetWait(fullMiner1.ID)
+	fullMiner2,_ = ps.MinerGetWait(fullMiner2.ID)
+
+	if slicedMiner.Dest != targetDest2 {
+		t.Errorf("Sliced miner dest field incorrect, Dest in Miner: %s", slicedMiner.Dest)
+	}
+
+	if fullMiner1.Dest != targetDest1 {
+		t.Errorf("Full miner 1 dest field incorrect, Dest in Miner: %s", fullMiner1.Dest)
+	}
+
+	if fullMiner2.Dest != targetDest2 {
+		t.Errorf("Full miner 2 dest field incorrect, Dest in Miner: %s", fullMiner2.Dest)
+	}
+
+	time.Sleep((hashrateCalcLagTime/2 - reAdjustmentTime)*time.Second)
+
+	fmt.Print("\n\n/// Contract 1 closes out ///\n\n\n")
 
 	// if network is ganache, create a new transaction so a new block is created
 	if configs.EthNodeAddr == "ws://127.0.0.1:7545" {
@@ -430,11 +512,12 @@ loop3:
 	}
 
 	// subcribe to contract closed event emitted by hashrate contract
-	hrLogs, hrSub, _ := contractmanager.SubscribeToContractEvents(cm.EthClient, common.HexToAddress(string(hashrateContractAddresses[1])))
+	hrLogs, hrSub, _ := contractmanager.SubscribeToContractEvents(cm.EthClient, common.HexToAddress(string(hashrateContractAddresses[0])))
 	// create event signature to parse out creation, purchase, and close event
 	contractClosedSig := []byte("contractClosed()")
 	contractClosedSigHash := crypto.Keccak256Hash(contractClosedSig)
-loop4:
+	
+	loop4:
 	for {
 		select {
 		case err := <-hrSub.Err():
@@ -445,24 +528,68 @@ loop4:
 			}
 		}
 	}
-
-	time.Sleep(2 * time.Second)
+	time.Sleep(1*time.Second)
 
 	// contract back to available
 	event, err = ps.GetWait(msgbus.ContractMsg, msgbus.IDString(hashrateContractAddresses[0]))
 	if err != nil {
-		panic(fmt.Sprintf("Getting contract failed: %s", err))
+		panic(fmt.Sprintf("Getting contract 2 failed: %s", err))
 	}
 	contract := event.Data.(msgbus.Contract)
 	if contract.State != msgbus.ContAvailableState || cm.NodeOperator.Contracts[hashrateContractAddresses[0]] != msgbus.ContAvailableState {
-		t.Errorf("Contract not back to available")
+		t.Errorf("Contract 1 not back to available")
 	}
 
-	miners, _ = ps.MinerGetAllWait()
-	for _, v := range miners {
-		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if len(miner.Contracts) != 0 || miner.Dest != defaultDestID {
-			t.Errorf("Miner contract and dest not set correctly")
+	time.Sleep(hashrateCalcLagTime*time.Second)
+	time.Sleep(reAdjustmentTime*time.Second)
+
+	if slicedMiner.Dest != targetDest2 {
+		t.Errorf("Sliced miner dest field incorrect, Dest in Miner: %s", slicedMiner.Dest)
+	}
+
+	if fullMiner1.Dest != defaultDestID {
+		t.Errorf("Full miner 1 dest field incorrect, Dest in Miner: %s", fullMiner1.Dest)
+	}
+
+	if fullMiner2.Dest != targetDest2 {
+		t.Errorf("Full miner 2 dest field incorrect, Dest in Miner: %s", fullMiner2.Dest)
+	}
+
+	time.Sleep((hashrateCalcLagTime/2 - reAdjustmentTime)*time.Second)
+
+	fmt.Print("\n\n/// Contract 2 closes out ///\n\n\n")
+
+	// if network is ganache, create a new transaction so a new block is created
+	if configs.EthNodeAddr == "ws://127.0.0.1:7545" {
+		contractmanager.CreateNewGanacheBlock(ts, cm.Account, cm.PrivateKey, contractLength, 0)
+	}
+
+	// subcribe to contract closed event emitted by hashrate contract
+	hrLogs, hrSub, _ = contractmanager.SubscribeToContractEvents(cm.EthClient, common.HexToAddress(string(hashrateContractAddresses[1])))
+	
+	loop5:
+	for {
+		select {
+		case err := <-hrSub.Err():
+			panic(fmt.Sprintf("Funcname::%s, Fileline::%s, Error::%v", lumerinlib.Funcname(), lumerinlib.FileLine(), err))
+		case hrLog := <-hrLogs:
+			if hrLog.Topics[0].Hex() == contractClosedSigHash.Hex() {
+				break loop5
+		}
 		}
 	}
+	time.Sleep(1*time.Second)
+
+	// contract back to available
+	event, err = ps.GetWait(msgbus.ContractMsg, msgbus.IDString(hashrateContractAddresses[1]))
+	if err != nil {
+		panic(fmt.Sprintf("Getting contract 2 failed: %s", err))
+	}
+	contract = event.Data.(msgbus.Contract)
+	if contract.State != msgbus.ContAvailableState || cm.NodeOperator.Contracts[hashrateContractAddresses[1]] != msgbus.ContAvailableState {
+		t.Errorf("Contract 2 not back to available")
+	}
+
+
+	time.Sleep(40*time.Second)
 }

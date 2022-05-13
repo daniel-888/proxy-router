@@ -178,3 +178,18 @@ func getGID() uint64 {
 	n, _ := strconv.ParseUint(string(b), 10, 64)
 	return n
 }
+
+//
+// goCounter()
+// Generates a UniqueID (int) and returns via supplied channel
+//
+func RunGoCounter(c chan int) {
+	go func() {
+
+		counter := 10000
+		for {
+			c <- counter
+			counter += 1
+		}
+	}()
+}

@@ -17,6 +17,7 @@ const (
 	ConfigContractTimeThreshold       ConfigConst = "ConfigContractTimeThreshold"
 	ConfigConnectionListenIP          ConfigConst = "ConfigConnectionListenIP"
 	ConfigConnectionListenPort        ConfigConst = "ConfigConnectionListenPort"
+	ConfigConnectionSwitchMethod      ConfigConst = "ConfigConnectionSwitchMethod"
 	ConfigConfigFilePath              ConfigConst = "ConfigConfigFilePath"
 	ConfigConfigDownloadPath          ConfigConst = "ConfigConfigDownloadPath"
 	ConfigLogFilePath                 ConfigConst = "ConfigLogFilePath"
@@ -27,6 +28,7 @@ const (
 	DisableConnection                 ConfigConst = "DisableConnection"
 	DisableContract                   ConfigConst = "DisableContract"
 	DisableSchedule                   ConfigConst = "DisableSchedule"
+	DisableValidate					  ConfigConst = "DisableValidator"
 	DisableStratumv1                  ConfigConst = "DisableStratumV1"
 	DisableAPI                        ConfigConst = "DisableAPI"
 )
@@ -83,6 +85,16 @@ var ConfigMap = map[ConfigConst]configitem{
 		envname:    "LISTENPORT",
 		configname: "connect.listenport",
 		defval:     "3333",
+		configval:  nil,
+		envval:     nil,
+		flagval:    nil,
+	},
+	ConfigConnectionSwitchMethod: {
+		flagname:   "schedulemethod",
+		flagusage:  "Connection Manager scheduling method: ondemand, onsubmit",
+		envname:    "SCHEDULEMETHOD",
+		configname: "connection.scheduler",
+		defval:     "ondemand",
 		configval:  nil,
 		envval:     nil,
 		flagval:    nil,
@@ -242,6 +254,15 @@ var ConfigMap = map[ConfigConst]configitem{
 		flagname:  "disablestratumv1",
 		flagusage: "Disable the Stratum V1 Protocol",
 		envname:   "DISABLESTRATUMV1",
+		defval:    "false",
+		configval: nil,
+		envval:    nil,
+		flagval:   nil,
+	},
+	DisableValidate: {
+		flagname:  "disablevalidate",
+		flagusage: "Disable the Validator",
+		envname:   "DISABLEVALIDATE",
 		defval:    "false",
 		configval: nil,
 		envval:    nil,
