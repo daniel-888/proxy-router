@@ -289,6 +289,8 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 					nTime := submitMsg.NTime
 					nonce := submitMsg.NOnce
 
+					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Submit Msg: %v", submitMsg)
+
 					var tabulationMessage = Message{}
 					mySubmit := MiningSubmit{}
 					mySubmit.WorkerName = workername
