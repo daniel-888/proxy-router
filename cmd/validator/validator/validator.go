@@ -74,6 +74,8 @@ func createValidator(bh BlockHeader, hashRate uint, limit uint, diff uint, pc st
 			} else if m.MessageType == "blockHeaderUpdate" {
 				bh := ConvertToBlockHeader(m.Message)
 				myValidator.UpdateBlockHeader(bh)
+				newM := m
+				messages <- newM
 			} else if m.MessageType == "closeValidator" {
 				close(messages)
 				return
@@ -156,7 +158,7 @@ func (v *MainValidator) ReceiveJSONMessage(b []byte, id string) {
 }
 
 //creates a new validator which can spawn multiple validation instances
-func MakeNewValidator(Ctx *context.Context) MainValidator {
+func MakeNewValidator(Ctx *context.Context) *MainValidator {
 	ch := Channels{
 		ValidationChannels: make(map[string]chan Message),
 	}
@@ -168,7 +170,7 @@ func MakeNewValidator(Ctx *context.Context) MainValidator {
 	}
 	validator.MinerDiffs.M = make(map[string]interface{})
 	validator.MinersVal.M = make(map[string]interface{})
-	return validator
+	return &validator
 }
 
 func (v *MainValidator) Start() error {
@@ -269,7 +271,7 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 					} else { // update block header in existing validation channel
 						var updateMessage = Message{}
 						updateMessage.Address = string(minerID)
-						updateMessage.MessageType = "createNew"
+						updateMessage.MessageType = "blockHeaderUpdate"
 						updateMessage.Message = ConvertMessageToString(UpdateBlockHeader{
 							Version:           version,
 							PreviousBlockHash: previousBlockHash,
