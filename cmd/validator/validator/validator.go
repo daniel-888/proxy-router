@@ -110,7 +110,8 @@ func (v *MainValidator) SendMessageToValidator(m Message) *Message {
 		if creationErr != nil {
 			//error handling for validator creation
 		}
-		useDiff, _ := strconv.ParseUint(creation.Diff, 16, 64)
+		useDiff, _ := strconv.ParseUint(creation.Diff, 16, 32)
+		//fmt.Println("useDiff:",useDiff)
 		createValidator( //creation["BH"] is an embedded JSON object
 			ConvertToBlockHeader(creation.BH),
 			ConvertStringToUint(creation.HashRate),
@@ -213,23 +214,28 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 
 				switch validateMsg.Data.(type) {
 				case *msgbus.SetDifficulty:
-					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Set Difficulty Msg: %v", event)
+					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+" Got Set Difficulty Msg: %v", event)
 					setDifficultyMsg := validateMsg.Data.(*msgbus.SetDifficulty)
-					diffStr := strconv.Itoa(setDifficultyMsg.Diff)
+					diffStr := strconv.Itoa(setDifficultyMsg.Diff + 570425344) // + 0x22000000
+					//fmt.Println("diffStr", diffStr)
 					diffEndian, _ := uintToLittleEndian(diffStr)
-					v.MinerDiffs.Set(string(minerID), diffEndian)
+					diffBigEndian := SwitchEndian(diffEndian)
+					//fmt.Println("diffEndian", diffEndian)
+					//fmt.Println("diffBigEndian", diffBigEndian)
+					v.MinerDiffs.Set(string(minerID), diffBigEndian)
 					if !v.MinersVal.Exists(string(minerID)) { // first time seeing miner
 						v.MinersVal.Set(string(minerID), false)
 					}
 
 				case *msgbus.Notify:
-					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Notify Msg: %v", event)
+					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+" Got Notify Msg: %v", event)
 					notifyMsg := validateMsg.Data.(*msgbus.Notify)
 					version := notifyMsg.Version
 					previousBlockHash := notifyMsg.PrevBlockHash
 					nBits := notifyMsg.Nbits
 					time := notifyMsg.Ntime
 					difficulty := v.MinerDiffs.Get(string(minerID)).(string)
+					//fmt.Println("difficulty:", difficulty)
 
 					merkelBranches := notifyMsg.MerkelBranches
 					merkelBranchesStr := []string{}
@@ -255,6 +261,8 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 						Difficulty:        nBits,
 					})
 
+					//fmt.Println("blockHeader", blockHeader)
+
 					if !v.MinersVal.Get(string(minerID)).(bool) { // no validation channel for miner yet
 						var createMessage = Message{}
 						createMessage.Address = string(minerID)
@@ -263,8 +271,8 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 							BH:         blockHeader,
 							HashRate:   "",                   // not needed for now
 							Limit:      "",                   // not needed for now
-							Diff:       difficulty,           //highest difficulty allowed using difficulty encoding
-							WorkerName: "seanmcadam.worker0", //worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
+							Diff:       difficulty,           // highest difficulty allowed using difficulty encoding
+							WorkerName: "seanmcadam.worker0", //"seanmcadam.worker0", //worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
 						})
 						v.SendMessageToValidator(createMessage)
 						v.MinersVal.Set(string(minerID), true)
@@ -283,15 +291,13 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 					}
 
 				case *msgbus.Submit:
-					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Submit Msg: %v", event)
+					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+" Got Submit Msg: %v", event)
 					submitMsg := validateMsg.Data.(*msgbus.Submit)
 					workername := submitMsg.WorkerName
 					jobID := submitMsg.JobID
 					extraNonce := submitMsg.Extraonce
 					nTime := submitMsg.NTime
 					nonce := submitMsg.NOnce
-
-					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Submit Msg: %v", submitMsg)
 
 					var tabulationMessage = Message{}
 					mySubmit := MiningSubmit{}
@@ -319,7 +325,8 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 						}
 					}
 					hashCountStr := string(hashCountRunes)
-					fmt.Println(hashCountStr)
+					
+					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+" Hashrate Calculated for Miner %s: %s", miner.ID, hashCountStr)
 
 					hashCount, err := strconv.Atoi(hashCountStr)
 					if err != nil {

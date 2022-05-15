@@ -35,15 +35,23 @@ func (v *Validator) UpdateHashrate() uint {
 	contractDuration := time.Now().Sub(v.StartTime) //returns an i64
 	//calculate the number of hashes represented by the pool difficulty target
 	bigDiffTarget := big.NewInt(int64(v.DifficultyTarget))
+	//fmt.Println("bigDiffTarget:", bigDiffTarget)
 	bigHashesAnalyzed := big.NewInt(int64(v.HashesAnalyzed))
+	//fmt.Println("bigHashesAnalyzed:", bigHashesAnalyzed)
 	result1 := new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil)
+	//fmt.Println("result1:", result1)
 	result2 := new(big.Int).Div(result1, bigDiffTarget)
+	//fmt.Println("result2:", result2)
 	exponent := math.Log2(float64(result2.Int64()))
+	//fmt.Println("exponent:", exponent)
 	hashesPerSubmission := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(exponent)), nil)
+	//fmt.Println("hashesPerSubmission:", hashesPerSubmission)
 	//multiply the number of hashes checked by the hashes represented from the difficulty target
 	totalHashes := new(big.Int).Mul(hashesPerSubmission, bigHashesAnalyzed)
+	//fmt.Println("totalHashes:", totalHashes)
 	//divide represented hashes by time duration
 	rateBigInt := new(big.Int).Div(totalHashes, big.NewInt(int64(contractDuration.Seconds())))
+	//fmt.Println("rateBigInt:", rateBigInt)
 	return uint(rateBigInt.Uint64())
 	//update contracthashrate with value
 }
@@ -81,6 +89,9 @@ func (v *Validator) IncomingHash(credential string, nonce string, time string) (
 	}
 	var bigDifficulty *big.Int = DifficultyToBigInt(uint32(v.DifficultyTarget))
 
+	//fmt.Println("hashAsBigInt:",hashAsBigInt)
+	//fmt.Println("v.DifficultyTarget:", v.DifficultyTarget)
+	//fmt.Println("bigDifficulty:",bigDifficulty)
 	if hashAsBigInt.Cmp(bigDifficulty) < 1 {
 		hashingResult = true
 	} else {

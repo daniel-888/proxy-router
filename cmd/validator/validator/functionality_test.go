@@ -278,6 +278,12 @@ func TestSubmit2HashesVerifyCount(t *testing.T) {
 	}
 }
 
+func TestEndian(t *testing.T) {
+	bigEndian := "17c2c0507d5b4f32aa1ca39d82b83f16dfbf75d000093fd60000000000000000"
+	fmt.Println("Big Endian: ", bigEndian)
+	littleEndian := SwitchEndian(bigEndian)
+	fmt.Println("Little Endian: ", littleEndian)
+}
 /*
 //create 2 validators, send each a hash, confirm hash results are true, close validators
 func TestCreateTwoValidatorValidateHashCloseValidator(t *testing.T) {

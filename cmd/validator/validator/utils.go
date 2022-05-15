@@ -25,9 +25,13 @@ func ConvertArray(input []byte) [32]byte {
 	return newArray
 }
 
-func BigEndianToLittleEndian(input string) string {
+func SwitchEndian(input string) (result string) {
 	//convert a big endian to a little endian hex representation
-	return ""
+	for i := 0; i < len(input); i = i + 2 {
+		result = input[i:i+2] + result
+	}
+
+	return result
 }
 
 //returns a mapping of the input message

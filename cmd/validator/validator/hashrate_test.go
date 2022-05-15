@@ -38,7 +38,25 @@ func TestHashrate(t *testing.T) {
 		Dest:                 defaultDest.ID,
 		Contracts: 			  make(map[msgbus.ContractID]bool),	
 	}
+	miner2 := msgbus.Miner{
+		ID:                   msgbus.MinerID("MinerID02"),
+		IP:                   "IpAddress2",
+		CurrentHashRate:      0,
+		State:                msgbus.OnlineState,
+		Dest:                 defaultDest.ID,
+		Contracts: 			  make(map[msgbus.ContractID]bool),	
+	}
+	miner3 := msgbus.Miner{
+		ID:                   msgbus.MinerID("MinerID03"),
+		IP:                   "IpAddress3",
+		CurrentHashRate:      0,
+		State:                msgbus.OnlineState,
+		Dest:                 defaultDest.ID,
+		Contracts: 			  make(map[msgbus.ContractID]bool),	
+	}
 	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), miner)
+	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner2.ID), miner2)
+	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner3.ID), miner3)
 
 	/*
 	{"params": ["prod.s9x8", "d73b189a", "4900020000000000", "61e6f630", "70010699"], "id": 19809, "method": "mining.submit"}
@@ -54,38 +72,103 @@ func TestHashrate(t *testing.T) {
 	{"id":5897,"jsonrpc":"2.0","method":"mining.notify","params":["9e845ebf","17c2c0507d5b4f32aa1ca39d82b83f16dfbf75d000093fd60000000000000000","01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2803cbf90a0004a8f6e6610c","0a746974616e2f6a74677261737369650affffffff02fe6f8126000000001976a9143f1ad6ada38343e55cc4c332657e30a71c86b66188ac0000000000000000266a24aa21a9edabebc22b545ae710e5ef8dc110c77870c5589a282567f36786a677b23cd0c8c800000000",[ "e03d3ffb98db39658948c3e7e612b18d60a863b981b76d4fe17717d77818e4a3", "a3bc1f07702d7d17411fa3a7d686efc4ac6e45d7b3f3d5f6091194afcf5ce9ab", "5c60807c2e560c0ca85edc301136a4f3f442dc738fc2896cebd0088d7273d7ab", "62248c534cc4cf906f63ce71b3662bb986430c563225d7106ab1f14791ca6d90", "f957f25e5fac2ee6e1de76b3272ad5ddc751414ef2bc1d67fdcb50484eea9be7", "ae2c5fb4cb6d2613fada24bf9eb731c176a3391cc1fe0262eb497ec4275779d2", "db033c650ce7e18c493019116aab554a2685082e27ec77aa7bf834c2da787c0b", "bb32f4b07a04676807e36c901c83d81a26529766caf2a0e611fa1c1f1b00f15d", "a5e29f9d83c401b4d0271b593ca2288f69ab79f1641e6f17a30f5cbb5141c30e", "0eb80a25f031588ccca0f9d246beabb24955c1da6c1402d8bd5b4f82ba6420a2", "be403c71eeb1bda016a246ff6a4ae2784cf8746142f17218563447e44f0251a1", "5690bd3e9f645f2f7b37d7532cb832f37a173d171bbeb54ea8b81e5ced39da99" ],"20000000","170b8c8b","61e6f6a8",false]}
 	*/
 
-	notifyJobId := "616c4a28"
-	notifyPrevBlock := "17c2c0507d5b4f32aa1ca39d82b83f16dfbf75d000093fd60000000000000000"
-	notifyGen1 := "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2803cbf90a00046cf6e6610c"
-	notifyGen2 := "0a746974616e2f6a74677261737369650affffffff024aa07e26000000001976a9143f1ad6ada38343e55cc4c332657e30a71c86b66188ac0000000000000000266a24aa21a9ed5617dd59c856a6ae1c00b6df9c4ed26727616d4d7b59f3eaacd16d810ff6dd3400000000"
-	notifyMerkles := []interface{}{"e03d3ffb98db39658948c3e7e612b18d60a863b981b76d4fe17717d77818e4a3", "a3bc1f07702d7d17411fa3a7d686efc4ac6e45d7b3f3d5f6091194afcf5ce9ab", "5c60807c2e560c0ca85edc301136a4f3f442dc738fc2896cebd0088d7273d7ab", "62248c534cc4cf906f63ce71b3662bb986430c563225d7106ab1f14791ca6d90", "f957f25e5fac2ee6e1de76b3272ad5ddc751414ef2bc1d67fdcb50484eea9be7", "300c97cc0ce4179ef67dd0d974fd7f70bcb7f4d71a8b675f7f2955c780d94ecf", "243796dcef2ee48f1a5132c42abb9ab11ae47ddf87f77797390ef0cf0cdd3a3b", "5e26cbaa9f32657aac5be852e9c560e429f80019fda2da39fee69685086325f2", "df44bb117da9c9c79919d78a16255715fd4c62aa03e6b67c4667907ac897e15a", "94a8c79e827851ebb6f043e393db73111e754a7b0b55fb0c83c6cbc6235f1603", "1db100d99f37b95d429df28a11f0bef873dc63c8510787e2c9be199662236f06", "680aa7cd5a2007a9f2ae2a76ed2fb2e3231c8b6cd3ccaeea951a089a91912223"}
-	notifyVersion := "20000000"
-	notifyNbits := "170b8c8b"
-	notifyNtime := "61e6f66c" 
-	notifyClean := false
+	/*
+	{"id":"2","jsonrpc":"2.0","method":"mining.notify","params":["e16730ab","aa89eee9a63a5da9c451dd242e03c93147950a770006f2140000000000000000","01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2103883c0b0004ab0480620c","5f546974616e2e696f5fffffffff0253854226000000001976a914288913831abe556f331ed13f73c98126f7a03a7588ac0000000000000000266a24aa21a9ed13927c1a804523a2ac252945392de21e7981c70afd5a0112a831c4c3d792b0c700000000",["90770a84646512101cadb195ee5e676388a004ea394cc7913051075dab2c27e6","3a34ac6e1042213afc32c759a773933ab4f3c915089d0d73577d10c8d19be586","6f34dd7b08ce40a15472920f9e9dcb7fe5770d946c29ee981f01f299c7546585","5c22bb9ddaad49ab18ac742cb194b06b970228812478231c96ac0995971049a6","5611316537a8e72bf9ff08e93a69c8577200c125df4cf1ecf6474b69dfee8043","975633591894e13452fb89b9c5c2f91c0db517569297d3d47edafbdeb4741094","64c2f8dd47ae9db4d6b21b676b2741a9f4b23747c2df5cb18ecdb09af3e29e04","618cf616e35e30b1f6623425eb91e0c74b1e1b21a2075c8ea4bcd7dd07c0dd07","276ff28fb4b98afc893e9a5b8a3a1d725780462277c3fa6d514377a0e8963ae7","76b779c85f266298fb65d31940697552d55d7e0de6bba80511af23ec247de3e5"],"20000000","170901ba","628004ab",false]}
+	{"id":"3","jsonrpc":"2.0","method":"mining.notify","params":["3fc7779e","aa89eee9a63a5da9c451dd242e03c93147950a770006f2140000000000000000","01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2103883c0b0004e70480620c","5f546974616e2e696f5fffffffff0296114b26000000001976a914288913831abe556f331ed13f73c98126f7a03a7588ac0000000000000000266a24aa21a9ede9ed4f2cf9294336e3ac300e9f06d049be2d99c77d3fcffb6b0ba9b934f7179100000000",["90770a84646512101cadb195ee5e676388a004ea394cc7913051075dab2c27e6","3a34ac6e1042213afc32c759a773933ab4f3c915089d0d73577d10c8d19be586","ad8657af7f58c7711a0bc65ffa28585fb5fe8c479c094e16d67e7ef23e5be4f5","8755c4ef5a1f688857495e694d886f39ed0b9e793b4aa3c4b1e495e86d90cc45","0eb44323a055be6b30e8835f5b8044b3f554b9c32e44347fba4465b5fa7dcf32","43293bf2a84946dc176360a670670cfdefa8c8922350cafa5ff69d7f7a1191c0","7331ce7d53e7c3c8bf41638e6691daaf5f2f205f94c45d39bbbf1b0d77477328","8eda13259dc163ceaa4b31030c5ca90340e2c0ad0fa535e8e992d2b2a76ad1f7","dbe9422de38ad661d056b771b632652d6ee42b2ea7f10bda6477093824672bea","24e143a8dc116d935b8f1ec8164b42e3006937df062e8827cf43dd55e38db2d3","990242e21688e72c8daba7001e35213f65b1c1c1c9457029d41b8b23dc8531e2"],"20000000","170901ba","628004e7",false]} 
+	{"id":"4","jsonrpc":"2.0","method":"mining.notify","params":["57ef4334","aa89eee9a63a5da9c451dd242e03c93147950a770006f2140000000000000000","01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2103883c0b0004230580620c","5f546974616e2e696f5fffffffff02e54d4f26000000001976a914288913831abe556f331ed13f73c98126f7a03a7588ac0000000000000000266a24aa21a9ed2001039a0fee2bcfb931c32d15847418198c1a033599e630d8dc27bbc22c03b700000000",["90770a84646512101cadb195ee5e676388a004ea394cc7913051075dab2c27e6","3a34ac6e1042213afc32c759a773933ab4f3c915089d0d73577d10c8d19be586","ad8657af7f58c7711a0bc65ffa28585fb5fe8c479c094e16d67e7ef23e5be4f5","4cbfb023b480689fa5f8ced400b52fe36f4b595b653a05f21c4efa51c6b6d52b","6b760ede8113d73b697eb5a394710cafdfd3c00302dc461cfc111ded76756fe9","9a24a044e1b35f2c154f0f41f512345f96698c41027246c3346a4f72c0c9648a","ff23b670a37ab183a0a743ad31c381e1baa951b67a286531a17baf036bded1cf","f244f9d828095d4e2373ec6edabc8deffc83856b0825206f436a187b4e9db718","7408592ca41ce815653505fe774615412d4c226a37414e56a6b48c7c7f76ec5d","23d3023a5bdb8a43b9869504d1a9e00337192ae28f030b8499cb7a1ed6d11733","b92cf5010bfbe2d760a6b411b28eeb923931054613f60dc690641763c7b1263f"],"20000000","170901ba","62800523",false]}
+	*/
+
+	/*
+	{"id":0,"jsonrpc":"2.0","method":"mining.set_difficulty","params":[65535]}
+
+	{"id":3298,"method":"mining.submit","params":["seanmcadam.worker0","57ef4334","6654010000000000","62800523","8d921ec5"]}
+	{"id":3299,"method":"mining.submit","params":["seanmcadam.worker0","57ef4334","e85f020000000000","62800523","f57dc4c0"]}
+	{"id":3300,"method":"mining.submit","params":["seanmcadam.worker0","57ef4334","bd77020000000000","62800523","5256e200"]}
+	*/
+
+	// Version:           "00000002",                                                         //bitcoin difficulty big endian
+	// PreviousBlockHash: "000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e", //big-endian expected
+	// MerkleRoot:        "915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3", //big-endian expected
+	// Time:              "1399703554",                                                       //timestamp, not necessay and overwritten with a submission attempt
+	// Difficulty:        "1900896c",                                                         //big-endian the difficulty target that a block needs to meet
+
+	// notifyJobId := "616c4a28"
+	// notifyPrevBlock := "17c2c0507d5b4f32aa1ca39d82b83f16dfbf75d000093fd60000000000000000"
+	// notifyGen1 := "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2803cbf90a00046cf6e6610c"
+	// notifyGen2 := "0a746974616e2f6a74677261737369650affffffff024aa07e26000000001976a9143f1ad6ada38343e55cc4c332657e30a71c86b66188ac0000000000000000266a24aa21a9ed5617dd59c856a6ae1c00b6df9c4ed26727616d4d7b59f3eaacd16d810ff6dd3400000000"
+	// notifyMerkles := []interface{}{"e03d3ffb98db39658948c3e7e612b18d60a863b981b76d4fe17717d77818e4a3", "a3bc1f07702d7d17411fa3a7d686efc4ac6e45d7b3f3d5f6091194afcf5ce9ab", "5c60807c2e560c0ca85edc301136a4f3f442dc738fc2896cebd0088d7273d7ab", "62248c534cc4cf906f63ce71b3662bb986430c563225d7106ab1f14791ca6d90", "f957f25e5fac2ee6e1de76b3272ad5ddc751414ef2bc1d67fdcb50484eea9be7", "300c97cc0ce4179ef67dd0d974fd7f70bcb7f4d71a8b675f7f2955c780d94ecf", "243796dcef2ee48f1a5132c42abb9ab11ae47ddf87f77797390ef0cf0cdd3a3b", "5e26cbaa9f32657aac5be852e9c560e429f80019fda2da39fee69685086325f2", "df44bb117da9c9c79919d78a16255715fd4c62aa03e6b67c4667907ac897e15a", "94a8c79e827851ebb6f043e393db73111e754a7b0b55fb0c83c6cbc6235f1603", "1db100d99f37b95d429df28a11f0bef873dc63c8510787e2c9be199662236f06", "680aa7cd5a2007a9f2ae2a76ed2fb2e3231c8b6cd3ccaeea951a089a91912223"}
+	// notifyVersion := "20000000"
+	// notifyNbits := "170b8c8b"
+	// notifyNtime := "61e6f66c" 
+	// notifyClean := false
+
+	notifyJobIds := [3]string{"e16730ab","3fc7779e","57ef4334"}
+	notifyPrevBlocks := [3]string{"aa89eee9a63a5da9c451dd242e03c93147950a770006f2140000000000000000","aa89eee9a63a5da9c451dd242e03c93147950a770006f2140000000000000000","aa89eee9a63a5da9c451dd242e03c93147950a770006f2140000000000000000"}
+	notifyGen1s := [3]string{"01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2103883c0b0004ab0480620c","01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2103883c0b0004e70480620c","01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2103883c0b0004230580620c"}
+	notifyGen2s := [3]string{"5f546974616e2e696f5fffffffff0253854226000000001976a914288913831abe556f331ed13f73c98126f7a03a7588ac0000000000000000266a24aa21a9ed13927c1a804523a2ac252945392de21e7981c70afd5a0112a831c4c3d792b0c700000000", "5f546974616e2e696f5fffffffff0296114b26000000001976a914288913831abe556f331ed13f73c98126f7a03a7588ac0000000000000000266a24aa21a9ede9ed4f2cf9294336e3ac300e9f06d049be2d99c77d3fcffb6b0ba9b934f7179100000000", "5f546974616e2e696f5fffffffff02e54d4f26000000001976a914288913831abe556f331ed13f73c98126f7a03a7588ac0000000000000000266a24aa21a9ed2001039a0fee2bcfb931c32d15847418198c1a033599e630d8dc27bbc22c03b700000000"}
+	notifyMerkless := [][]interface{}{{"e03d3ffb98db39658948c3e7e612b18d60a863b981b76d4fe17717d77818e4a3", "a3bc1f07702d7d17411fa3a7d686efc4ac6e45d7b3f3d5f6091194afcf5ce9ab", "5c60807c2e560c0ca85edc301136a4f3f442dc738fc2896cebd0088d7273d7ab", "62248c534cc4cf906f63ce71b3662bb986430c563225d7106ab1f14791ca6d90", "f957f25e5fac2ee6e1de76b3272ad5ddc751414ef2bc1d67fdcb50484eea9be7", "300c97cc0ce4179ef67dd0d974fd7f70bcb7f4d71a8b675f7f2955c780d94ecf", "243796dcef2ee48f1a5132c42abb9ab11ae47ddf87f77797390ef0cf0cdd3a3b", "5e26cbaa9f32657aac5be852e9c560e429f80019fda2da39fee69685086325f2", "df44bb117da9c9c79919d78a16255715fd4c62aa03e6b67c4667907ac897e15a", "94a8c79e827851ebb6f043e393db73111e754a7b0b55fb0c83c6cbc6235f1603", "1db100d99f37b95d429df28a11f0bef873dc63c8510787e2c9be199662236f06", "680aa7cd5a2007a9f2ae2a76ed2fb2e3231c8b6cd3ccaeea951a089a91912223"},
+	{"90770a84646512101cadb195ee5e676388a004ea394cc7913051075dab2c27e6","3a34ac6e1042213afc32c759a773933ab4f3c915089d0d73577d10c8d19be586","ad8657af7f58c7711a0bc65ffa28585fb5fe8c479c094e16d67e7ef23e5be4f5","8755c4ef5a1f688857495e694d886f39ed0b9e793b4aa3c4b1e495e86d90cc45","0eb44323a055be6b30e8835f5b8044b3f554b9c32e44347fba4465b5fa7dcf32","43293bf2a84946dc176360a670670cfdefa8c8922350cafa5ff69d7f7a1191c0","7331ce7d53e7c3c8bf41638e6691daaf5f2f205f94c45d39bbbf1b0d77477328","8eda13259dc163ceaa4b31030c5ca90340e2c0ad0fa535e8e992d2b2a76ad1f7","dbe9422de38ad661d056b771b632652d6ee42b2ea7f10bda6477093824672bea","24e143a8dc116d935b8f1ec8164b42e3006937df062e8827cf43dd55e38db2d3","990242e21688e72c8daba7001e35213f65b1c1c1c9457029d41b8b23dc8531e2"},
+	{"90770a84646512101cadb195ee5e676388a004ea394cc7913051075dab2c27e6","3a34ac6e1042213afc32c759a773933ab4f3c915089d0d73577d10c8d19be586","ad8657af7f58c7711a0bc65ffa28585fb5fe8c479c094e16d67e7ef23e5be4f5","4cbfb023b480689fa5f8ced400b52fe36f4b595b653a05f21c4efa51c6b6d52b","6b760ede8113d73b697eb5a394710cafdfd3c00302dc461cfc111ded76756fe9","9a24a044e1b35f2c154f0f41f512345f96698c41027246c3346a4f72c0c9648a","ff23b670a37ab183a0a743ad31c381e1baa951b67a286531a17baf036bded1cf","f244f9d828095d4e2373ec6edabc8deffc83856b0825206f436a187b4e9db718","7408592ca41ce815653505fe774615412d4c226a37414e56a6b48c7c7f76ec5d","23d3023a5bdb8a43b9869504d1a9e00337192ae28f030b8499cb7a1ed6d11733","b92cf5010bfbe2d760a6b411b28eeb923931054613f60dc690641763c7b1263f"}}
+	notifyVersions := [3]string{"20000000","20000000","20000000"}
+	notifyNbitss := [3]string{"170901ba","170901ba","170901ba"}
+	notifyNtimes := [3]string{"628004ab" ,"628004e7","62800523"}
+	notifyCleans := [3]bool{false,false,false}
 
 	// "prod.s9x8", //worker name
 	// "d73b189a",  //job ID
 	// "",          //extra nonce 2
 	// "536dc802",  //time in bits
 	// "222771801") //nonce
-	workerNames := [3]string{"prod.s9x8","prod.s9x8","prod.s9x8"}
-	jobIDs := [3]string{"d73b189a","616c4a28","616c4a28"}
-	extraNonce2s := [3]string{"","77f9020000000000","5035030000000000"} //5a7a010000000000
-	nTimes := [3]string{"536dc802","61e6f66c","61e6f66c"} // 61e6f66c
-	nOnces := [3]string{"222771801","d83d2cf9","602849db"} // e6b732f5
 
-	time.Sleep(time.Second * 10)
+	// workerNames := [3]string{"prod.s9x8","prod.s9x8","prod.s9x8"}
+	// jobIDs := [3]string{"d73b189a","616c4a28","616c4a28"}
+	// extraNonce2s := [3]string{"","77f9020000000000","5035030000000000"} //5a7a010000000000
+	// nTimes := [3]string{"536dc802","61e6f66c","61e6f66c"} // 61e6f66c
+	// nOnces := [3]string{"222771801","d83d2cf9","602849db"} // e6b732f5
 
-	ps.SendValidateSetDiff(context.Background(), miner.ID, defaultDest.ID, 289)
-	time.Sleep(time.Second * 10)
+	// workerNames := [3]string{"seanmcadam.worker0","seanmcadam.worker0","seanmcadam.worker0"}
+	// jobIDs := [3]string{"57ef4334","57ef4334","57ef4334"}
+	// extraNonce2s := [3]string{"6654010000000000","e85f020000000000","bd77020000000000"} //5a7a010000000000
+	// nTimes := [3]string{"62800523","62800523","62800523"} // 61e6f66c
+	// nOnces := [3]string{"8d921ec5","f57dc4c0","5256e200"} // e6b732f5
 
-	ps.SendValidateNotify(context.Background(), miner.ID, defaultDest.ID, notifyJobId, notifyPrevBlock, notifyGen1, notifyGen2, notifyMerkles, notifyVersion, notifyNbits, notifyNtime, notifyClean)
-	time.Sleep(time.Second * 10)
 
-	for i:=0;i<3;i++ {
-		ps.SendValidateSubmit(context.Background(), workerNames[i], miner.ID, defaultDest.ID, jobIDs[i], extraNonce2s[i], nTimes[i], nOnces[i])
-		time.Sleep(time.Second * 40)
-	}
-	time.Sleep(time.Second * 10)
+	workerNames := [3]string{"seanmcadam.worker0","seanmcadam.worker1","seanmcadam.worker2"}
+	jobIDs := [3]string{"57ef4334","57ef4335","57ef4336"}
+	extraNonce2s := [3]string{"6654010000000000","e85f020000000000","bd77020000000000"} //5a7a010000000000
+	nTimes := [3]string{"62800523","62800523","62800523"} // 61e6f66c
+	nOnces := [3]string{"8d921ec5","f57dc4c0","5256e200"} // e6b732f5
+
+	time.Sleep(time.Second * 3)
+
+	ps.SendValidateSetDiff(context.Background(), miner.ID, defaultDest.ID, 65535) //486604799 4294901789
+	time.Sleep(time.Second * 3)
+
+	ps.SendValidateSetDiff(context.Background(), miner2.ID, defaultDest.ID, 65535) //486604799 4294901789
+	time.Sleep(time.Second * 3)
+
+	ps.SendValidateSetDiff(context.Background(), miner3.ID, defaultDest.ID, 65535) //486604799 4294901789
+	time.Sleep(time.Second * 3)
+
+	// ps.SendValidateNotify(context.Background(), miner.ID, defaultDest.ID, notifyJobId, notifyPrevBlock, notifyGen1, notifyGen2, notifyMerkles, notifyVersion, notifyNbits, notifyNtime, notifyClean)
+	// time.Sleep(time.Second * 10)
+	ps.SendValidateNotify(context.Background(), miner.ID, defaultDest.ID, notifyJobIds[0], notifyPrevBlocks[0], notifyGen1s[0], notifyGen2s[0], notifyMerkless[0], notifyVersions[0], notifyNbitss[0], notifyNtimes[0], notifyCleans[0])
+	time.Sleep(time.Second * 3)
+
+	ps.SendValidateNotify(context.Background(), miner2.ID, defaultDest.ID, notifyJobIds[1], notifyPrevBlocks[1], notifyGen1s[1], notifyGen2s[1], notifyMerkless[1], notifyVersions[1], notifyNbitss[1], notifyNtimes[1], notifyCleans[1])
+	time.Sleep(time.Second * 3)
+
+	ps.SendValidateNotify(context.Background(), miner3.ID, defaultDest.ID, notifyJobIds[2], notifyPrevBlocks[2], notifyGen1s[2], notifyGen2s[2], notifyMerkless[2], notifyVersions[2], notifyNbitss[2], notifyNtimes[2], notifyCleans[2])
+	time.Sleep(time.Second * 3)
+
+	ps.SendValidateSubmit(context.Background(), workerNames[0], miner.ID, defaultDest.ID, jobIDs[0], extraNonce2s[0], nTimes[0], nOnces[0])
+	time.Sleep(time.Second * 3)
+	
+	ps.SendValidateSubmit(context.Background(), workerNames[1], miner2.ID, defaultDest.ID, jobIDs[1], extraNonce2s[1], nTimes[1], nOnces[1])
+	time.Sleep(time.Second * 3)
+	
+	ps.SendValidateSubmit(context.Background(), workerNames[2], miner3.ID, defaultDest.ID, jobIDs[2], extraNonce2s[2], nTimes[2], nOnces[2])
+	time.Sleep(time.Second * 3)
+
+	//time.Sleep(time.Second * 10)
 }
