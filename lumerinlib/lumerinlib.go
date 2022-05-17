@@ -62,6 +62,7 @@ func FileLineFunc(a ...int) string {
 	var depth int = 1
 
 	if len(a) != 0 {
+		depth = len(a)
 		if depth < 1 && depth > 10 {
 			panic(FileLine() + " depth out of bounds")
 		}
