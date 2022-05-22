@@ -217,11 +217,8 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+" Got Set Difficulty Msg: %v", event)
 					setDifficultyMsg := validateMsg.Data.(*msgbus.SetDifficulty)
 					diffStr := strconv.Itoa(setDifficultyMsg.Diff + 570425344) // + 0x22000000
-					//fmt.Println("diffStr", diffStr)
 					diffEndian, _ := uintToLittleEndian(diffStr)
 					diffBigEndian := SwitchEndian(diffEndian)
-					//fmt.Println("diffEndian", diffEndian)
-					//fmt.Println("diffBigEndian", diffBigEndian)
 					v.MinerDiffs.Set(string(minerID), diffBigEndian)
 					if !v.MinersVal.Exists(string(minerID)) { // first time seeing miner
 						v.MinersVal.Set(string(minerID), false)
@@ -235,7 +232,6 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 					nBits := notifyMsg.Nbits
 					time := notifyMsg.Ntime
 					difficulty := v.MinerDiffs.Get(string(minerID)).(string)
-					//fmt.Println("difficulty:", difficulty)
 
 					merkelBranches := notifyMsg.MerkelBranches
 					merkelBranchesStr := []string{}
@@ -261,18 +257,25 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 						Difficulty:        nBits,
 					})
 
-					//fmt.Println("blockHeader", blockHeader)
-
 					if !v.MinersVal.Get(string(minerID)).(bool) { // no validation channel for miner yet
 						var createMessage = Message{}
 						createMessage.Address = string(minerID)
+						var workerName string
+						switch createMessage.Address {
+						case "MinerID01":
+							workerName = "seanmcadamworker0"
+						case "MinerID02":
+							workerName = "seanmcadamworker1"
+						case "MinerID03":
+							workerName = "seanmcadamworker2"
+						}
 						createMessage.MessageType = "createNew"
 						createMessage.Message = ConvertMessageToString(NewValidator{
 							BH:         blockHeader,
 							HashRate:   "",                   // not needed for now
 							Limit:      "",                   // not needed for now
 							Diff:       difficulty,           // highest difficulty allowed using difficulty encoding
-							WorkerName: "seanmcadam.worker0", //"seanmcadam.worker0", //worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
+							WorkerName: workerName, 		  // worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
 						})
 						v.SendMessageToValidator(createMessage)
 						v.MinersVal.Set(string(minerID), true)

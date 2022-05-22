@@ -254,10 +254,10 @@ func (cs *ConnectionScheduler) RunningContractsManager() {
 							contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 						}
 						for i,r := range cs.RunningContracts {
-							if r == c.(msgbus.Contract).ID && len(cs.RunningContracts) > 1 {
+							if r == c.(msgbus.Contract).ID && len(cs.RunningContracts) > (i+1) {
 								cs.RunningContracts = append(cs.RunningContracts[:i], cs.RunningContracts[i+1:]...)
-							} else if r == c.(msgbus.Contract).ID && len(cs.RunningContracts) == 1 {
-								cs.RunningContracts = []msgbus.ContractID{}
+							} else if r == c.(msgbus.Contract).ID {
+								cs.RunningContracts = cs.RunningContracts[:len(cs.RunningContracts) - 1]
 							}
 						}
 						cs.ReadyMiners.Set(string(m.ID), *m)
@@ -377,9 +377,13 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 	// find all miner combinations that add up to promised hashrate
 	minerCombinations := findSubsets(sortedReadyMiners, promisedHashrate, hashrateTolerance)
 	if minerCombinations == nil {
-		contextlib.Logf(cs.Ctx, log.LevelInfo, "Need to slice miner for valid combo on Contract: %s", contract.ID)
+		contextlib.Logf(cs.Ctx, log.LevelInfo, "Need to slice miner for valid combinantion on Contract: %s", contract.ID)
 
 		minerCombinations = findSlicedSubsets(sortedReadyMiners, promisedHashrate, hashrateTolerance)
+		if len(minerCombinations) == 0 {
+			contextlib.Logf(cs.Ctx, log.LevelInfo, "Hashrate Value from Contract %s too small to create Valid Miner Combination ", contract.ID)
+			return
+		}
 		sliceMiner = true
 	}
 
@@ -627,22 +631,25 @@ func findSlicedSubsets(sortedMiners MinerList, targetHashrate int, hashrateToler
 		}
 	}
 
+	if len(minerCombinations) == 0 {
+		return []MinerList{}
+	}
+
 	// only pass miner combinations where overflow of hashrate sum is caused by 1 miner
 	MIN := int(float64(targetHashrate) * (1 - hashrateTolerance))
 
-	index := 0
+	goodMinerCombinations := []MinerList{}
 	for _,m := range minerCombinations {
 		sum := 0
-		for i := 0; i < (len(m) - 1); i++{
-			sum += m[i].hashrate
+		for j := 0; j < (len(m) - 1); j++{
+			sum += m[j].hashrate
 		}
-		if sum > MIN {
-			minerCombinations = append(minerCombinations[:index], minerCombinations[index+1:]...)
+		if sum < MIN {
+			goodMinerCombinations = append(goodMinerCombinations, m)
 		}
-		index++
 	}
 
-	return minerCombinations
+	return goodMinerCombinations
 }
 
 func bestCombination(minerCombinations []MinerList, targetHashrate int) MinerList {

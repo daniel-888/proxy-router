@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
 	"time"
 
@@ -312,28 +311,6 @@ func TestValEnabled(t *testing.T) {
 	time.Sleep(time.Second * 2)
 
 	fmt.Print("\n\n/// Validator getting submits and updating miner hashrates ///\n\n\n")
-
-	for i:=0;i<10;i++ {
-		jobId1 := "JobId1-" + strconv.FormatInt(int64(i), 10)
-		jobId2 := "JobId2-" + strconv.FormatInt(int64(i), 10)
-		jobId3 := "JobId3-" + strconv.FormatInt(int64(i), 10)
-		miningSubmit1 := msgbus.Submit{
-			ID: msgbus.SubmitID(jobId1),
-			Miner: miner1.ID,
-		}
-		miningSubmit2 := msgbus.Submit{
-			ID: msgbus.SubmitID(jobId2),
-			Miner: miner2.ID,
-		}
-		miningSubmit3 := msgbus.Submit{
-			ID: msgbus.SubmitID(jobId3),
-			Miner: miner3.ID,
-		}
-		ps.PubWait(msgbus.SubmitMsg, msgbus.IDString(jobId1), miningSubmit1)
-		ps.PubWait(msgbus.SubmitMsg, msgbus.IDString(jobId2), miningSubmit2)
-		ps.PubWait(msgbus.SubmitMsg, msgbus.IDString(jobId3), miningSubmit3)
-		time.Sleep((time.Second * hashrateCalcLagTime)/10)
-	}
 
 	m1,_ := ps.MinerGetWait(miner1.ID)
 	m2,_ := ps.MinerGetWait(miner2.ID)
