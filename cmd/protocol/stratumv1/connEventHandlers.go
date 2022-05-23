@@ -991,6 +991,7 @@ func (svs *StratumV1Struct) handleDstReqNotify(uid simple.ConnUniqueID, request 
 			contextlib.Logf(svs.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" passing notify for state:%s", dststate)
 
 			minerID := svs.minerRec.ID
+			username := svs.dstDest[uid].Username()
 			destID := svs.minerRec.Dest
 			n := request.Params
 			jobID := n[0].(string)
@@ -1005,7 +1006,7 @@ func (svs *StratumV1Struct) handleDstReqNotify(uid simple.ConnUniqueID, request 
 
 			cs := contextlib.GetContextStruct(svs.Ctx())
 			ps := cs.GetMsgBus()
-			ps.SendValidateNotify(svs.Ctx(), minerID, destID, jobID, prevblock, gen1, gen2, merkel, version, nbits, ntime, clean)
+			ps.SendValidateNotify(svs.Ctx(), minerID, destID, username, jobID, prevblock, gen1, gen2, merkel, version, nbits, ntime, clean)
 
 			LogJson(svs.Ctx(), lumerinlib.FileLineFunc(), JSON_SEND_DST2SRC, msg)
 			svs.dstLastReqNotify[uid] = request
@@ -1168,6 +1169,7 @@ func (svs *StratumV1Struct) handleDstNoticeNotify(uid simple.ConnUniqueID, notic
 		if defRouteUid == uid {
 			minerID := svs.minerRec.ID
 			destID := svs.minerRec.Dest
+			username := svs.dstDest[uid].Username()
 			n := notice.Params.([]interface{})
 			jobID := n[0].(string)
 			prevblock := n[1].(string)
@@ -1181,7 +1183,7 @@ func (svs *StratumV1Struct) handleDstNoticeNotify(uid simple.ConnUniqueID, notic
 
 			cs := contextlib.GetContextStruct(svs.Ctx())
 			ps := cs.GetMsgBus()
-			ps.SendValidateNotify(svs.Ctx(), minerID, destID, jobID, prevblock, gen1, gen2, merkel, version, nbits, ntime, clean)
+			ps.SendValidateNotify(svs.Ctx(), minerID, destID, username, jobID, prevblock, gen1, gen2, merkel, version, nbits, ntime, clean)
 
 			LogJson(svs.Ctx(), lumerinlib.FileLineFunc(), JSON_SEND_DST2SRC, msg)
 			svs.protocol.WriteSrc(msg)
