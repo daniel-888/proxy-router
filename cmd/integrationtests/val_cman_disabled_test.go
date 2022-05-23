@@ -166,8 +166,6 @@ func TestValDisabled(t *testing.T) {
 		panic(fmt.Sprintf("Loading Config Failed: %s", err))
 	}
 
-	// var sleepTime time.Duration = 10 * time.Second
-
 	ps := msgbus.New(10, nil)
 
 	var hashrateCalcLagTime time.Duration = 20
@@ -313,8 +311,7 @@ func TestValDisabled(t *testing.T) {
 		ID:     msgbus.DestID(msgbus.GetRandomIDString()),
 		NetUrl: "stratum+tcp://127.0.0.1:55555/",
 	}
-	event,_ := ps.PubWait(msgbus.DestMsg, msgbus.IDString(targetDest.ID), targetDest)
-	targetDestID := msgbus.DestID(event.ID)
+	ps.PubWait(msgbus.DestMsg, msgbus.IDString(targetDest.ID), targetDest)
 
 	contract1.State = msgbus.ContRunningState
 	contract1.Buyer = "buyer1"
@@ -322,41 +319,25 @@ func TestValDisabled(t *testing.T) {
 	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract1.ID), contract1)
 	time.Sleep(reAdjustmentTime*time.Second)
 
-	var slicedMiner *msgbus.Miner
-	var fullMiner1 *msgbus.Miner
-	var fullMiner2 *msgbus.Miner
+	fmt.Print("\n--Time Slice 1--\n")
 	minerIDs,_ := ps.MinerGetAllWait()
-	for _,m := range minerIDs {
+	for i,m := range minerIDs {
 		miner,_ := ps.MinerGetWait(m)
-		if miner.TimeSlice {
-			slicedMiner = miner
-		} else if miner.Contracts[contract1.ID] && !miner.TimeSlice{
-			fullMiner1 = miner
-		} else {
-			fullMiner2 = miner
-		}
+		fmt.Printf("Miner%d: %v\n", i, miner)
 	}
-	if slicedMiner.Dest != targetDestID {
-		t.Errorf("Sliced miner dest field incorrect")
-	}
-
-	if fullMiner1.Dest != targetDestID {
-		t.Errorf("Full miner dest field incorrect")
-	}
+	fmt.Println()
 
 	time.Sleep((hashrateCalcLagTime/2 - reAdjustmentTime)*time.Second)
 
 	time.Sleep(reAdjustmentTime*time.Second)
 
-	slicedMiner,_ = ps.MinerGetWait(slicedMiner.ID)
-	fullMiner1,_ = ps.MinerGetWait(fullMiner1.ID)
-	if slicedMiner.Dest != defaultDestID {
-		t.Errorf("Sliced miner dest field incorrect")
+	fmt.Print("\n--Time Slice 2--\n")
+	minerIDs,_ = ps.MinerGetAllWait()
+	for i,m := range minerIDs {
+		miner,_ := ps.MinerGetWait(m)
+		fmt.Printf("Miner%d: %v\n", i, miner)
 	}
-
-	if fullMiner1.Dest != targetDestID {
-		t.Errorf("Full miner dest field incorrect")
-	}
+	fmt.Println()
 
 	time.Sleep((hashrateCalcLagTime/2 - reAdjustmentTime)*time.Second)
 
@@ -366,8 +347,7 @@ func TestValDisabled(t *testing.T) {
 		ID:     msgbus.DestID(msgbus.GetRandomIDString()),
 		NetUrl: "stratum+tcp://127.0.0.1:66666/",
 	}
-	event,_ = ps.PubWait(msgbus.DestMsg, msgbus.IDString(targetDest2.ID), targetDest2)
-	targetDest2ID := msgbus.DestID(event.ID)
+	ps.PubWait(msgbus.DestMsg, msgbus.IDString(targetDest2.ID), targetDest2)
 
 	contract2.State = msgbus.ContRunningState
 	contract2.Buyer = "buyer2"
@@ -376,40 +356,25 @@ func TestValDisabled(t *testing.T) {
 	time.Sleep(hashrateCalcLagTime*time.Second)
 	time.Sleep(reAdjustmentTime*time.Second)
 
-	slicedMiner,_ = ps.MinerGetWait(slicedMiner.ID)
-	fullMiner1,_ = ps.MinerGetWait(fullMiner1.ID)
-	fullMiner2,_ = ps.MinerGetWait(fullMiner2.ID)
-	if slicedMiner.Dest != targetDestID {
-		t.Errorf("Sliced miner dest field incorrect, Dest in Miner: %s", slicedMiner.Dest)
+	fmt.Print("\n--Time Slice 1--\n")
+	minerIDs,_ = ps.MinerGetAllWait()
+	for i,m := range minerIDs {
+		miner,_ := ps.MinerGetWait(m)
+		fmt.Printf("Miner%d: %v\n", i, miner)
 	}
-
-	if fullMiner1.Dest != targetDestID {
-		t.Errorf("Full miner 1 dest field incorrect, Dest in Miner: %s", fullMiner1.Dest)
-	}
-
-	if fullMiner2.Dest != targetDest2ID {
-		t.Errorf("Full miner 2 dest field incorrect, Dest in Miner: %s", fullMiner2.Dest)
-	}
+	fmt.Println()
 
 	time.Sleep((hashrateCalcLagTime/2 - reAdjustmentTime)*time.Second)
 
 	time.Sleep(reAdjustmentTime*time.Second)
 
-	slicedMiner,_ = ps.MinerGetWait(slicedMiner.ID)
-	fullMiner1,_ = ps.MinerGetWait(fullMiner1.ID)
-	fullMiner2,_ = ps.MinerGetWait(fullMiner2.ID)
-
-	if slicedMiner.Dest != targetDest2ID {
-		t.Errorf("Sliced miner dest field incorrect, Dest in Miner: %s", slicedMiner.Dest)
+	fmt.Print("\n--Time Slice 2--\n")
+	minerIDs,_ = ps.MinerGetAllWait()
+	for i,m := range minerIDs {
+		miner,_ := ps.MinerGetWait(m)
+		fmt.Printf("Miner%d: %v\n", i, miner)
 	}
-
-	if fullMiner1.Dest != targetDestID {
-		t.Errorf("Full miner 1 dest field incorrect, Dest in Miner: %s", fullMiner1.Dest)
-	}
-
-	if fullMiner2.Dest != targetDest2ID {
-		t.Errorf("Full miner 2 dest field incorrect, Dest in Miner: %s", fullMiner2.Dest)
-	}
+	fmt.Println()
 
 	time.Sleep((hashrateCalcLagTime/2 - reAdjustmentTime)*time.Second)
 
@@ -420,20 +385,10 @@ func TestValDisabled(t *testing.T) {
 	time.Sleep(hashrateCalcLagTime*time.Second)
 	time.Sleep(reAdjustmentTime*time.Second)
 
-	slicedMiner,_ = ps.MinerGetWait(slicedMiner.ID)
-	fullMiner1,_ = ps.MinerGetWait(fullMiner1.ID)
-	fullMiner2,_ = ps.MinerGetWait(fullMiner2.ID)
-
-	if slicedMiner.Dest != targetDest2ID {
-		t.Errorf("Sliced miner dest field incorrect, Dest in Miner: %s", slicedMiner.Dest)
-	}
-
-	if fullMiner1.Dest != defaultDestID {
-		t.Errorf("Full miner 1 dest field incorrect, Dest in Miner: %s", fullMiner1.Dest)
-	}
-
-	if fullMiner2.Dest != targetDest2ID {
-		t.Errorf("Full miner 2 dest field incorrect, Dest in Miner: %s", fullMiner2.Dest)
+	minerIDs,_ = ps.MinerGetAllWait()
+	for i,m := range minerIDs {
+		miner,_ := ps.MinerGetWait(m)
+		fmt.Printf("Miner%d: %v\n", i, miner)
 	}
 
 	time.Sleep((hashrateCalcLagTime/2 - reAdjustmentTime)*time.Second)
@@ -442,8 +397,12 @@ func TestValDisabled(t *testing.T) {
 
 	contract2.State = msgbus.ContAvailableState
 	ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contract2.ID), contract2)
+	time.Sleep(hashrateCalcLagTime*time.Second)
 	time.Sleep(reAdjustmentTime*time.Second)
 
-
-	time.Sleep(40*time.Second)
+	minerIDs,_ = ps.MinerGetAllWait()
+	for i,m := range minerIDs {
+		miner,_ := ps.MinerGetWait(m)
+		fmt.Printf("Miner%d: %v\n", i, miner)
+	}
 }

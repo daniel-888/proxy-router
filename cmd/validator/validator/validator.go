@@ -314,9 +314,15 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 					tabulationMessage.Message = ConvertMessageToString(mySubmit)
 
 					m := v.SendMessageToValidator(tabulationMessage)
+					hashCountStr,err := ReceiveHashCount(m.Message)
+					if err != nil {
+						contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to receive hashcount msg, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+					}
+
+					// parse hashcount field returned (need to fix how its returned e.g. {"HashCount":"%!s(uint=1537228672809129301)"}})
 					hashCountRunes := []rune{}
 					startFound := false
-					for _, v := range m.Message {
+					for _,v := range m.Message {
 						if v == ')' {
 							break
 						}
@@ -327,11 +333,11 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 							startFound = true
 						}
 					}
-					hashCountStr := string(hashCountRunes)
+					hashCountStr.HashCount = string(hashCountRunes)
 					
-					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+" Hashrate Calculated for Miner %s: %s", miner.ID, hashCountStr)
+					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+" Hashrate Calculated for Miner %s: %s", miner.ID, hashCountStr.HashCount)
 
-					hashCount, err := strconv.Atoi(hashCountStr)
+					hashCount, err := strconv.Atoi(hashCountStr.HashCount)
 					if err != nil {
 						contextlib.Logf(v.Ctx, log.LevelPanic, "Failed to convert hashrate string to int, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 					}
