@@ -227,6 +227,7 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 				case *msgbus.Notify:
 					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+" Got Notify Msg: %v", event)
 					notifyMsg := validateMsg.Data.(*msgbus.Notify)
+					username := notifyMsg.UserID
 					version := notifyMsg.Version
 					previousBlockHash := notifyMsg.PrevBlockHash
 					nBits := notifyMsg.Nbits
@@ -260,22 +261,13 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 					if !v.MinersVal.Get(string(minerID)).(bool) { // no validation channel for miner yet
 						var createMessage = Message{}
 						createMessage.Address = string(minerID)
-						var workerName string
-						switch createMessage.Address {
-						case "MinerID01":
-							workerName = "seanmcadamworker0"
-						case "MinerID02":
-							workerName = "seanmcadamworker1"
-						case "MinerID03":
-							workerName = "seanmcadamworker2"
-						}
 						createMessage.MessageType = "createNew"
 						createMessage.Message = ConvertMessageToString(NewValidator{
 							BH:         blockHeader,
 							HashRate:   "",                   // not needed for now
 							Limit:      "",                   // not needed for now
 							Diff:       difficulty,           // highest difficulty allowed using difficulty encoding
-							WorkerName: workerName, 		  // worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
+							WorkerName: username, 		  // worker name assigned to an individual mining rig. used to ensure that attempts are being allocated correctly
 						})
 						v.SendMessageToValidator(createMessage)
 						v.MinersVal.Set(string(minerID), true)

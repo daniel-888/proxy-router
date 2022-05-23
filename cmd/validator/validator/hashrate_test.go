@@ -179,14 +179,14 @@ func TestHashrate(t *testing.T) {
 
 	// ps.SendValidateNotify(context.Background(), miner.ID, defaultDest.ID, notifyJobId, notifyPrevBlock, notifyGen1, notifyGen2, notifyMerkles, notifyVersion, notifyNbits, notifyNtime, notifyClean)
 	// time.Sleep(time.Second * 10)
-	ps.SendValidateNotify(context.Background(), miner.ID, defaultDest.ID, notifyJobIds[0], notifyPrevBlocks[0], notifyGen1s[0], notifyGen2s[0], notifyMerkless[0], notifyVersions[0], notifyNbitss[0], notifyNtimes[0], notifyCleans[0])
+	ps.SendValidateNotify(context.Background(), miner.ID, defaultDest.ID, workerNames[0], notifyJobIds[0], notifyPrevBlocks[0], notifyGen1s[0], notifyGen2s[0], notifyMerkless[0], notifyVersions[0], notifyNbitss[0], notifyNtimes[0], notifyCleans[0])
 	time.Sleep(time.Second * 3)
 
 	ps.SendValidateSubmit(context.Background(), workerNames[0], miner.ID, defaultDest.ID, jobIDs[0], extraNonce2s[0], nTimes[0], nOnces[0])
 	time.Sleep(time.Second * 3)
 
 
-	ps.SendValidateNotify(context.Background(), miner.ID, defaultDest.ID, notifyJobIds[1], notifyPrevBlocks[1], notifyGen1s[1], notifyGen2s[1], notifyMerkless[1], notifyVersions[1], notifyNbitss[1], notifyNtimes[1], notifyCleans[1])
+	ps.SendValidateNotify(context.Background(), miner.ID, defaultDest.ID, workerNames[1], notifyJobIds[1], notifyPrevBlocks[1], notifyGen1s[1], notifyGen2s[1], notifyMerkless[1], notifyVersions[1], notifyNbitss[1], notifyNtimes[1], notifyCleans[1])
 	time.Sleep(time.Second * 3)
 
 	ps.SendValidateSubmit(context.Background(), workerNames[1], miner.ID, defaultDest.ID, jobIDs[1], extraNonce2s[1], nTimes[1], nOnces[1])
@@ -199,7 +199,7 @@ func TestHashrate(t *testing.T) {
 	time.Sleep(time.Second * 3)
 
 
-	ps.SendValidateNotify(context.Background(), miner.ID, defaultDest.ID, notifyJobIds[2], notifyPrevBlocks[2], notifyGen1s[2], notifyGen2s[2], notifyMerkless[2], notifyVersions[2], notifyNbitss[2], notifyNtimes[2], notifyCleans[2])
+	ps.SendValidateNotify(context.Background(), miner.ID, defaultDest.ID, workerNames[1], notifyJobIds[2], notifyPrevBlocks[2], notifyGen1s[2], notifyGen2s[2], notifyMerkless[2], notifyVersions[2], notifyNbitss[2], notifyNtimes[2], notifyCleans[2])
 	time.Sleep(time.Second * 3)
 
 	ps.SendValidateSubmit(context.Background(), workerNames[4], miner.ID, defaultDest.ID, jobIDs[4], extraNonce2s[4], nTimes[4], nOnces[4])
