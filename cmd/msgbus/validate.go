@@ -26,6 +26,7 @@ type Submit struct {
 
 type Notify struct {
 	JobID           string
+	UserID          string
 	PrevBlockHash   string
 	GenTransaction1 string
 	GenTransaction2 string
@@ -65,11 +66,12 @@ func newSubmit(workername string, jobid string, extranonce string, ntime string,
 	return s
 }
 
-func newNotify(jobid string, prevblock string, gen1 string, gen2 string, merkel []interface{}, version string, nbits string, ntime string, clean bool) (n *Notify) {
+func newNotify(jobid string, username string, prevblock string, gen1 string, gen2 string, merkel []interface{}, version string, nbits string, ntime string, clean bool) (n *Notify) {
 
 	n = &Notify{
 
 		JobID:           jobid,
+		UserID:          username,
 		PrevBlockHash:   prevblock,
 		GenTransaction1: gen1,
 		GenTransaction2: gen2,
@@ -118,9 +120,9 @@ func (ps *PubSub) SendValidateSubmit(ctx context.Context, workername string, m M
 //
 //
 //
-func (ps *PubSub) SendValidateNotify(ctx context.Context, m MinerID, d DestID, jobid string, prevblock string, gen1 string, gen2 string, merkel []interface{}, version string, nbits string, ntime string, clean bool) {
+func (ps *PubSub) SendValidateNotify(ctx context.Context, m MinerID, d DestID, username string, jobid string, prevblock string, gen1 string, gen2 string, merkel []interface{}, version string, nbits string, ntime string, clean bool) {
 
-	notify := newNotify(jobid, prevblock, gen1, gen2, merkel, version, nbits, ntime, clean)
+	notify := newNotify(jobid, username, prevblock, gen1, gen2, merkel, version, nbits, ntime, clean)
 	id := getValidateID()
 	validate := newValidate(id, string(m), string(d), notify)
 

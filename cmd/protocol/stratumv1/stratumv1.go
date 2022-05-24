@@ -163,7 +163,9 @@ FORLOOP:
 			break FORLOOP
 		case ps := <-protocolStructChan:
 			ss := NewStratumV1Struct(s.Ctx(), ps, s.scheduler)
-			ss.Run()
+			if ss != nil {
+				ss.Run()
+			}
 		}
 	}
 
@@ -184,7 +186,9 @@ func (s *StratumV1ListenStruct) goListenAcceptOnce() {
 		contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" context canceled")
 	case ps := <-protocolStructChan:
 		ss := NewStratumV1Struct(s.Ctx(), ps, s.scheduler)
-		ss.Run()
+		if ss != nil {
+			ss.Run()
+		}
 	}
 
 	contextlib.Logf(s.Ctx(), contextlib.LevelTrace, lumerinlib.FileLineFunc()+" Exiting...")
@@ -260,7 +264,8 @@ func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct, schedu
 
 	addr, e := ps.GetSrcRemoteAddr()
 	if e != nil {
-		contextlib.Logf(ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" GetSrcRemoteAddr() error:%s", e)
+		contextlib.Logf(ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" GetSrcRemoteAddr() error:%s", e)
+		return nil
 	}
 
 	addrstr := strings.Split(addr.String(), ":")
@@ -948,6 +953,7 @@ func (svs *StratumV1Struct) sendLastMiningNotice(uid simple.ConnUniqueID) (e err
 	notice := svs.dstLastMiningNotice[uid]
 	minerID := svs.minerRec.ID
 	destID := svs.minerRec.Dest
+	username := svs.dstDest[uid].Username()
 	n := notice.Params.([]interface{})
 	jobID := n[0].(string)
 	prevblock := n[1].(string)
@@ -961,7 +967,7 @@ func (svs *StratumV1Struct) sendLastMiningNotice(uid simple.ConnUniqueID) (e err
 
 	cs := contextlib.GetContextStruct(svs.Ctx())
 	ps := cs.GetMsgBus()
-	ps.SendValidateNotify(svs.Ctx(), minerID, destID, jobID, prevblock, gen1, gen2, merkel, version, nbits, ntime, clean)
+	ps.SendValidateNotify(svs.Ctx(), minerID, destID, username, jobID, prevblock, gen1, gen2, merkel, version, nbits, ntime, clean)
 
 	msg, e := notice.createNoticeMsg()
 
