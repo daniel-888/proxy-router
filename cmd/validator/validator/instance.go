@@ -3,6 +3,7 @@ package validator
 import (
 	"fmt"
 	"math/big"
+	"math"
 	"strconv"
 	"time"
 )
@@ -35,7 +36,10 @@ func (v *Validator) UpdateHashrate() uint {
 	//calculate the number of hashes represented by the pool difficulty target
 	bigDiffTarget := big.NewInt(int64(v.DifficultyTarget))
 	bigHashesAnalyzed := big.NewInt(int64(v.HashesAnalyzed))
-	hashesPerSubmission := new(big.Int).Exp(big.NewInt(2), bigDiffTarget, nil)
+	result1 := new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil)
+	result2 := new(big.Int).Div(result1, bigDiffTarget)
+	exponent := math.Log2(float64(result2.Int64()))
+	hashesPerSubmission := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(exponent)), nil)
 	//multiply the number of hashes checked by the hashes represented from the difficulty target
 	totalHashes := new(big.Int).Mul(hashesPerSubmission, bigHashesAnalyzed)
 	//divide represented hashes by time duration

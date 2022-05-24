@@ -215,13 +215,13 @@ func TestHashRatePerAsic(t *testing.T) {
 		if strings.Contains(hashingResult.Message, "ERROR") { //need to update this functionality
 			t.Errorf("incorrect hash: %v", hashingResult.Message)
 		}
-		time.Sleep(5*time.Second)
+		time.Sleep(5 * time.Second)
 	}
 	//creating hash request message
 	hashRequestMessage := createHashCounterRequestMessage()
 	hashCount := validator.SendMessageToValidator(hashRequestMessage)
 	resultingHashCount, receiveHashCountErr := ReceiveHashCount(hashCount.Message)
-	if receiveHashCountErr != nil{
+	if receiveHashCountErr != nil {
 		//error handling for ReceiveHashCount
 	}
 	fmt.Println(resultingHashCount.HashCount)
@@ -270,7 +270,7 @@ func TestSubmit2HashesVerifyCount(t *testing.T) {
 	hashCount := validator.SendMessageToValidator(hashRequestMessage)
 	resultingHashCount, receiveHashCountErr := ReceiveHashCount(hashCount.Message)
 	validator.SendMessageToValidator(createCloseMethod())
-	if receiveHashCountErr != nil{
+	if receiveHashCountErr != nil {
 		//error handling for ReceiveHashCount
 	}
 	if resultingHashCount.HashCount != "2" {

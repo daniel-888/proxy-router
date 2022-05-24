@@ -20,6 +20,7 @@ type Miner struct {
 	ID                      MinerID
 	Name                    string
 	IP                      string
+	Port                    int
 	MAC                     string
 	State                   MinerState
 	Contracts               map[ContractID]bool // Updated by Connection Scheduler

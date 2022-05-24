@@ -209,20 +209,6 @@ func (cs *ConnectionScheduler) ContractHandler(ch msgbus.EventChan) {
 					switch event.Data.(msgbus.Contract).State {
 					case msgbus.ContAvailableState:
 						contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Found Available Contract: %v", event)
-						if currentContract.State != msgbus.ContAvailableState {
-							// // free up busy miners with this contract id
-							// miners := cs.BusyMiners.GetAll()
-							// for _, v := range miners {
-							// 	if _,ok := v.(msgbus.Miner).Contracts[id]; ok {
-							// 		cs.BusyMiners.Delete(string(v.(msgbus.Miner).ID))
-							// 		m, err := cs.Ps.MinerRemoveContractWait(v.(msgbus.Miner).ID, id, cs.NodeOperator.DefaultDest)
-							// 		if err != nil {
-							// 			contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
-							// 		}
-							// 		cs.ReadyMiners.Set(string(m.ID), *m)
-							// 	}
-							// }
-						}
 
 					case msgbus.ContRunningState:
 						contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Found Running Contract: %v", event)
@@ -413,6 +399,64 @@ func (cs *ConnectionScheduler) WatchMinerEvents(ch msgbus.EventChan) {
 				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Event: %v", event)
 			}
 
+			return
+		case <-cs.ServiceContractChan:
+			contracts := cs.Contracts.GetAll()
+
+			// Fill up ready and busy miners map
+			miners, err := cs.Ps.MinerGetAllWait()
+			if err != nil {
+				contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+			}
+			for i := range miners {
+				miner, err := cs.Ps.MinerGetWait(miners[i])
+				if err != nil {
+					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+				}
+				if miner.State == msgbus.OnlineState {
+					if len(miner.Contracts) == 0 {
+						cs.ReadyMiners.Set(string(miners[i]), *miner)
+					} else {
+						cs.BusyMiners.Set(string(miners[i]), *miner)
+					}
+				}
+			}
+			readyMiners := cs.ReadyMiners.GetAll()
+			busyMiners := cs.BusyMiners.GetAll()
+			contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners In Routine Manager: %v", readyMiners)
+			contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners In Routine Manager: %v", busyMiners)
+
+			for _, c := range contracts {
+				if c.(msgbus.Contract).State == msgbus.ContRunningState {
+					if cs.Passthrough {
+						cs.wg.Add(1)
+						go cs.ContractRunningPassthrough(c.(msgbus.Contract).ID)
+					} else {
+						cs.wg.Add(1)
+						cs.RunningContracts = append(cs.RunningContracts, c.(msgbus.Contract).ID)
+						go cs.ContractRunning(c.(msgbus.Contract).ID)
+					}
+				} else {
+					// if in available state make sure no miners are servicing it
+					miners := cs.Ps.MinersContainContract(c.(msgbus.Contract).ID)
+					for _, v := range miners {
+						cs.BusyMiners.Delete(string(v.ID))
+						m, err := cs.Ps.MinerRemoveContractWait(v.ID, c.(msgbus.Contract).ID, cs.NodeOperator.DefaultDest)
+						if err != nil {
+							contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+						}
+						for i, r := range cs.RunningContracts {
+							if r == c.(msgbus.Contract).ID && len(cs.RunningContracts) > 1 {
+								cs.RunningContracts = append(cs.RunningContracts[:i], cs.RunningContracts[i+1:]...)
+							} else if r == c.(msgbus.Contract).ID && len(cs.RunningContracts) == 1 {
+								cs.RunningContracts = []msgbus.ContractID{}
+							}
+						}
+						cs.ReadyMiners.Set(string(m.ID), *m)
+					}
+				}
+			}
+			cs.wg.Wait()
 		}
 	}
 }
