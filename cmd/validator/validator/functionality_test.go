@@ -173,7 +173,7 @@ func createCloseMethod() Message {
 func TestCreateValidator(t *testing.T) {
 	//creating a validator
 	creationMessage := createTestValidator()
-	validator := MakeNewValidator()
+	validator := MakeNewValidator(nil)
 	validator.SendMessageToValidator(creationMessage)
 
 	//sending a hash message to the validator
@@ -205,7 +205,7 @@ func TestHashRatePerAsic(t *testing.T) {
 	*/
 	//creating a validator
 	creationMessage := createTestValidator()
-	validator := MakeNewValidator()
+	validator := MakeNewValidator(nil)
 	validator.SendMessageToValidator(creationMessage)
 
 	for i := 0; i < 5; i++ {
@@ -215,13 +215,13 @@ func TestHashRatePerAsic(t *testing.T) {
 		if strings.Contains(hashingResult.Message, "ERROR") { //need to update this functionality
 			t.Errorf("incorrect hash: %v", hashingResult.Message)
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(5*time.Second)
 	}
 	//creating hash request message
 	hashRequestMessage := createHashCounterRequestMessage()
 	hashCount := validator.SendMessageToValidator(hashRequestMessage)
 	resultingHashCount, receiveHashCountErr := ReceiveHashCount(hashCount.Message)
-	if receiveHashCountErr != nil {
+	if receiveHashCountErr != nil{
 		//error handling for ReceiveHashCount
 	}
 	fmt.Println(resultingHashCount.HashCount)
@@ -231,7 +231,7 @@ func TestHashRatePerAsic(t *testing.T) {
 func TestCreateValidatorValidateHashCloseValidator(t *testing.T) {
 	//creating a validator
 	creationMessage := createTestValidator()
-	validator := MakeNewValidator()
+	validator := MakeNewValidator(nil)
 	validator.SendMessageToValidator(creationMessage)
 
 	//sending a hash message to the validator
@@ -254,7 +254,7 @@ func TestCreateValidatorValidateHashCloseValidator(t *testing.T) {
 func TestSubmit2HashesVerifyCount(t *testing.T) {
 	//creating a validator
 	creationMessage := createTestValidator()
-	validator := MakeNewValidator()
+	validator := MakeNewValidator(nil)
 	validator.SendMessageToValidator(creationMessage)
 
 	//sending 2 mining.submit messages to validator
@@ -270,7 +270,7 @@ func TestSubmit2HashesVerifyCount(t *testing.T) {
 	hashCount := validator.SendMessageToValidator(hashRequestMessage)
 	resultingHashCount, receiveHashCountErr := ReceiveHashCount(hashCount.Message)
 	validator.SendMessageToValidator(createCloseMethod())
-	if receiveHashCountErr != nil {
+	if receiveHashCountErr != nil{
 		//error handling for ReceiveHashCount
 	}
 	if resultingHashCount.HashCount != "2" {
