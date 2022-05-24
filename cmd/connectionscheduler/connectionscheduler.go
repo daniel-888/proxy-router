@@ -13,6 +13,8 @@ import (
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
+const HASHRATE_LIMIT = 20
+
 type ConnectionScheduler struct {
 	Ps                   		*msgbus.PubSub
 	Contracts            		lumerinlib.ConcurrentMap
@@ -324,7 +326,8 @@ func (cs *ConnectionScheduler) ContractRunning(contractId msgbus.ContractID) {
 	}
 	contract := event.Data.(msgbus.Contract)
 
-	hashrateTolerance := float64(contract.Limit) / 100
+	//hashrateTolerance := float64(contract.Limit) / 100
+	hashrateTolerance := float64(HASHRATE_LIMIT) / 100
 
 	availableHashrate, _ := cs.calculateHashrateAvailability(contractId)
 
@@ -358,7 +361,8 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 
 	destid := contract.Dest
 	promisedHashrate := contract.Speed
-	hashrateTolerance := float64(contract.Limit) / 100
+	// hashrateTolerance := float64(contract.Limit) / 100
+	hashrateTolerance := float64(HASHRATE_LIMIT) / 100
 	sliceMiner := false
 
 	// in buyer node point miner directly to the pool

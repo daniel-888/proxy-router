@@ -265,7 +265,7 @@ func TestValDisabled(t *testing.T) {
 	time.Sleep(time.Second * 3)
 
 	// Miner 3
-	ps.SendValidateNotify(context.Background(), miner3.ID, defaultDestID, workerNames[2], notifyJobIds[2], notifyPrevBlocks[2], notifyGen1s[2], notifyGen2s[2], notifyMerkless[2], notifyVersions[2], notifyNbitss[2], notifyNtimes[2], notifyCleans[2])
+	ps.SendValidateNotify(context.Background(), miner3.ID, defaultDestID, workerNames[4], notifyJobIds[2], notifyPrevBlocks[2], notifyGen1s[2], notifyGen2s[2], notifyMerkless[2], notifyVersions[2], notifyNbitss[2], notifyNtimes[2], notifyCleans[2])
 	time.Sleep(time.Second * 3)
 
 	ps.SendValidateSubmit(context.Background(), workerNames[4], miner3.ID, defaultDestID, jobIDs[4], extraNonce2s[4], nTimes[4], nOnces[4])
