@@ -290,9 +290,10 @@ func (cs *ConnectionScheduler) WatchMinerEvents(ch msgbus.EventChan) {
 						connection.SetAvailable(false)
 					}
 				}
-
-				contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners: %v", cs.ReadyMiners.M)
-				contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners: %v", cs.BusyMiners.M)
+				readyMiners := cs.ReadyMiners.GetAll()
+				busyMiners := cs.BusyMiners.GetAll()
+				contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners: %v", readyMiners)
+				contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners: %v", busyMiners)
 
 				//
 				// Update Event
@@ -312,11 +313,15 @@ func (cs *ConnectionScheduler) WatchMinerEvents(ch msgbus.EventChan) {
 				case 0: // no contract
 					// Update the current miner data
 					connection.SetAvailable(true)
+					//cs.ReadyMiners.Set(string(id), miner)
 				default:
 					connection.SetAvailable(false)
+					//cs.ReadyMiners.Set(string(id), miner)
 				}
-				contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners: %v", cs.ReadyMiners.M)
-				contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners: %v", cs.BusyMiners.M)
+				readyMiners := cs.ReadyMiners.GetAll()
+				busyMiners := cs.BusyMiners.GetAll()
+				contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners: %v", readyMiners)
+				contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners: %v", busyMiners)
 
 				//
 				// Unpublish Event
@@ -359,9 +364,9 @@ func (cs *ConnectionScheduler) RunningContractsManager() {
 					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 				}
 				if miner.State == msgbus.OnlineState {
-					if len(miner.Contracts) == 0 && !cs.ReadyMiners.Exists(string(miner.ID)){
+					if len(miner.Contracts) == 0 {
 						cs.ReadyMiners.Set(string(miners[i]), *miner)
-					} else if len(miner.Contracts) > 0 && !cs.BusyMiners.Exists(string(miner.ID)) {
+					} else {
 						cs.BusyMiners.Set(string(miners[i]), *miner)
 					}
 				}
