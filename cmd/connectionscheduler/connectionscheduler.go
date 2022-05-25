@@ -91,17 +91,6 @@ func (cs *ConnectionScheduler) Start() (err error) {
 	// Start Contract Running Routine Manager
 	go cs.RunningContractsManager()
 
-	minerEventChan := msgbus.NewEventChan()
-
-	_, err = cs.Ps.Sub(msgbus.MinerMsg, "", minerEventChan)
-
-	if err != nil {
-		contextlib.Logf(cs.Ctx, log.LevelError, "Failed to subscribe to miner events, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
-		return err
-	}
-
-	go cs.WatchMinerEvents(minerEventChan)
-
 	// Update connection scheduler with current miners in online state
 	miners, err := cs.Ps.MinerGetAllWait()
 	if err != nil {
@@ -138,6 +127,15 @@ func (cs *ConnectionScheduler) Start() (err error) {
 			}
 		}
 	}
+
+	// Monitor Miner Events
+	minerEventChan := msgbus.NewEventChan()
+	_, err = cs.Ps.Sub(msgbus.MinerMsg, "", minerEventChan)
+	if err != nil {
+		contextlib.Logf(cs.Ctx, log.LevelError, "Failed to subscribe to miner events, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+		return err
+	}
+	go cs.WatchMinerEvents(minerEventChan)
 
 	return err
 }
@@ -350,6 +348,10 @@ func (cs *ConnectionScheduler) WatchMinerEvents(ch msgbus.EventChan) {
 				}
 
 				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Publish Event: %v", event)
+
+				if !cs.ReadyMiners.Exists(string(id)) && !cs.BusyMiners.Exists(string(id)) {
+					cs.ReadyMiners.Set(string(id), miner)
+				}
 
 				switch len(miner.Contracts) {
 				case 0: // no contract
