@@ -16,6 +16,7 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/connections"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
@@ -88,7 +89,8 @@ func TestBuyerRoutine(t *testing.T) {
 	}
 
 	// start connection scheduler look at miners
-	cs, err := connectionscheduler.New(&mainCtx, &NodeOperator, false, 0)
+	connectionCollection := connections.CreateConnectionCollection()
+	cs, err := connectionscheduler.New(&mainCtx, &NodeOperator, false, 0, connectionCollection)
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}

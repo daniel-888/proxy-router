@@ -17,6 +17,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/connections"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
 	"gitlab.com/TitanInd/lumerin/cmd/validator/validator"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
@@ -91,6 +92,11 @@ func ValEnabledSimMain(ps *msgbus.PubSub, configs ValEnabledConfig, hashrateCalc
 	mainContext := context.Background()
 
 	//
+	// Create Connection Collection
+	//
+	connectionCollection := connections.CreateConnectionCollection()
+
+	//
 	// Add the various Context variables here
 	// msgbus, logger, defailt listen address, defalt desitnation address
 	//
@@ -158,7 +164,7 @@ func ValEnabledSimMain(ps *msgbus.PubSub, configs ValEnabledConfig, hashrateCalc
 	//
 	// Fire up schedule manager
 	//
-	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, false, int(hashrateCalcLagTime))
+	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, false, int(hashrateCalcLagTime), connectionCollection)
 	if err != nil {
 		panic(fmt.Sprintf("Schedule manager failed: %v", err))
 	}

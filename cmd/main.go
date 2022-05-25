@@ -60,7 +60,6 @@ func main() {
 	//
 	// Create Connection Collection
 	//
-
 	connectionCollection := connections.CreateConnectionCollection()
 
 	// Add the various Context variables here

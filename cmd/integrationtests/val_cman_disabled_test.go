@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/connections"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
 	"gitlab.com/TitanInd/lumerin/cmd/validator/validator"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
@@ -68,6 +69,11 @@ func LoadValDisabledTestConfiguration(filePath string) (configs ValDisabledConfi
 
 func ValDisabledSimMain(ps *msgbus.PubSub, configs ValDisabledConfig, hashrateCalcLagTime time.Duration) msgbus.DestID {
 	mainContext := context.Background()
+
+	//
+	// Create Connection Collection
+	//
+	connectionCollection := connections.CreateConnectionCollection()
 
 	//
 	// Add the various Context variables here
@@ -137,7 +143,7 @@ func ValDisabledSimMain(ps *msgbus.PubSub, configs ValDisabledConfig, hashrateCa
 	//
 	// Fire up schedule manager
 	//
-	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, false, int(hashrateCalcLagTime))
+	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, false, int(hashrateCalcLagTime), connectionCollection)
 	if err != nil {
 		panic(fmt.Sprintf("Schedule manager failed: %v", err))
 	}
