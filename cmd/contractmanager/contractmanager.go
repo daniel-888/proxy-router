@@ -556,35 +556,36 @@ loop:
 			block, err := seller.EthClient.BlockByHash(context.Background(), header.Hash())
 			if err != nil {
 				contextlib.Logf(seller.Ctx, log.LevelWarn, fmt.Sprintf("Funcname::%s, Fileline::%s, Error::", lumerinlib.Funcname(), lumerinlib.FileLine()), err)
-			}
+			} else {
+				// check if contract length has passed
+				if block.Time() >= uint64(contractFinishedTimestamp) {
+					var closeOutType uint
 
-			// check if contract length has passed
-			if block.Time() >= uint64(contractFinishedTimestamp) && err == nil {
-				var closeOutType uint
-
-				// seller only wants to closeout
-				closeOutType = 2
-				// seller wants to claim funds with closeout
-				if seller.ClaimFunds {
-					closeOutType = 3
-				}
-
-				// if contract was not already closed early, close out here
-				contractValues, err := readHashrateContract(seller.EthClient, common.HexToAddress(string(contractMsg.ID)))
-				if err != nil {
-					contextlib.Logf(seller.Ctx, log.LevelPanic, fmt.Sprintf("Reading hashrate contract failed, Fileline::%s, Error::", lumerinlib.FileLine()), err)
-				}
-				if contractValues.State == RunningState {
-					var wg sync.WaitGroup
-					wg.Add(1)
-					err = setContractCloseOut(seller.EthClient, seller.Account, seller.PrivateKey, common.HexToAddress(string(contractMsg.ID)), &wg, &seller.CurrentNonce, closeOutType, seller.Ps, seller.NodeOperator)
-					if err != nil {
-						contextlib.Logf(seller.Ctx, log.LevelPanic, fmt.Sprintf("Contract Close Out failed, Fileline::%s, Error::", lumerinlib.FileLine()), err)
+					// seller only wants to closeout
+					closeOutType = 2
+					// seller wants to claim funds with closeout
+					if seller.ClaimFunds {
+						closeOutType = 3
 					}
-					wg.Wait()
+
+					// if contract was not already closed early, close out here
+					contractValues, err := readHashrateContract(seller.EthClient, common.HexToAddress(string(contractMsg.ID)))
+					if err != nil {
+						contextlib.Logf(seller.Ctx, log.LevelPanic, fmt.Sprintf("Reading hashrate contract failed, Fileline::%s, Error::", lumerinlib.FileLine()), err)
+					}
+					if contractValues.State == RunningState {
+						var wg sync.WaitGroup
+						wg.Add(1)
+						err = setContractCloseOut(seller.EthClient, seller.Account, seller.PrivateKey, common.HexToAddress(string(contractMsg.ID)), &wg, &seller.CurrentNonce, closeOutType, seller.Ps, seller.NodeOperator)
+						if err != nil {
+							contextlib.Logf(seller.Ctx, log.LevelPanic, fmt.Sprintf("Contract Close Out failed, Fileline::%s, Error::", lumerinlib.FileLine()), err)
+						}
+						wg.Wait()
+					}
+					break loop
 				}
-				break loop
 			}
+
 		}
 	}
 }
