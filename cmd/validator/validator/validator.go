@@ -212,6 +212,7 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 				// }
 				//workerName := dest.Username() + ":" + dest.Password()
 
+				loop:
 				switch validateMsg.Data.(type) {
 				case *msgbus.SetDifficulty:
 					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+" Got Set Difficulty Msg: %v", event)
@@ -226,6 +227,9 @@ func (v *MainValidator) validateHandler(ch msgbus.EventChan) {
 
 				case *msgbus.Notify:
 					contextlib.Logf(v.Ctx, log.LevelTrace, lumerinlib.Funcname()+" Got Notify Msg: %v", event)
+					if !v.MinerDiffs.Exists(string(minerID)) { // did not get set diffculty message for miner yet
+						break loop
+					}
 					notifyMsg := validateMsg.Data.(*msgbus.Notify)
 					username := notifyMsg.UserID
 					version := notifyMsg.Version

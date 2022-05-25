@@ -555,11 +555,11 @@ loop:
 			// get latest block from header
 			block, err := seller.EthClient.BlockByHash(context.Background(), header.Hash())
 			if err != nil {
-				contextlib.Logf(seller.Ctx, log.LevelPanic, fmt.Sprintf("Funcname::%s, Fileline::%s, Error::", lumerinlib.Funcname(), lumerinlib.FileLine()), err)
+				contextlib.Logf(seller.Ctx, log.LevelWarn, fmt.Sprintf("Funcname::%s, Fileline::%s, Error::", lumerinlib.Funcname(), lumerinlib.FileLine()), err)
 			}
 
 			// check if contract length has passed
-			if block.Time() >= uint64(contractFinishedTimestamp) {
+			if block.Time() >= uint64(contractFinishedTimestamp) && err == nil {
 				var closeOutType uint
 
 				// seller only wants to closeout
