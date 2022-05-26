@@ -313,10 +313,10 @@ func (cs *ConnectionScheduler) WatchMinerEvents(ch msgbus.EventChan) {
 				case 0: // no contract
 					// Update the current miner data
 					connection.SetAvailable(true)
-					cs.ReadyMiners.Set(string(id), miner)
+					//cs.ReadyMiners.Set(string(id), miner)
 				default:
 					connection.SetAvailable(false)
-					cs.ReadyMiners.Set(string(id), miner)
+					//cs.BusyMiners.Set(string(id), miner)
 				}
 				readyMiners := cs.ReadyMiners.GetAll()
 				busyMiners := cs.BusyMiners.GetAll()

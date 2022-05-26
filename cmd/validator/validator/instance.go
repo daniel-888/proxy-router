@@ -37,12 +37,14 @@ func (v *Validator) UpdateHashrate() uint {
 	bigDiffTarget := big.NewInt(int64(v.DifficultyTarget))
 	bigHashesAnalyzed := big.NewInt(int64(v.HashesAnalyzed))
 	result1 := new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil)
+	if bigDiffTarget.Cmp(big.NewInt(0)) == 0 {return 0} // avoid div by 0 panic
 	result2 := new(big.Int).Div(result1, bigDiffTarget)
 	exponent := math.Log2(float64(result2.Int64()))
 	hashesPerSubmission := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(exponent)), nil)
 	//multiply the number of hashes checked by the hashes represented from the difficulty target
 	totalHashes := new(big.Int).Mul(hashesPerSubmission, bigHashesAnalyzed)
 	//divide represented hashes by time duration
+	if big.NewInt(int64(contractDuration.Seconds())).Cmp(big.NewInt(0)) == 0 {return 0} // avoid div by 0 panic
 	rateBigInt := new(big.Int).Div(totalHashes, big.NewInt(int64(contractDuration.Seconds())))
 	return uint(rateBigInt.Uint64())
 	//update contracthashrate with value
