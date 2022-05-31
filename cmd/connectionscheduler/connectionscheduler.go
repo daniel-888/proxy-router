@@ -14,7 +14,10 @@ import (
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
-const HASHRATE_LIMIT = 20
+const (
+	HASHRATE_LIMIT = 20
+	MIN_SLICE = 0.10
+)
 
 type ConnectionScheduler struct {
 	Ps                   *msgbus.PubSub
@@ -35,6 +38,7 @@ type ConnectionScheduler struct {
 type Miner struct {
 	id       msgbus.MinerID
 	hashrate int
+	slicePercent float64
 }
 type MinerList []Miner
 
@@ -395,11 +399,10 @@ func (cs *ConnectionScheduler) RunningContractsManager() {
 						if err != nil {
 							contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 						}
-						for i, r := range cs.RunningContracts {
-							if r == c.(msgbus.Contract).ID && len(cs.RunningContracts) > 1 {
-								cs.RunningContracts = append(cs.RunningContracts[:i], cs.RunningContracts[i+1:]...)
-							} else if r == c.(msgbus.Contract).ID && len(cs.RunningContracts) == 1 {
-								cs.RunningContracts = []msgbus.ContractID{}
+						newRunningContracts := []msgbus.ContractID{}
+						for _,r := range cs.RunningContracts {
+							if r != c.(msgbus.Contract).ID {
+								newRunningContracts = append(newRunningContracts, r)
 							}
 						}
 						cs.ReadyMiners.Set(string(m.ID), *m)
@@ -435,7 +438,7 @@ func (cs *ConnectionScheduler) ContractRunningPassthrough(contractId msgbus.Cont
 	miners := cs.ReadyMiners.GetAll()
 
 	for _, m := range miners {
-		_, err = cs.Ps.MinerSetContractWait(m.(msgbus.Miner).ID, contract.ID, false)
+		_, err = cs.Ps.MinerSetContractWait(m.(msgbus.Miner).ID, contract.ID, 1, false)
 		if err != nil {
 			contextlib.Logf(cs.Ctx, log.LevelWarn, lumerinlib.FileLine()+"Error:%v", err)
 		}
@@ -501,9 +504,7 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 
 	destid := contract.Dest
 	promisedHashrate := contract.Speed
-	// hashrateTolerance := float64(contract.Limit) / 100
 	hashrateTolerance := float64(HASHRATE_LIMIT) / 100
-	sliceMiner := false
 
 	// in buyer node point miner directly to the pool
 	if cs.NodeOperator.IsBuyer {
@@ -520,96 +521,80 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 
 	// find all miner combinations that add up to promised hashrate
 	minerCombinations := findSubsets(sortedReadyMiners, promisedHashrate, hashrateTolerance)
-	if minerCombinations == nil {
-		contextlib.Logf(cs.Ctx, log.LevelInfo, "Need to slice miner for valid combinantion on Contract: %s", contract.ID)
-
-		minerCombinations = findSlicedSubsets(sortedReadyMiners, promisedHashrate, hashrateTolerance)
-		if len(minerCombinations) == 0 {
-			contextlib.Logf(cs.Ctx, log.LevelInfo, "Hashrate Value from Contract %s too small to create Valid Miner Combination ", contract.ID)
-			return
-		}
-		sliceMiner = true
+	if len(minerCombinations) == 0 {
+		contextlib.Logf(cs.Ctx, log.LevelInfo, "Hashrate Value from Contract %s too small to create Valid Miner Combination ", contract.ID)
+		return
 	}
 
 	contextlib.Logf(cs.Ctx, log.LevelInfo, "Valid Miner Combinations for Contract %s: %v", contract.ID, minerCombinations)
 
 	// find best combination of miners
-	var minerCombination MinerList
-	if !sliceMiner {
-		minerCombination = bestCombination(minerCombinations, promisedHashrate)
-	} else {
-		minerCombination = bestSlicedCombination(minerCombinations, promisedHashrate)
-	}
+	minerCombination := bestCombination(minerCombinations, promisedHashrate)
 
 	contextlib.Logf(cs.Ctx, log.LevelInfo, "Best Miner Combination for Contract %s: %v", contract.ID, minerCombination)
 
 	// set contract and target destination for miners in optimal miner combination
-	for i, v := range minerCombination {
-		if (i == len(minerCombination)-1) && sliceMiner {
-			_, err := cs.Ps.MinerSetContractWait(v.id, contract.ID, true)
+	slicedMiners := []msgbus.Miner{}
+	for _, v := range minerCombination {
+		miner, err := cs.Ps.MinerGetWait(v.id)
+		if err != nil {
+			contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+		}
+		slicePercent := float64(v.hashrate)/float64(miner.CurrentHashRate)
+
+		if slicePercent < 1 {
+			_, err = cs.Ps.MinerSetContractWait(v.id, contract.ID, slicePercent, true)
 			if err != nil {
 				contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 			}
-			break
+			slicedMiners = append(slicedMiners, *miner)
+		} else {
+			_, err = cs.Ps.MinerSetContractWait(v.id, contract.ID, slicePercent, false)
+			if err != nil {
+				contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+			}
+			miner, err = cs.Ps.MinerSetDestWait(v.id, destid)
+			if err != nil {
+				contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+			}
+			cs.ReadyMiners.Delete(string(miner.ID))
+			cs.BusyMiners.Set(string(miner.ID), *miner)
 		}
-		_, err := cs.Ps.MinerSetContractWait(v.id, contract.ID, false)
-		if err != nil {
-			contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
-		}
-		miner, err := cs.Ps.MinerSetDestWait(v.id, destid)
-		if err != nil {
-			contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
-		}
-		cs.ReadyMiners.Delete(string(miner.ID))
-		cs.BusyMiners.Set(string(miner.ID), *miner)
 	}
 
-	if sliceMiner {
-		slicedMiner, err := cs.Ps.MinerGetWait(minerCombination[minerCombination.Len()-1].id)
-		if err != nil {
-			contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
-		}
-
-		contract1 := cs.RunningContracts[0] // if slicing between multiple contracts only make miner updates for that miner in one contract running routine
-
-		if len(slicedMiner.Contracts) == 1 {
-			miner, err := cs.Ps.MinerSetDestWait(slicedMiner.ID, destid)
-			if err != nil {
-				contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
-			}
-			cs.ReadyMiners.Delete(string(miner.ID))
-			cs.BusyMiners.Set(string(miner.ID), *miner)
-			readyMiners := cs.ReadyMiners.GetAll()
-			busyMiners := cs.BusyMiners.GetAll()
-			contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners In Contract %s Set Target Func: %v", contract.ID, readyMiners)
-			contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners In Contract %s Set Target Func: %v", contract.ID, busyMiners)
-			time.Sleep(time.Second * time.Duration(cs.HashrateCalcLagTime/2))
-
-			contextlib.Logf(cs.Ctx, log.LevelInfo, "Switching Sliced Miner Dest to Default Dest, Miner: %s", slicedMiner.ID)
-			miner, err = cs.Ps.MinerSetDestWait(slicedMiner.ID, cs.NodeOperator.DefaultDest)
-			if err != nil {
-				contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
-			}
-			cs.ReadyMiners.Delete(string(miner.ID))
-			cs.BusyMiners.Set(string(miner.ID), *miner)
-			readyMiners = cs.ReadyMiners.GetAll()
-			busyMiners = cs.BusyMiners.GetAll()
-			contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners In Contract %s Set Target Func: %v", contract.ID, readyMiners)
-			contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners In Contract %s Set Target Func: %v", contract.ID, busyMiners)
-			time.Sleep(time.Second * time.Duration(cs.HashrateCalcLagTime/2))
-		} else if len(slicedMiner.Contracts) > 1 && contract.ID == contract1 {
-			var contracts []msgbus.Contract
-			for k := range slicedMiner.Contracts {
-				event, err := cs.Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(k))
+	totalDuration := time.Second * time.Duration(cs.HashrateCalcLagTime)
+	if len(slicedMiners) == 0 {
+		contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners In Contract %s Set Target Func: %v", contract.ID, cs.ReadyMiners.M)
+		contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners In Contract %s Set Target Func: %v", contract.ID, cs.ReadyMiners.M)
+		time.Sleep(totalDuration)
+	} else {
+		totalDuration := time.Second * time.Duration(cs.HashrateCalcLagTime)
+		for i, m := range slicedMiners {
+			var durationPassed time.Duration
+			for i, v := range m.Contracts {
+				contextlib.Logf(cs.Ctx, log.LevelInfo, "Switching Sliced Miner %s Dest to service Contract: %s", m.ID, i)
+				event, err := cs.Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(i))
 				if err != nil {
 					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 				}
-				contracts = append(contracts, event.Data.(msgbus.Contract))
+				contract = event.Data.(msgbus.Contract)
+				miner, err := cs.Ps.MinerSetDestWait(m.ID, contract.Dest)
+				if err != nil {
+					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
+				}
+				slicedDuration := time.Second * time.Duration(int(float64(cs.HashrateCalcLagTime)*v))
+				cs.ReadyMiners.Delete(string(miner.ID))
+				cs.BusyMiners.Set(string(miner.ID), *miner)
+				readyMiners := cs.ReadyMiners.GetAll()
+				busyMiners := cs.BusyMiners.GetAll()
+				contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners In Contract %s Set Target Func: %v", contract.ID, readyMiners)
+				contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners In Contract %s Set Target Func: %v", contract.ID, busyMiners)
+				time.Sleep(slicedDuration)
+				durationPassed += slicedDuration
 			}
-
-			for _, c := range contracts {
-				contextlib.Logf(cs.Ctx, log.LevelInfo, "Switching Sliced Miner %s Dest to service Contract: %s", slicedMiner.ID, c.ID)
-				miner, err := cs.Ps.MinerSetDestWait(slicedMiner.ID, c.Dest)
+			if (i == len(slicedMiners)-1) && (durationPassed < totalDuration) {
+				contextlib.Logf(cs.Ctx, log.LevelInfo, "Switching Sliced Miner Dest to Default Dest, Miner: %s", m.ID)
+				miner, err := cs.Ps.MinerSetDestWait(m.ID, cs.NodeOperator.DefaultDest)
 				if err != nil {
 					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 				}
@@ -619,13 +604,9 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 				busyMiners := cs.BusyMiners.GetAll()
 				contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners In Contract %s Set Target Func: %v", contract.ID, readyMiners)
 				contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners In Contract %s Set Target Func: %v", contract.ID, busyMiners)
-				time.Sleep(time.Second * time.Duration(cs.HashrateCalcLagTime/len(contracts)))
+				time.Sleep(totalDuration - durationPassed)
 			}
 		}
-	} else {
-		contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners In Contract %s Set Target Func: %v", contract.ID, cs.ReadyMiners.M)
-		contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners In Contract %s Set Target Func: %v", contract.ID, cs.ReadyMiners.M)
-		time.Sleep(time.Second * time.Duration(cs.HashrateCalcLagTime))
 	}
 }
 
@@ -640,11 +621,12 @@ func (cs *ConnectionScheduler) calculateHashrateAvailability(id msgbus.ContractI
 			if !v.(msgbus.Miner).TimeSlice {
 				contractHashrate += v.(msgbus.Miner).CurrentHashRate
 			} else {
-				contractHashrate += v.(msgbus.Miner).CurrentHashRate / 2
+				contractHashrate += int(float64(v.(msgbus.Miner).CurrentHashRate) * v.(msgbus.Miner).Contracts[id])
 			}
 		}
-		if v.(msgbus.Miner).TimeSlice && len(v.(msgbus.Miner).Contracts) < 2 {
-			availableHashrate += v.(msgbus.Miner).CurrentHashRate / 2
+		if v.(msgbus.Miner).TimeSlice {
+			leftoverSlicePercent := cs.Ps.MinerSlicedUtilization(v.(msgbus.Miner).ID)
+			availableHashrate += int(float64(v.(msgbus.Miner).CurrentHashRate) * leftoverSlicePercent)
 		}
 	}
 	availableHashrate += contractHashrate
@@ -659,16 +641,17 @@ func (cs *ConnectionScheduler) sortMinersByHashrate(contractId msgbus.ContractID
 
 	miners := cs.ReadyMiners.GetAll()
 	for _, v := range miners {
-		m = append(m, Miner{v.(msgbus.Miner).ID, v.(msgbus.Miner).CurrentHashRate})
+		m = append(m, Miner{v.(msgbus.Miner).ID, v.(msgbus.Miner).CurrentHashRate, 0})
 	}
 
 	// include busy miners that are already associated with contract and sliced miners with extra contract space
 	miners = cs.BusyMiners.GetAll()
 	for _, v := range miners {
 		if _, ok := v.(msgbus.Miner).Contracts[contractId]; ok {
-			m = append(m, Miner{v.(msgbus.Miner).ID, v.(msgbus.Miner).CurrentHashRate})
-		} else if v.(msgbus.Miner).TimeSlice && len(v.(msgbus.Miner).Contracts) < 2 {
-			m = append(m, Miner{v.(msgbus.Miner).ID, v.(msgbus.Miner).CurrentHashRate})
+			m = append(m, Miner{v.(msgbus.Miner).ID, v.(msgbus.Miner).CurrentHashRate, 0})
+		} else if v.(msgbus.Miner).TimeSlice && (cs.Ps.MinerSlicedUtilization(v.(msgbus.Miner).ID) > 0) {
+			leftoverSlicePercent := cs.Ps.MinerSlicedUtilization(v.(msgbus.Miner).ID)
+			m = append(m, Miner{v.(msgbus.Miner).ID, int(float64(v.(msgbus.Miner).CurrentHashRate) * leftoverSlicePercent), 0})
 		}
 	}
 
@@ -676,7 +659,7 @@ func (cs *ConnectionScheduler) sortMinersByHashrate(contractId msgbus.ContractID
 	return m
 }
 
-func sumSubsets(sortedMiners MinerList, n int, targetHashrate int, hashrateTolerance float64) (m MinerList) {
+func sumSubsets(sortedMiners MinerList, n int, targetHashrate int, hashrateTolerance float64) (m MinerList, sum int) {
 	// Create new array with size equal to sorted miners array to create binary array as per n(decimal number)
 	x := make([]int, sortedMiners.Len())
 	j := sortedMiners.Len() - 1
@@ -688,90 +671,45 @@ func sumSubsets(sortedMiners MinerList, n int, targetHashrate int, hashrateToler
 		j--
 	}
 
-	sum := 0
+	sumPrev := 0 // only return subsets where hashrate overflow is caused by 1 miner
 
 	// Calculate the sum of this subset
 	for i := range sortedMiners {
 		if x[i] == 1 {
 			sum += sortedMiners[i].hashrate
 		}
-	}
-
-	MIN := int(float64(targetHashrate) * (1 - hashrateTolerance))
-	MAX := int(float64(targetHashrate) * (1 + hashrateTolerance))
-
-	// if sum is within target hashrate bounds, subset was found
-	if sum >= MIN && sum <= MAX {
-		for i := range sortedMiners {
-			if x[i] == 1 {
-				m = append(m, sortedMiners[i])
-			}
-		}
-		return m
-	}
-
-	return nil
-}
-
-func sumSlicedSubsets(sortedMiners MinerList, n int, targetHashrate int, hashrateTolerance float64) (m MinerList) {
-	// Create new array with size equal to sorted miners array to create binary array as per n(decimal number)
-	x := make([]int, sortedMiners.Len())
-	j := sortedMiners.Len() - 1
-
-	// Convert the array into binary array
-	for n > 0 {
-		x[j] = n % 2
-		n = n / 2
-		j--
-	}
-
-	sum := 0
-
-	// Calculate the sum of this subset
-	for i := range sortedMiners {
-		if x[i] == 1 {
-			sum += sortedMiners[i].hashrate
+		if i == len(sortedMiners) - 1 {
+			sumPrev = sum - sortedMiners[i].hashrate
 		}
 	}
 
 	MIN := int(float64(targetHashrate) * (1 - hashrateTolerance))
 
 	// if sum is within target hashrate bounds, subset was found
-	if sum >= MIN {
+	if sum >= MIN && sumPrev < MIN{
 		for i := range sortedMiners {
 			if x[i] == 1 {
 				m = append(m, sortedMiners[i])
 			}
 		}
-		return m
+		return m, sum
 	}
 
-	return nil
+	return nil,0
 }
 
 // find subsets of list of miners whose hashrate sum equal the target hashrate
 func findSubsets(sortedMiners MinerList, targetHashrate int, hashrateTolerance float64) (minerCombinations []MinerList) {
 	// Calculate total number of subsets
 	tot := math.Pow(2, float64(sortedMiners.Len()))
+	MAX := int(float64(targetHashrate) * (1 + hashrateTolerance))
+	minerCombinationsSums := []int{}
 
 	for i := 0; i < int(tot); i++ {
-		m := sumSubsets(sortedMiners, i, targetHashrate, hashrateTolerance)
+		m,s := sumSubsets(sortedMiners, i, targetHashrate, hashrateTolerance)
 		if m != nil {
 			minerCombinations = append(minerCombinations, m)
-		}
-	}
-	return minerCombinations
-}
-
-// find subsets of list of miners whose hashrate sum equal the target hashrate
-func findSlicedSubsets(sortedMiners MinerList, targetHashrate int, hashrateTolerance float64) (minerCombinations []MinerList) {
-	// Calculate total number of subsets
-	tot := math.Pow(2, float64(sortedMiners.Len()))
-
-	for i := 0; i < int(tot); i++ {
-		m := sumSlicedSubsets(sortedMiners, i, targetHashrate, hashrateTolerance)
-		if m != nil {
-			minerCombinations = append(minerCombinations, m)
+			minerCombinationsSums = append(minerCombinationsSums, s)
 		}
 	}
 
@@ -779,21 +717,20 @@ func findSlicedSubsets(sortedMiners MinerList, targetHashrate int, hashrateToler
 		return []MinerList{}
 	}
 
-	// only pass miner combinations where overflow of hashrate sum is caused by 1 miner
-	MIN := int(float64(targetHashrate) * (1 - hashrateTolerance))
-
-	goodMinerCombinations := []MinerList{}
-	for _, m := range minerCombinations {
-		sum := 0
-		for j := 0; j < (len(m) - 1); j++ {
-			sum += m[j].hashrate
-		}
-		if sum < MIN {
-			goodMinerCombinations = append(goodMinerCombinations, m)
+	for i,m := range minerCombinations {
+		if minerCombinationsSums[i] > MAX { // need to slice miner
+			sumPrev := minerCombinationsSums[i] - m[len(m) - 1].hashrate
+			unslicedHashrate := m[len(m) - 1].hashrate
+			slicedHashrate := targetHashrate - sumPrev
+			if float64(slicedHashrate)/float64(unslicedHashrate) < MIN_SLICE {
+				m[len(m) - 1].hashrate = int(float64(m[len(m) - 1].hashrate)*MIN_SLICE)
+			} else {
+				m[len(m) - 1].hashrate = slicedHashrate
+			}
 		}
 	}
 
-	return goodMinerCombinations
+	return minerCombinations
 }
 
 func bestCombination(minerCombinations []MinerList, targetHashrate int) MinerList {
@@ -806,51 +743,11 @@ func bestCombination(minerCombinations []MinerList, targetHashrate int) MinerLis
 		totalHashRate := 0
 		num := 0
 		for j := range miners {
-			totalHashRate += miners[j].hashrate
-			num++
-		}
-		hashrates[i] = totalHashRate
-		numMiners[i] = num
-	}
-
-	// find combination closest to target hashrate
-	index := 0
-	for i := range hashrates {
-		res1 := math.Abs(float64(targetHashrate) - float64(hashrates[index]))
-		res2 := math.Abs(float64(targetHashrate) - float64(hashrates[i]))
-		if res1 > res2 {
-			index = i
-		}
-	}
-
-	// if duplicate exists choose the one with the least number of miners
-	newIndex := index
-	for i := range hashrates {
-		if hashrates[i] == hashrates[index] && numMiners[i] < numMiners[newIndex] {
-			newIndex = i
-		}
-	}
-
-	return minerCombinations[newIndex]
-}
-
-func bestSlicedCombination(minerCombinations []MinerList, targetHashrate int) MinerList {
-	hashrates := make([]int, len(minerCombinations))
-	numMiners := make([]int, len(minerCombinations))
-
-	// find hashrate and number of miners in each combination
-	for i := range minerCombinations {
-		miners := minerCombinations[i]
-		totalHashRate := 0
-		num := 0
-		for j := range miners {
-			var minerHashrate int
 			if j == len(miners)-1 {
-				minerHashrate = miners[j].hashrate / 2
+				totalHashRate += int(float64(miners[j].hashrate) * miners[j].slicePercent)
 			} else {
-				minerHashrate = miners[j].hashrate
+				totalHashRate += miners[j].hashrate
 			}
-			totalHashRate += minerHashrate
 			num++
 		}
 

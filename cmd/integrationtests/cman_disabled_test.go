@@ -244,7 +244,7 @@ func TestDisabled(t *testing.T) {
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if !miner.Contracts["ContractID01"] || miner.Dest != targetDest.ID {
+		if _,ok := miner.Contracts["ContractID01"]; !ok || miner.Dest != targetDest.ID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -299,13 +299,13 @@ func TestDisabled(t *testing.T) {
 		minersArr = append(minersArr, *miner)
 	}
 
-	if !minersArr[0].Contracts["ContractID01"] && miner.Dest != targetDest.ID {
+	if _,ok := minersArr[0].Contracts["ContractID01"]; !ok && miner.Dest != targetDest.ID {
 		t.Errorf("Miner 1 contract and dest not set correctly")
 	}
-	if !minersArr[1].Contracts["ContractID02"] && miner.Dest != targetDest2.ID {
+	if _,ok := minersArr[1].Contracts["ContractID02"]; !ok && miner.Dest != targetDest2.ID {
 		t.Errorf("Miner 2 contract and dest not set correctly")
 	}
-	if !minersArr[2].Contracts["ContractID03"] && miner.Dest != targetDest2.ID {
+	if _,ok := minersArr[2].Contracts["ContractID03"]; !ok && miner.Dest != targetDest2.ID {
 		t.Errorf("Miner 3 contract and dest not set correctly")
 	}
 

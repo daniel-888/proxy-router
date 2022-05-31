@@ -187,7 +187,7 @@ func TestValDisabled(t *testing.T) {
 		CurrentHashRate:      0,
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
-		Contracts: 			  make(map[msgbus.ContractID]bool),	
+		Contracts: 			  make(map[msgbus.ContractID]float64),	
 	}
 	miner2 := msgbus.Miner{
 		ID:                   msgbus.MinerID("MinerID02"),
@@ -195,7 +195,7 @@ func TestValDisabled(t *testing.T) {
 		CurrentHashRate:      0,
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
-		Contracts: 			  make(map[msgbus.ContractID]bool),
+		Contracts: 			  make(map[msgbus.ContractID]float64),
 	}
 	miner3 := msgbus.Miner{
 		ID:                   msgbus.MinerID("MinerID03"),
@@ -203,7 +203,7 @@ func TestValDisabled(t *testing.T) {
 		CurrentHashRate:      0,
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
-		Contracts: 			  make(map[msgbus.ContractID]bool),
+		Contracts: 			  make(map[msgbus.ContractID]float64),
 	}
 	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner1.ID), miner1)
 	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner2.ID), miner2)

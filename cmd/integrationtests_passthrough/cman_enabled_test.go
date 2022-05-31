@@ -352,7 +352,7 @@ loop2:
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if !miner.Contracts[hashrateContractAddress] || miner.Dest != targetDest {
+		if _,ok := miner.Contracts[hashrateContractAddress]; ok || miner.Dest != targetDest {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -405,7 +405,7 @@ loop3:
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-		if !miner.Contracts[hashrateContractAddress] || miner.Dest != targetDest {
+		if _,ok := miner.Contracts[hashrateContractAddress]; !ok || miner.Dest != targetDest {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}

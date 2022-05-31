@@ -293,7 +293,7 @@ func TestValEnabled(t *testing.T) {
 		CurrentHashRate:      0,
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
-		Contracts: 			  make(map[msgbus.ContractID]bool),	
+		Contracts: 			  make(map[msgbus.ContractID]float64),	
 	}
 	miner2 := msgbus.Miner{
 		ID:                   msgbus.MinerID("MinerID02"),
@@ -301,7 +301,7 @@ func TestValEnabled(t *testing.T) {
 		CurrentHashRate:      0,
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
-		Contracts: 			  make(map[msgbus.ContractID]bool),
+		Contracts: 			  make(map[msgbus.ContractID]float64),
 	}
 	miner3 := msgbus.Miner{
 		ID:                   msgbus.MinerID("MinerID03"),
@@ -309,7 +309,7 @@ func TestValEnabled(t *testing.T) {
 		CurrentHashRate:      0,
 		State:                msgbus.OnlineState,
 		Dest:                 defaultDestID,
-		Contracts: 			  make(map[msgbus.ContractID]bool),
+		Contracts: 			  make(map[msgbus.ContractID]float64),
 	}
 	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner1.ID), miner1)
 	ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner2.ID), miner2)
@@ -383,7 +383,7 @@ func TestValEnabled(t *testing.T) {
 		miner,_ := ps.MinerGetWait(m)
 		if miner.TimeSlice {
 			slicedMiner = miner
-		} else if miner.Contracts[hashrateContractAddresses[0]] && !miner.TimeSlice{
+		} else if _,ok := miner.Contracts[hashrateContractAddresses[0]]; ok && !miner.TimeSlice{
 			fullMiner1 = miner
 		} else {
 			fullMiner2 = miner

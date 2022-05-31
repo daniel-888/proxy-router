@@ -283,7 +283,7 @@ func NewStratumV1Struct(ctx context.Context, ps *protocol.ProtocolStruct, schedu
 		Port:                    port,
 		MAC:                     "", // Future... maybe
 		State:                   msgbus.OnlineState,
-		Contracts:               make(map[msgbus.ContractID]bool),
+		Contracts:               make(map[msgbus.ContractID]float64),
 		Dest:                    defdest.ID,
 		InitialMeasuredHashRate: 0,
 		CurrentHashRate:         0,
