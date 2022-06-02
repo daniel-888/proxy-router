@@ -72,21 +72,22 @@ func (m *ConnectionCollection) AddConnection(connectionAddress string, destinati
 }
 
 func (m *ConnectionCollection) RemoveConnection(id string) error {
-	// collection, err := m.getCollection()
+	collection, err := m.getCollection()
 
-	// if err != nil {
-	// 	return err
-	// }
+	if err != nil {
+		return err
+	}
 
-	// newCollection := []interfaces.IConnectionModel{}
+	// newCollection := make([]interfaces.IConnectionModel, len(collection))
 
-	// for index, model := range collection {
-	// 	if model.GetId() == id {
-	// 		newCollection = append(newCollection[:index], collection[index+1:]...)
-	// 	}
-	// }
+	for index, model := range collection {
+		if model.GetId() == id {
+			collection = append(collection[:index], collection[index+1:]...)
+		}
+	}
 
 	m.connections.Delete(id)
+	m.connections.Store("collection", collection)
 
 	return nil
 }
