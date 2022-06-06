@@ -39,7 +39,7 @@ func main() {
 	l := log.New()
 
 	configs := config.ReadConfigs()
-	l.SetLevel(log.Level(config.ReadConfigs().LogLevel))
+	l.SetLevel(log.Level(configs.LogLevel))
 
 	logFile, err := os.OpenFile(configs.LogFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
