@@ -185,8 +185,20 @@ func (ps *PubSub) MinerRemoveContractWait(miner MinerID, contract ContractID, de
 			fmt.Println(lumerinlib.FileLine()+"Trying to remove contract from Miner that doesn't contain it")
 		}
 		delete(m.Contracts, contract)
-		m.Dest = defaultDest
-		m.TimeSlice = false
+		if len(m.Contracts) == 0 {
+			m.Dest = defaultDest
+			m.TimeSlice = false
+		} else {
+			sliced := false
+			loop:
+			for _,c := range m.Contracts {
+				if c < 1 {
+					sliced = true
+					break loop
+				}
+			}
+			m.TimeSlice = sliced
+		}
 		err = ps.MinerSetWait(*m)
 		if err != nil {
 			fmt.Printf(lumerinlib.FileLine()+" MinerSetWait errored out:%s\n", err)
