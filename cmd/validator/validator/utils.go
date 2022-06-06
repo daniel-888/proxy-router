@@ -60,7 +60,10 @@ func nextPowerOfTwo(n int) int {
 }
 
 func ConvertMerkleBranchesToRoot(merkle_branches []string) (*chainhash.Hash, error) {
-
+	if len(merkle_branches) == 0 {
+		var zeroReturn *chainhash.Hash
+		return zeroReturn, nil
+	}
 
 	nextPOT := nextPowerOfTwo(len(merkle_branches))
 	arraySize := nextPOT*2-1
