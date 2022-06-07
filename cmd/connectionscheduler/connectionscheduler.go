@@ -115,7 +115,7 @@ func (cs *ConnectionScheduler) Start() (err error) {
 		}
 
 		contextlib.Logf(cs.Ctx, log.LevelInfo, "Adding connection... Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
-		connection, err := cs.connectionController.AddConnection(miner.IP, string(dest.NetUrl), string(miner.State), string(miner.ID))
+		connection, err := cs.connectionController.AddConnection(string(miner.ID), miner.IP, string(dest.NetUrl), string(miner.State))
 
 		if err != nil {
 			contextlib.Logf(cs.Ctx, log.LevelError, "Failed to add miner connection, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
@@ -242,6 +242,8 @@ func (cs *ConnectionScheduler) WatchMinerEvents(ch msgbus.EventChan) {
 		case event := <-ch:
 			id := msgbus.MinerID(event.ID)
 
+			contextlib.Logf(cs.Ctx, log.LevelInfo, "Miner event: %+v", event)
+
 			var miner msgbus.Miner
 
 			switch event.Data.(type) {
@@ -252,22 +254,7 @@ func (cs *ConnectionScheduler) WatchMinerEvents(ch msgbus.EventChan) {
 				miner = *m
 			}
 
-			dest, err := cs.Ps.DestGetWait(miner.Dest)
-
-			if err != nil {
-				if miner.Dest == "" {
-					dest = &msgbus.Dest{NetUrl: ""}
-				}
-
-				contextlib.Logf(cs.Ctx, log.LevelWarn, "Failed to get miner destination, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
-			}
-
-			contextlib.Logf(cs.Ctx, log.LevelInfo, "Getting or adding connection... Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
-			connection, err := cs.connectionController.GetOrAddConnection(miner.IP, string(dest.NetUrl), string(miner.State), string(miner.ID))
-
-			if err != nil {
-				contextlib.Logf(cs.Ctx, log.LevelError, "Failed to get or add connection, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
-			}
+			contextlib.Logf(cs.Ctx, log.LevelInfo, "Miner event data: %+v", miner)
 
 		loop:
 			switch event.EventType {
@@ -275,21 +262,22 @@ func (cs *ConnectionScheduler) WatchMinerEvents(ch msgbus.EventChan) {
 			// Publish Event
 			//
 			case msgbus.PublishEvent:
+				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Publish Event: %v", event)
 
-				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Publish Event: %v;  State: %v", event, miner.State)
+				dest, err := cs.Ps.DestGetWait(miner.Dest)
 
-				if miner.State != msgbus.OnlineState {
-					contextlib.Logf(cs.Ctx, log.LevelInfo, "Removing connection... Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
-					err := cs.connectionController.RemoveConnection(connection.GetId())
-
-					if err != nil {
-						contextlib.Logf(cs.Ctx, log.LevelError, "Failed to remove connection, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
+				if err != nil {
+					if miner.Dest == "" {
+						dest = &msgbus.Dest{NetUrl: ""}
 					}
 
-					break loop
+					contextlib.Logf(cs.Ctx, log.LevelWarn, "Failed to get miner destination, Fileline::%s, Error::%v", lumerinlib.FileLine(), err)
 				}
 
-				// contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Publish Event: %v;  State: %v", event, miner.State)
+				connection, err := cs.connectionController.AddConnection(string(miner.ID), miner.IP, string(dest.NetUrl), string(miner.State))
+				if err != nil {
+					contextlib.Logf(cs.Ctx, log.LevelError, "Cannot add connection: %v. Fileline: %s", err, lumerinlib.FileLine())
+				}
 
 				switch len(miner.Contracts) {
 				case 0: // no contract
@@ -313,6 +301,9 @@ func (cs *ConnectionScheduler) WatchMinerEvents(ch msgbus.EventChan) {
 				// Update Event
 				//
 			case msgbus.UpdateEvent:
+				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Update Event: %v", event)
+
+				connection := cs.connectionController.GetConnection(string(id))
 
 				if miner.State != msgbus.OnlineState {
 					cs.connectionController.RemoveConnection(string(id))
@@ -320,8 +311,6 @@ func (cs *ConnectionScheduler) WatchMinerEvents(ch msgbus.EventChan) {
 					cs.BusyMiners.Delete(string(id))
 					break loop
 				}
-
-				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Update Event: %v", event)
 
 				switch len(miner.Contracts) {
 				case 0: // no contract
@@ -342,7 +331,7 @@ func (cs *ConnectionScheduler) WatchMinerEvents(ch msgbus.EventChan) {
 				//
 			case msgbus.UnpublishEvent:
 				contextlib.Logf(cs.Ctx, log.LevelTrace, lumerinlib.Funcname()+"Got Miner Unpublish/Unsubscribe Event: %v", event)
-				cs.connectionController.RemoveConnection(connection.GetId())
+				cs.connectionController.RemoveConnection(string(id))
 				cs.ReadyMiners.Delete(string(id))
 				cs.BusyMiners.Delete(string(id))
 
@@ -420,7 +409,7 @@ func (cs *ConnectionScheduler) RunningContractsManager() {
 					}
 				}
 			}
-			
+
 			cs.wg.Wait()
 		}
 	}
@@ -583,10 +572,10 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 	if len(slicedMiners) == 0 {
 		contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners In Contract %s Set Target Func: %v", contract.ID, cs.ReadyMiners.M)
 		contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners In Contract %s Set Target Func: %v", contract.ID, cs.ReadyMiners.M)
-		loop1:
-		for i:=0;i<5;i++ {
+	loop1:
+		for i := 0; i < 5; i++ {
 			// check if contract went to available periodically
-			event,err := cs.Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contract.ID))
+			event, err := cs.Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contract.ID))
 			if err != nil {
 				contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 			}
@@ -595,15 +584,15 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 				contractStateChanged = true
 				break loop1
 			}
-			durationPassed += totalDuration/5
-			time.Sleep(totalDuration/5)
+			durationPassed += totalDuration / 5
+			time.Sleep(totalDuration / 5)
 		}
 	} else {
-		loop2:
+	loop2:
 		for i, m := range slicedMiners {
 			for i, v := range m.Contracts {
 				// check if contract went to available
-				event,err := cs.Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contract.ID))
+				event, err := cs.Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contract.ID))
 				if err != nil {
 					contextlib.Logf(cs.Ctx, log.LevelPanic, lumerinlib.FileLine()+"Error:%v", err)
 				}
@@ -630,7 +619,7 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 				busyMiners := cs.BusyMiners.GetAll()
 				contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners In Contract %s Set Target Func: %v", contract.ID, readyMiners)
 				contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners In Contract %s Set Target Func: %v", contract.ID, busyMiners)
-				time.Sleep(slicedDuration) 
+				time.Sleep(slicedDuration)
 				durationPassed += slicedDuration
 			}
 			if (i == len(slicedMiners)-1) && (durationPassed < totalDuration) {
@@ -744,7 +733,7 @@ func sumSubsets(sortedMiners MinerList, n int, targetHashrate int, hashrateToler
 	MIN := int(float64(targetHashrate) * (1 - hashrateTolerance))
 
 	// if sum is within target hashrate bounds, subset was found
-	if sum >= MIN && sumPrev < MIN{
+	if sum >= MIN && sumPrev < MIN {
 		for i := range sortedMiners {
 			if x[i] == 1 {
 				m = append(m, sortedMiners[i])
@@ -753,7 +742,7 @@ func sumSubsets(sortedMiners MinerList, n int, targetHashrate int, hashrateToler
 		return m, sum
 	}
 
-	return nil,0
+	return nil, 0
 }
 
 // find subsets of list of miners whose hashrate sum equal the target hashrate
@@ -764,7 +753,7 @@ func findSubsets(sortedMiners MinerList, targetHashrate int, hashrateTolerance f
 	minerCombinationsSums := []int{}
 
 	for i := 0; i < int(tot); i++ {
-		m,s := sumSubsets(sortedMiners, i, targetHashrate, hashrateTolerance)
+		m, s := sumSubsets(sortedMiners, i, targetHashrate, hashrateTolerance)
 		if m != nil {
 			minerCombinations = append(minerCombinations, m)
 			minerCombinationsSums = append(minerCombinationsSums, s)
@@ -775,15 +764,15 @@ func findSubsets(sortedMiners MinerList, targetHashrate int, hashrateTolerance f
 		return []MinerList{}
 	}
 
-	for i,m := range minerCombinations {
+	for i, m := range minerCombinations {
 		if minerCombinationsSums[i] > MAX { // need to slice miner
-			sumPrev := minerCombinationsSums[i] - m[len(m) - 1].hashrate
-			unslicedHashrate := m[len(m) - 1].hashrate
+			sumPrev := minerCombinationsSums[i] - m[len(m)-1].hashrate
+			unslicedHashrate := m[len(m)-1].hashrate
 			slicedHashrate := targetHashrate - sumPrev
 			if float64(slicedHashrate)/float64(unslicedHashrate) < MIN_SLICE {
-				m[len(m) - 1].hashrate = int(float64(m[len(m) - 1].hashrate)*MIN_SLICE)
+				m[len(m)-1].hashrate = int(float64(m[len(m)-1].hashrate) * MIN_SLICE)
 			} else {
-				m[len(m) - 1].hashrate = slicedHashrate
+				m[len(m)-1].hashrate = slicedHashrate
 			}
 		}
 	}

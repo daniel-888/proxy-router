@@ -384,14 +384,14 @@ func (s *StratumV1Struct) goEvent() {
 
 		// closed connection
 		if event == nil {
-			contextlib.Logf(s.Ctx(), contextlib.LevelFatal, lumerinlib.FileLineFunc()+"[Closing] event:%v", event)
+			contextlib.Logf(s.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+"[Closing] event:%v", event)
 			break
 		}
 
 		e := s.eventHandler(event)
 
 		if e != nil {
-			contextlib.Logf(s.Ctx(), contextlib.LevelFatal, lumerinlib.FileLineFunc()+"[Closing] eventHandler() returned error:%s", e)
+			contextlib.Logf(s.Ctx(), contextlib.LevelError, lumerinlib.FileLineFunc()+"[Closing] eventHandler() returned error:%s", e)
 			break
 		}
 	}
