@@ -123,7 +123,7 @@ func main() {
 			lumerinlib.PanicHere("")
 		}
 
-		fmt.Printf("Listening for stratum messages on %v\n\n", src.String())
+		l.Logf(log.LevelInfo, "Listening for stratum messages on %v\n\n", src.String())
 
 		stratum, err := stratumv1.NewListener(mainContext, src, dest)
 		scheduler := configs.Scheduler
@@ -212,7 +212,7 @@ func main() {
 
 	select {
 	case <-sigInt:
-		fmt.Println("Signal Interupt: Cancelling all contexts and shuting down program")
+		l.Logf(log.LevelWarn, "Signal Interupt: Cancelling all contexts and shuting down program")
 		mainCancel()
 	case <-mainContext.Done():
 		time.Sleep(time.Second * 5)

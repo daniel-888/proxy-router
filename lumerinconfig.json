@@ -42,7 +42,7 @@
     },
 
     "logging": {
-        "level": 5,
+        "level": 6,
         "filePath": "/tmp/lumerin1.log"
     }
 }
