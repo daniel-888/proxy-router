@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/connections"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 func TestPassthroughConnectionScheduler(t *testing.T) {
-	ps := msgbus.New(10, nil)
+	l := log.New()
+	ps := msgbus.New(10, l)
 
 	ctxStruct := contextlib.NewContextStruct(nil, ps, nil, nil, nil)
 	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)
@@ -159,7 +161,8 @@ On Ropsten, demonstrate one seller, three miners, two contracts (valued at 1+par
 purchased by two separate buyers concurrently and can show purchased hashrate consistently for the duration of both contracts
 */
 func TestTimeSlicing(t *testing.T) {
-	ps := msgbus.New(10, nil)
+	l := log.New()
+	ps := msgbus.New(10, l)
 
 	ctxStruct := contextlib.NewContextStruct(nil, ps, nil, nil, nil)
 	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)
@@ -365,7 +368,8 @@ func TestTimeSlicing(t *testing.T) {
 }
 
 func TestMultiTimeSlicing(t *testing.T) {
-	ps := msgbus.New(10, nil)
+	l := log.New()
+	ps := msgbus.New(10, l)
 
 	ctxStruct := contextlib.NewContextStruct(nil, ps, nil, nil, nil)
 	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)
@@ -578,7 +582,8 @@ func TestMultiTimeSlicing(t *testing.T) {
 }
 
 func TestEdgeCases (t *testing.T) {
-	ps := msgbus.New(10, nil)
+	l := log.New()
+	ps := msgbus.New(10, l)
 
 	ctxStruct := contextlib.NewContextStruct(nil, ps, nil, nil, nil)
 	mainCtx := context.WithValue(context.Background(), contextlib.ContextKey, ctxStruct)

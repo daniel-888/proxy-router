@@ -224,7 +224,8 @@ func TestEnabled(t *testing.T) {
 
 	var sleepTime time.Duration = 10 * time.Second
 
-	ps := msgbus.New(10, nil)
+	l := log.New()
+	ps := msgbus.New(10, l)
 
 	// wait until transaction for deploying contracts went through before continuing
 	_, lerr := ts.EthClient.TransactionReceipt(context.Background(), ltransaction.Hash())

@@ -17,6 +17,7 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/connections"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
 	"gitlab.com/TitanInd/lumerin/cmd/validator/validator"
@@ -230,7 +231,8 @@ func TestValEnabled(t *testing.T) {
 
 	var sleepTime time.Duration = 10 * time.Second
 
-	ps := msgbus.New(10, nil)
+	l := log.New()
+	ps := msgbus.New(10, l)
 
 	// wait until transaction for deploying contracts went through before continuing
 	_, lerr := ts.EthClient.TransactionReceipt(context.Background(), ltransaction.Hash())

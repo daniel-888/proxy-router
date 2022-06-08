@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/connections"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
 	"gitlab.com/TitanInd/lumerin/cmd/validator/validator"
@@ -172,7 +173,8 @@ func TestValDisabled(t *testing.T) {
 		panic(fmt.Sprintf("Loading Config Failed: %s", err))
 	}
 
-	ps := msgbus.New(10, nil)
+	l := log.New()
+	ps := msgbus.New(10, l)
 
 	var hashrateCalcLagTime time.Duration = 20
 	var reAdjustmentTime time.Duration = 3
