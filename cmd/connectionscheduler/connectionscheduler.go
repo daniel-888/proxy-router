@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	HASHRATE_LIMIT = 20
+	HASHRATE_LIMIT = 10
 	MIN_SLICE      = 0.10
 )
 
@@ -581,10 +581,19 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 	contractStateChanged := false
 	var durationPassed time.Duration
 	if len(slicedMiners) == 0 {
-		contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners In Contract %s Set Target Func: %v", contract.ID, cs.ReadyMiners.M)
-		contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners In Contract %s Set Target Func: %v", contract.ID, cs.ReadyMiners.M)
+		currentReadyMiners := cs.ReadyMiners.GetAll()
+		currentBusyMiners := cs.BusyMiners.GetAll()
+		contextlib.Logf(cs.Ctx, log.LevelInfo, "Ready Miners In Contract %s Set Target Func: %v", contract.ID, currentReadyMiners)
+		contextlib.Logf(cs.Ctx, log.LevelInfo, "Busy Miners In Contract %s Set Target Func: %v", contract.ID, currentBusyMiners)
 		loop1:
 		for i:=0;i<5;i++ {
+			// check none of the miners were unpublished
+			for _,v := range currentBusyMiners {
+				if !cs.BusyMiners.Exists(string(v.(msgbus.Miner).ID)) {
+					break loop1
+				}
+			}
+
 			// check if contract went to available periodically
 			event,err := cs.Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contract.ID))
 			if err != nil {
@@ -602,6 +611,13 @@ func (cs *ConnectionScheduler) SetMinerTarget(contract msgbus.Contract) {
 		loop2:
 		for i, m := range slicedMiners {
 			for i, v := range m.Contracts {
+				// check none of the miners were unpublished
+				for _,v := range slicedMiners {
+					if !cs.BusyMiners.Exists(string(v.ID)) {
+						break loop2
+					}
+				}
+
 				// check if contract went to available
 				event,err := cs.Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contract.ID))
 				if err != nil {
@@ -699,17 +715,18 @@ func (cs *ConnectionScheduler) sortMinersByHashrate(contractId msgbus.ContractID
 
 	miners := cs.ReadyMiners.GetAll()
 	for _, v := range miners {
-		m = append(m, Miner{v.(msgbus.Miner).ID, v.(msgbus.Miner).CurrentHashRate, 0})
+		m = append(m, Miner{v.(msgbus.Miner).ID, v.(msgbus.Miner).CurrentHashRate, 1})
 	}
 
 	// include busy miners that are already associated with contract and sliced miners with extra contract space
 	miners = cs.BusyMiners.GetAll()
 	for _, v := range miners {
 		if _, ok := v.(msgbus.Miner).Contracts[contractId]; ok {
-			m = append(m, Miner{v.(msgbus.Miner).ID, v.(msgbus.Miner).CurrentHashRate, 0})
+			slicePercent := v.(msgbus.Miner).Contracts[contractId]
+			m = append(m, Miner{v.(msgbus.Miner).ID, int(float64(v.(msgbus.Miner).CurrentHashRate)*slicePercent), slicePercent})
 		} else if v.(msgbus.Miner).TimeSlice && (cs.Ps.MinerSlicedUtilization(v.(msgbus.Miner).ID) > 0) {
 			leftoverSlicePercent := cs.Ps.MinerSlicedUtilization(v.(msgbus.Miner).ID)
-			m = append(m, Miner{v.(msgbus.Miner).ID, int(float64(v.(msgbus.Miner).CurrentHashRate) * leftoverSlicePercent), 0})
+			m = append(m, Miner{v.(msgbus.Miner).ID, int(float64(v.(msgbus.Miner).CurrentHashRate) * leftoverSlicePercent), leftoverSlicePercent})
 		}
 	}
 
@@ -782,8 +799,10 @@ func findSubsets(sortedMiners MinerList, targetHashrate int, hashrateTolerance f
 			slicedHashrate := targetHashrate - sumPrev
 			if float64(slicedHashrate)/float64(unslicedHashrate) < MIN_SLICE {
 				m[len(m) - 1].hashrate = int(float64(m[len(m) - 1].hashrate)*MIN_SLICE)
+				m[len(m) - 1].slicePercent = MIN_SLICE
 			} else {
 				m[len(m) - 1].hashrate = slicedHashrate
+				m[len(m) - 1].slicePercent = float64(slicedHashrate)/float64(unslicedHashrate)
 			}
 		}
 	}
