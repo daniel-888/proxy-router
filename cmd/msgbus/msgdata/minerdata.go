@@ -151,8 +151,13 @@ func (r *MinerRepo) SubscribeToMinerMsgBus() {
 					break loop
 				}
 			}
+<<<<<<< HEAD
 			miner := event.Data.(msgbus.Miner)
 			r.AddMinerFromMsgBus(minerID, miner)
+=======
+			miner := event.Data.(*msgbus.Miner)
+			r.AddMinerFromMsgBus(minerID, *miner)
+>>>>>>> pr-009
 
 			//
 			// Delete/Unpublish Event

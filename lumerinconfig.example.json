@@ -18,6 +18,13 @@
         "passthrough": false
     },
 
+<<<<<<< HEAD
+=======
+    "validate": {
+        "disable": false
+    },
+
+>>>>>>> pr-009
     "contract": {
         "disable": false,
         "mnemonic": "YOUR MNEMONIC GOES HERE --- ADD TO GITIGNORE BEFORE PUSHING TO A PUBLIC REPOSITORY",

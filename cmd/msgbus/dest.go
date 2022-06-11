@@ -47,7 +47,11 @@ func (ps *PubSub) DestPubWait(dest Dest) (d Dest, err error) {
 func (ps *PubSub) DestGetWait(id DestID) (dest *Dest, err error) {
 
 	if id == "" {
+<<<<<<< HEAD
 		panic(fmt.Sprintf(lumerinlib.FileLine() + " empty DestID passed in\n"))
+=======
+		return nil, fmt.Errorf(lumerinlib.FileLine() + " empty DestID passed in\n")
+>>>>>>> pr-009
 	}
 
 	event, err := ps.GetWait(DestMsg, IDString(id))

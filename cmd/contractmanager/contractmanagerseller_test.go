@@ -17,13 +17,25 @@ import (
 
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+<<<<<<< HEAD
+=======
+	"gitlab.com/TitanInd/lumerin/cmd/log"
+
+	"gitlab.com/TitanInd/lumerin/connections"
+>>>>>>> pr-009
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
 
 func TestSellerRoutine(t *testing.T) {
+<<<<<<< HEAD
 	configPath := "../../ropstenconfig.json"
 	ps := msgbus.New(10, nil)
+=======
+	configPath := "../../ganacheconfig.json"
+	l := log.New()
+	ps := msgbus.New(10, l)
+>>>>>>> pr-009
 	ts, _, _ := BeforeEach(configPath)
 	var hashrateContractAddress [4]common.Address
 	var purchasedHashrateContractAddress [4]common.Address
@@ -93,7 +105,12 @@ func TestSellerRoutine(t *testing.T) {
 	}
 
 	// start connection scheduler look at miners
+<<<<<<< HEAD
 	cs, err := connectionscheduler.New(&mainCtx, &NodeOperator, false)
+=======
+	connectionCollection := connections.CreateConnectionCollection()
+	cs, err := connectionscheduler.New(&mainCtx, &NodeOperator, false, 0, connectionCollection)
+>>>>>>> pr-009
 	if err != nil {
 		panic(fmt.Sprintf("schedule manager failed:%s", err))
 	}
@@ -197,7 +214,14 @@ loop2:
 	// connection scheduler sets contract to correct miner
 	m1, _ := ps.MinerGetWait(miner1.ID)
 	m2, _ := ps.MinerGetWait(miner2.ID)
+<<<<<<< HEAD
 	if m1.Contract != msgbus.ContractID(hashrateContractAddress[0].Hex()) || m2.Contract != "" {
+=======
+	if m1.Contracts[msgbus.ContractID(hashrateContractAddress[0].Hex())] {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if len(m2.Contracts) == 0 {
+>>>>>>> pr-009
 		t.Errorf("Miner contracts not set correctly")
 	}
 
@@ -218,8 +242,13 @@ loop2:
 
 	// connection scheduler removed contract from miner
 	m1, _ = ps.MinerGetWait(miner1.ID)
+<<<<<<< HEAD
 	if m1.Contract != "" {
 		t.Errorf("Contract 1 was not removed from miner after early closeout")
+=======
+	if len(m1.Contracts) == 0 {
+		t.Errorf("Miner contracts not set correctly")
+>>>>>>> pr-009
 	}
 
 	//
@@ -252,7 +281,14 @@ loop4:
 	// connection scheduler sets contract to correct miner
 	m1, _ = ps.MinerGetWait(miner1.ID)
 	m2, _ = ps.MinerGetWait(miner2.ID)
+<<<<<<< HEAD
 	if m1.Contract != "" || m2.Contract != msgbus.ContractID(hashrateContractAddress[1].Hex()) {
+=======
+	if len(m1.Contracts) == 0 {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if m2.Contracts[msgbus.ContractID(hashrateContractAddress[1].Hex())] {
+>>>>>>> pr-009
 		t.Errorf("Miner contracts not set correctly")
 	}
 
@@ -273,7 +309,11 @@ loop4:
 
 	// connection scheduler removed contract from miner
 	m2, _ = ps.MinerGetWait(miner2.ID)
+<<<<<<< HEAD
 	if m2.Contract != "" {
+=======
+	if len(m2.Contracts) == 0 {
+>>>>>>> pr-009
 		t.Errorf("Contract 2 was not removed from miner after early closeout")
 	}
 
@@ -322,14 +362,28 @@ loop6:
 	m1, _ = ps.MinerGetWait(miner1.ID)
 	m2, _ = ps.MinerGetWait(miner2.ID)
 	m3, _ := ps.MinerGetWait(miner3.ID)
+<<<<<<< HEAD
 	if m1.Contract != "" || m2.Contract != "" || m3.Contract != msgbus.ContractID(hashrateContractAddress[2].Hex()) {
+=======
+	if len(m1.Contracts) == 0 {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if len(m2.Contracts) == 0 {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if m3.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] {
+>>>>>>> pr-009
 		t.Errorf("Miner contracts not set correctly")
 	}
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	fmt.Print("Closeout From Buyer: ")
+<<<<<<< HEAD
 	setContractCloseOut(cman.EthClient, buyerAddress, buyerPrivateKey, hashrateContractAddress[2], &wg, &cman.CurrentNonce, 0)
+=======
+	setContractCloseOut(cman.EthClient, buyerAddress, buyerPrivateKey, hashrateContractAddress[2], &wg, &cman.CurrentNonce, 0, ps, NodeOperator)
+>>>>>>> pr-009
 	wg.Wait()
 	time.Sleep(time.Millisecond * time.Duration(sleepTime*3))
 	if cman.NodeOperator.Contracts[msgbus.ContractID(hashrateContractAddress[2].Hex())] != msgbus.ContAvailableState {
@@ -338,7 +392,11 @@ loop6:
 
 	// connection scheduler removed contract from miner
 	m3, _ = ps.MinerGetWait(miner3.ID)
+<<<<<<< HEAD
 	if m3.Contract != "" {
+=======
+	if len(m3.Contracts) == 0 {
+>>>>>>> pr-009
 		t.Errorf("Contract 3 was not removed from miner after early closeout")
 	}
 
@@ -389,7 +447,20 @@ loop8:
 	m2, _ = ps.MinerGetWait(miner2.ID)
 	m3, _ = ps.MinerGetWait(miner3.ID)
 	m4, _ := ps.MinerGetWait(miner4.ID)
+<<<<<<< HEAD
 	if m1.Contract != "" || m2.Contract != "" || m3.Contract != "" || m4.Contract != msgbus.ContractID(hashrateContractAddress[3].Hex()) {
+=======
+	if len(m1.Contracts) == 0 {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if len(m2.Contracts) == 0 {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if len(m3.Contracts) == 0 {
+		t.Errorf("Miner contracts not set correctly")
+	}
+	if m4.Contracts[msgbus.ContractID(hashrateContractAddress[3].Hex())] {
+>>>>>>> pr-009
 		t.Errorf("Miner contracts not set correctly")
 	}
 
@@ -432,7 +503,11 @@ loop8:
 
 	// connection scheduler removed contract from miner
 	m4, _ = ps.MinerGetWait(miner4.ID)
+<<<<<<< HEAD
 	if m4.Contract != "" {
+=======
+	if len(m4.Contracts) == 0 {
+>>>>>>> pr-009
 		t.Errorf("Contract 4 was not removed from miner after early closeout")
 	}
 

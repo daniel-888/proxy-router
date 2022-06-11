@@ -6,6 +6,10 @@ import (
 	"net"
 	"os"
 	"os/signal"
+<<<<<<< HEAD
+=======
+	"strings"
+>>>>>>> pr-009
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/config"
@@ -15,6 +19,11 @@ import (
 	"gitlab.com/TitanInd/lumerin/cmd/log"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
+<<<<<<< HEAD
+=======
+	"gitlab.com/TitanInd/lumerin/cmd/validator/validator"
+	"gitlab.com/TitanInd/lumerin/connections"
+>>>>>>> pr-009
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
@@ -36,6 +45,10 @@ func main() {
 	l := log.New()
 
 	configs := config.ReadConfigs()
+<<<<<<< HEAD
+=======
+	l.SetLevel(log.Level(configs.LogLevel))
+>>>>>>> pr-009
 
 	logFile, err := os.OpenFile(configs.LogFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
@@ -55,6 +68,13 @@ func main() {
 	ps := msgbus.New(10, l)
 
 	//
+<<<<<<< HEAD
+=======
+	// Create Connection Collection
+	//
+	connectionCollection := connections.CreateConnectionCollection()
+
+>>>>>>> pr-009
 	// Add the various Context variables here
 	// msgbus, logger, default listen address, defalt desitnation address
 	//
@@ -64,7 +84,11 @@ func main() {
 	//
 	// the proro argument (#1) gets set in the Protocol sus-system
 	//
+<<<<<<< HEAD
 	cs := contextlib.NewContextStruct(nil, ps, nil, src, dst)
+=======
+	cs := contextlib.NewContextStruct(nil, ps, l, src, dst)
+>>>>>>> pr-009
 
 	//
 	// All of the various needed subsystem values get passed into the context here.
@@ -108,16 +132,40 @@ func main() {
 	//
 	if !configs.DisableStratumv1 {
 
+<<<<<<< HEAD
 		src, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", configs.ListenIP, configs.ListenPort))
 		if err != nil {
 			lumerinlib.PanicHere("")
 		}
 
+=======
+		listenAddress := fmt.Sprintf("%s:%s", configs.ListenIP, configs.ListenPort)
+
+		src, err := net.ResolveTCPAddr("tcp", listenAddress)
+>>>>>>> pr-009
 		if err != nil {
 			lumerinlib.PanicHere("")
 		}
 
+<<<<<<< HEAD
 		stratum, err := stratumv1.NewListener(mainContext, src, dest)
+=======
+		l.Logf(log.LevelInfo, "Listening for stratum messages on %v\n\n", src.String())
+
+		stratum, err := stratumv1.NewListener(mainContext, src, dest)
+		scheduler := configs.Scheduler
+		scheduler = strings.ToLower(scheduler)
+
+		switch scheduler {
+		case "ondemand":
+			stratum.SetScheduler(stratumv1.OnDemand)
+		case "onsubmit":
+			stratum.SetScheduler(stratumv1.OnSubmit)
+		default:
+			l.Logf(log.LevelPanic, "Scheduler value: %s Not Supported", scheduler)
+		}
+
+>>>>>>> pr-009
 		if err != nil {
 			panic(fmt.Sprintf("Stratum Protocol New() failed:%s", err))
 		}
@@ -130,13 +178,32 @@ func main() {
 	// Fire up schedule manager
 	//
 	if !configs.DisableSchedule {
+<<<<<<< HEAD
 		cs, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
+=======
+		cs, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough, configs.HashrateCalcLagTime, connectionCollection)
+>>>>>>> pr-009
 		if err != nil {
 			l.Logf(log.LevelPanic, "Schedule manager failed: %v", err)
 		}
 		err = cs.Start()
 		if err != nil {
+<<<<<<< HEAD
 			l.Logf(log.LevelPanic, "Schedule manager to start: %v", err)
+=======
+			l.Logf(log.LevelPanic, "Schedule manager failed to start: %v", err)
+		}
+	}
+
+	//
+	// Fire up validator
+	//
+	if !configs.DisableValidate {
+		v := validator.MakeNewValidator(&mainContext)
+		err = v.Start()
+		if err != nil {
+			l.Logf(log.LevelPanic, "Validator failed to start: %v", err)
+>>>>>>> pr-009
 		}
 	}
 
@@ -175,13 +242,21 @@ func main() {
 	//Fire up external api
 	//
 	if !configs.DisableApi {
+<<<<<<< HEAD
 		api := externalapi.New(ps)
+=======
+		api := externalapi.New(ps, connectionCollection)
+>>>>>>> pr-009
 		go api.Run(configs.ApiPort, l)
 	}
 
 	select {
 	case <-sigInt:
+<<<<<<< HEAD
 		fmt.Println("Signal Interupt: Cancelling all contexts and shuting down program")
+=======
+		l.Logf(log.LevelWarn, "Signal Interupt: Cancelling all contexts and shuting down program")
+>>>>>>> pr-009
 		mainCancel()
 	case <-mainContext.Done():
 		time.Sleep(time.Second * 5)

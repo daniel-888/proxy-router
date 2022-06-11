@@ -479,8 +479,26 @@ func (l *LumerinSocketStruct) Close() (e error) {
 //
 //
 //
+<<<<<<< HEAD
 func (l *LumerinSocketStruct) GetAddr() net.Addr {
 	return l.remoteaddr
+=======
+func (l *LumerinSocketStruct) GetRemoteAddr() (addr net.Addr, e error) {
+
+	if l == nil {
+		contextlib.Logf(l.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" pointer is nil")
+	}
+
+	switch l.socket.(type) {
+	case *sockettcp.SocketTCPStruct:
+		addr, e = l.socket.(*sockettcp.SocketTCPStruct).RemoteAddr()
+	default:
+		contextlib.Logf(l.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" Default reached, type: %T", l.socket)
+	}
+
+	return addr, e
+	// return l.remoteaddr
+>>>>>>> pr-009
 }
 
 //

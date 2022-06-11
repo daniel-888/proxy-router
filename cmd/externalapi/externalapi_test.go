@@ -11,7 +11,12 @@ import (
 )
 
 func TestMsgBusDataAddedToApiRepos(t *testing.T) {
+<<<<<<< HEAD
 	ps := msgbus.New(10, nil)
+=======
+	l := log.New()
+	ps := msgbus.New(10, l)
+>>>>>>> pr-009
 
 	dest := msgbus.Dest{
 		ID:     msgbus.DestID("DestID01"),
@@ -61,7 +66,11 @@ func TestMsgBusDataAddedToApiRepos(t *testing.T) {
 
 	api := New(ps)
 	time.Sleep(time.Millisecond * 1000)
+<<<<<<< HEAD
 	l := log.New()
+=======
+
+>>>>>>> pr-009
 	go api.Run("8080", l)
 
 	fmt.Print("\n/// Publish Msgbus Msgs //\n\n")

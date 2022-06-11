@@ -31,10 +31,16 @@ import (
 const (
 	AvailableState uint8 = 0
 	RunningState   uint8 = 1
+<<<<<<< HEAD
 )
 
 const HASHRATE_TOLERANCE = .10
 
+=======
+	HASHRATE_LIMIT = 20
+)
+
+>>>>>>> pr-009
 type hashrateContractValues struct {
 	State                  uint8
 	Price                  int
@@ -478,12 +484,23 @@ func (seller *SellerContractManager) watchHashrateContract(addr msgbus.ContractI
 						contextlib.Logf(seller.Ctx, log.LevelPanic, "Getting Purchased Contract Failed: %v", event.Err)
 					}
 					contractMsg := event.Data.(msgbus.Contract)
+<<<<<<< HEAD
 					contractMsg.State = msgbus.ContAvailableState
 					contractMsg.Buyer = ""
 					seller.Ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contractMsg.ID), contractMsg)
 
 					seller.NodeOperator.Contracts[addr] = msgbus.ContAvailableState
 					seller.Ps.SetWait(msgbus.NodeOperatorMsg, msgbus.IDString(seller.NodeOperator.ID), seller.NodeOperator)
+=======
+					if contractMsg.State == msgbus.ContRunningState {
+						contractMsg.State = msgbus.ContAvailableState
+						contractMsg.Buyer = ""
+						seller.Ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contractMsg.ID), contractMsg)
+	
+						seller.NodeOperator.Contracts[addr] = msgbus.ContAvailableState
+						seller.Ps.SetWait(msgbus.NodeOperatorMsg, msgbus.IDString(seller.NodeOperator.ID), seller.NodeOperator)
+					}
+>>>>>>> pr-009
 
 				case purchaseInfoUpdatedSigHash.Hex():
 					contextlib.Logf(seller.Ctx, log.LevelInfo, "Hashrate Contract %s Purchase Info Updated \n\n", addr)
@@ -554,6 +571,7 @@ loop:
 			// get latest block from header
 			block, err := seller.EthClient.BlockByHash(context.Background(), header.Hash())
 			if err != nil {
+<<<<<<< HEAD
 				contextlib.Logf(seller.Ctx, log.LevelPanic, fmt.Sprintf("Funcname::%s, Fileline::%s, Error::", lumerinlib.Funcname(), lumerinlib.FileLine()), err)
 			}
 
@@ -584,6 +602,39 @@ loop:
 				}
 				break loop
 			}
+=======
+				contextlib.Logf(seller.Ctx, log.LevelWarn, fmt.Sprintf("Funcname::%s, Fileline::%s, Error::", lumerinlib.Funcname(), lumerinlib.FileLine()), err)
+			} else {
+				// check if contract length has passed
+				if block.Time() >= uint64(contractFinishedTimestamp) {
+					var closeOutType uint
+
+					// seller only wants to closeout
+					closeOutType = 2
+					// seller wants to claim funds with closeout
+					if seller.ClaimFunds {
+						closeOutType = 3
+					}
+
+					// if contract was not already closed early, close out here
+					contractValues, err := readHashrateContract(seller.EthClient, common.HexToAddress(string(contractMsg.ID)))
+					if err != nil {
+						contextlib.Logf(seller.Ctx, log.LevelPanic, fmt.Sprintf("Reading hashrate contract failed, Fileline::%s, Error::", lumerinlib.FileLine()), err)
+					}
+					if contractValues.State == RunningState {
+						var wg sync.WaitGroup
+						wg.Add(1)
+						err = setContractCloseOut(seller.EthClient, seller.Account, seller.PrivateKey, common.HexToAddress(string(contractMsg.ID)), &wg, &seller.CurrentNonce, closeOutType, seller.Ps, seller.NodeOperator)
+						if err != nil {
+							contextlib.Logf(seller.Ctx, log.LevelPanic, fmt.Sprintf("Contract Close Out failed, Fileline::%s, Error::", lumerinlib.FileLine()), err)
+						}
+						wg.Wait()
+					}
+					break loop
+				}
+			}
+
+>>>>>>> pr-009
 		}
 	}
 }
@@ -954,19 +1005,33 @@ func (buyer *BuyerContractManager) checkHashRate(contractId msgbus.ContractID) b
 		if err != nil {
 			contextlib.Logf(buyer.Ctx, log.LevelPanic, fmt.Sprintf("Failed to get miner, Fileline::%s, Error::", lumerinlib.FileLine()), err)
 		}
+<<<<<<< HEAD
 		if miner.Contract == contractId {
+=======
+		if _,ok := miner.Contracts[contractId]; !ok {
+>>>>>>> pr-009
 			totalHashrate += miner.CurrentHashRate
 		}
 	}
 
+<<<<<<< HEAD
 	promisedHashrateMin := int(float32(contract.Speed) * (1 - HASHRATE_TOLERANCE))
+=======
+	//hashrateTolerance := float64(contract.Limit) / 100
+	hashrateTolerance := float64(HASHRATE_LIMIT) / 100
+	promisedHashrateMin := int(float64(contract.Speed) * (1 - hashrateTolerance))
+>>>>>>> pr-009
 
 	contextlib.Logf(buyer.Ctx, log.LevelInfo, "Hashrate being sent to contract %s: %d\n", contractId, totalHashrate)
 	if totalHashrate <= promisedHashrateMin {
 		contextlib.Logf(buyer.Ctx, log.LevelInfo, "Closing out contract %s for not meeting hashrate requirements\n", contractId)
 		var wg sync.WaitGroup
 		wg.Add(1)
+<<<<<<< HEAD
 		err := setContractCloseOut(buyer.EthClient, buyer.Account, buyer.PrivateKey, common.HexToAddress(string(contractId)), &wg, &buyer.CurrentNonce, 0)
+=======
+		err := setContractCloseOut(buyer.EthClient, buyer.Account, buyer.PrivateKey, common.HexToAddress(string(contractId)), &wg, &buyer.CurrentNonce, 0, buyer.Ps, buyer.NodeOperator)
+>>>>>>> pr-009
 		if err != nil {
 			contextlib.Logf(buyer.Ctx, log.LevelPanic, fmt.Sprintf("Contract Close Out failed, Fileline::%s, Error::", lumerinlib.FileLine()), err)
 		}
@@ -1099,7 +1164,11 @@ func readDestUrl(client *ethclient.Client, contractAddress common.Address, priva
 	return encryptedDestUrl, err
 }
 
+<<<<<<< HEAD
 func setContractCloseOut(client *ethclient.Client, fromAddress common.Address, privateKeyString string, contractAddress common.Address, wg *sync.WaitGroup, CurrentNonce *nonce, closeOutType uint) error {
+=======
+func setContractCloseOut(client *ethclient.Client, fromAddress common.Address, privateKeyString string, contractAddress common.Address, wg *sync.WaitGroup, CurrentNonce *nonce, closeOutType uint, Ps *msgbus.PubSub, NodeOperator msgbus.NodeOperator) error {
+>>>>>>> pr-009
 	defer wg.Done()
 	defer CurrentNonce.mutex.Unlock()
 
@@ -1153,6 +1222,28 @@ func setContractCloseOut(client *ethclient.Client, fromAddress common.Address, p
 
 	fmt.Printf("tx sent: %s\n\n", tx.Hash().Hex())
 	fmt.Println("Closing Out Contract: ", contractAddress)
+<<<<<<< HEAD
+=======
+
+	event, err := Ps.GetWait(msgbus.ContractMsg, msgbus.IDString(contractAddress.Hex()))
+	if err != nil {
+		fmt.Printf("Funcname::%s, Fileline::%s, Error::%v\n", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
+		return err
+	}
+	if event.Err != nil {
+		fmt.Printf("Funcname::%s, Fileline::%s, Error::%v\n", lumerinlib.Funcname(), lumerinlib.FileLine(), err)
+		return err
+	}
+	contractMsg := event.Data.(msgbus.Contract)
+	if contractMsg.State == msgbus.ContRunningState {
+		contractMsg.State = msgbus.ContAvailableState
+		contractMsg.Buyer = ""
+		Ps.SetWait(msgbus.ContractMsg, msgbus.IDString(contractMsg.ID), contractMsg)
+
+		NodeOperator.Contracts[msgbus.ContractID(contractAddress.Hex())] = msgbus.ContAvailableState
+		Ps.SetWait(msgbus.NodeOperatorMsg, msgbus.IDString(NodeOperator.ID), NodeOperator)
+	}
+>>>>>>> pr-009
 	return err
 }
 

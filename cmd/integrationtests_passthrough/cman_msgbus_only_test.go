@@ -27,9 +27,19 @@ type LocalConfig struct {
 	LogFilePath         string
 }
 
+<<<<<<< HEAD
 func TestConnMgr(t *testing.T) {
 
 	var sleepTime time.Duration = 60 * time.Second
+=======
+var miners []msgbus.DestID
+
+func TestConnMgr(t *testing.T) {
+
+	var sleepTime time.Duration = 30 * time.Second
+
+	miners = make([]msgbus.DestID, 0)
+>>>>>>> pr-009
 
 	//
 	// Load configuration
@@ -66,19 +76,44 @@ func TestConnMgr(t *testing.T) {
 	//
 	// Setup MsgBus
 	//
+<<<<<<< HEAD
 	ps := msgbus.New(10, l)
 	// ps := msgbus.New(10, nil)
+=======
+	//ps := msgbus.New(10, l)
+	ps := msgbus.New(10, l)
+>>>>>>> pr-009
 
 	mainContext := context.Background()
 
 	defaultdst := "stratum+tcp://seanmcadam.switcher0:@mining.pool.titan.io:4242"
+<<<<<<< HEAD
 	seconddst := "stratum+tcp://seanmcadam.switcher1:@mining.pool.titan.io:4242/"
+=======
+	seconddst := "stratum+tcp://seanmcadam.switcher0:@btc.f2pool.com:3333/"
+	thirddst := "stratum+tcp://seanmcadam.switcher0:@ss.antpool.com:3333/"
+	fourthdst := "stratum+tcp://seanmcadam.switcher0:@ss.antpool.com:3333/"
+	fifthdst := "stratum+tcp://seanmcadam.switcher0:@us-east.stratum.slushpool.com:3333/"
+>>>>>>> pr-009
 
 	//defaultdst := "stratum+tcp://seanmcadam.switcher0:@pooltesta1.sbx.lumerin.io:4242/"
 	//seconddst := "stratum+tcp://seanmcadam.switcher1:@pooltesta1.sbx.lumerin.io:4242/"
 
+<<<<<<< HEAD
 	src := lumerinlib.NewNetAddr(lumerinlib.TCP, configs.ListenIP+":"+configs.ListenPort)
 	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, defaultdst)
+=======
+	//defaultdst := "stratum+tcp://seanmcadam.switcher0:@localhost:33335/"
+	//seconddst := "stratum+tcp://seanmcadam.switcher1:@localhost:33335/"
+
+	src := lumerinlib.NewNetAddr(lumerinlib.TCP, configs.ListenIP+":"+configs.ListenPort)
+
+	dst := lumerinlib.NewNetAddr(lumerinlib.TCP, defaultdst)
+	//dst2 := lumerinlib.NewNetAddr(lumerinlib.TCP, seconddst)
+	//dst3 := lumerinlib.NewNetAddr(lumerinlib.TCP, thirddst)
+	//dst4 := lumerinlib.NewNetAddr(lumerinlib.TCP, fourthdst)
+	//dst5 := lumerinlib.NewNetAddr(lumerinlib.TCP, fifthdst)
+>>>>>>> pr-009
 
 	cs := contextlib.NewContextStruct(nil, ps, l, src, dst)
 
@@ -89,6 +124,7 @@ func TestConnMgr(t *testing.T) {
 		NetUrl: msgbus.DestNetUrl(defaultdst),
 	}
 
+<<<<<<< HEAD
 	//
 	// Publish Default Dest record
 	//
@@ -99,15 +135,67 @@ func TestConnMgr(t *testing.T) {
 	if event.Err != nil {
 		panic(fmt.Sprintf("Adding Default Dest Failed: %s", event.Err))
 	}
+=======
+	secondDest := &msgbus.Dest{
+		ID:     msgbus.DestID("SecondDest"),
+		NetUrl: msgbus.DestNetUrl(seconddst),
+	}
+
+	thirdDest := &msgbus.Dest{
+		ID:     msgbus.DestID("ThirdDest"),
+		NetUrl: msgbus.DestNetUrl(thirddst),
+	}
+
+	fourthDest := &msgbus.Dest{
+		ID:     msgbus.DestID("FourthDest"),
+		NetUrl: msgbus.DestNetUrl(fourthdst),
+	}
+
+	fifthDest := &msgbus.Dest{
+		ID:     msgbus.DestID("FifthDest"),
+		NetUrl: msgbus.DestNetUrl(fifthdst),
+	}
+
+	publishRecord(ps, defaultDest)
+	publishRecord(ps, secondDest)
+	publishRecord(ps, thirdDest)
+	publishRecord(ps, fourthDest)
+	publishRecord(ps, fifthDest)
+
+	miners = append(miners, secondDest.ID)
+	miners = append(miners, thirdDest.ID)
+	miners = append(miners, fourthDest.ID)
+	miners = append(miners, fifthDest.ID)
+	miners = append(miners, defaultDest.ID)
+
+	//
+	// Publish Default Dest record
+	//
+	//event, err := ps.PubWait(msgbus.DestMsg, msgbus.IDString(msgbus.DEFAULT_DEST_ID), defaultDest)
+	//if err != nil {
+	//	panic(fmt.Sprintf("Adding Default Dest Failed: %s", err))
+	//}
+	//if event.Err != nil {
+	//	panic(fmt.Sprintf("Adding Default Dest Failed: %s", event.Err))
+	//}
+>>>>>>> pr-009
 
 	//
 	// Publish alternate pool destination
 	//
+<<<<<<< HEAD
 	newTargetDest := msgbus.Dest{
 		ID:     msgbus.DestID(msgbus.GetRandomIDString()),
 		NetUrl: msgbus.DestNetUrl(seconddst),
 	}
 	ps.PubWait(msgbus.DestMsg, msgbus.IDString(newTargetDest.ID), newTargetDest)
+=======
+	//newTargetDest := msgbus.Dest{
+	//	ID:     msgbus.DestID(msgbus.GetRandomIDString()),
+	//	NetUrl: msgbus.DestNetUrl(seconddst),
+	//}
+	//ps.PubWait(msgbus.DestMsg, msgbus.IDString(newTargetDest.ID), newTargetDest)
+>>>>>>> pr-009
 
 	srcStrat, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%s", configs.ListenIP, configs.ListenPort))
 	if err != nil {
@@ -125,6 +213,7 @@ func TestConnMgr(t *testing.T) {
 	//
 	// Sleep while the system stablizes
 	//
+<<<<<<< HEAD
 
 	time.Sleep(sleepTime)
 
@@ -167,6 +256,16 @@ func TestConnMgr(t *testing.T) {
 
 		time.Sleep(sleepTime)
 		fmt.Printf("\n***********\nPoint to Primary DST\n************\n")
+=======
+	time.Sleep(sleepTime)
+
+	for {
+		for u, v := range miners {
+			fmt.Printf("\n***********\nPoint to[%d] %s\n************\n", u, v)
+			setMinerDest(ps, v)
+			time.Sleep(sleepTime)
+		}
+>>>>>>> pr-009
 	}
 }
 
@@ -210,3 +309,46 @@ func LoadTestConfiguration(filePath string) (configs LocalConfig, err error) {
 
 	return configs, err
 }
+<<<<<<< HEAD
+=======
+
+//
+// Publish Dest record
+//
+func publishRecord(ps *msgbus.PubSub, d *msgbus.Dest) {
+
+	event, err := ps.PubWait(msgbus.DestMsg, msgbus.IDString(d.ID), d)
+	if err != nil {
+		panic(fmt.Sprintf("Adding Default Dest:%s Failed: %s", d.ID, err))
+	}
+	if event.Err != nil {
+		panic(fmt.Sprintf("Adding Default Dest:%s Failed: %s", d.ID, event.Err))
+	}
+}
+
+//
+// Set Miner
+//
+func setMiner(ps *msgbus.PubSub, miner msgbus.Miner) {
+
+	e := ps.MinerSetWait(miner)
+	if e != nil {
+		panic(fmt.Sprintf("MinerSetWait() error:%s on %s", e, miner.ID))
+	}
+}
+
+//
+// Set Miner Dest
+//
+func setMinerDest(ps *msgbus.PubSub, dest msgbus.DestID) {
+	miners, _ := ps.MinerGetAllWait()
+	for _, v := range miners {
+		minerptr, _ := ps.MinerGetWait(msgbus.MinerID(v))
+		if minerptr != nil {
+			miner := *minerptr
+			miner.Dest = dest
+			setMiner(ps, miner)
+		}
+	}
+}
+>>>>>>> pr-009

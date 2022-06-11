@@ -17,6 +17,10 @@ const (
 	ConfigContractTimeThreshold       ConfigConst = "ConfigContractTimeThreshold"
 	ConfigConnectionListenIP          ConfigConst = "ConfigConnectionListenIP"
 	ConfigConnectionListenPort        ConfigConst = "ConfigConnectionListenPort"
+<<<<<<< HEAD
+=======
+	ConfigConnectionSwitchMethod      ConfigConst = "ConfigConnectionSwitchMethod"
+>>>>>>> pr-009
 	ConfigConfigFilePath              ConfigConst = "ConfigConfigFilePath"
 	ConfigConfigDownloadPath          ConfigConst = "ConfigConfigDownloadPath"
 	ConfigLogFilePath                 ConfigConst = "ConfigLogFilePath"
@@ -27,6 +31,10 @@ const (
 	DisableConnection                 ConfigConst = "DisableConnection"
 	DisableContract                   ConfigConst = "DisableContract"
 	DisableSchedule                   ConfigConst = "DisableSchedule"
+<<<<<<< HEAD
+=======
+	DisableValidate					  ConfigConst = "DisableValidator"
+>>>>>>> pr-009
 	DisableStratumv1                  ConfigConst = "DisableStratumV1"
 	DisableAPI                        ConfigConst = "DisableAPI"
 )
@@ -87,6 +95,19 @@ var ConfigMap = map[ConfigConst]configitem{
 		envval:     nil,
 		flagval:    nil,
 	},
+<<<<<<< HEAD
+=======
+	ConfigConnectionSwitchMethod: {
+		flagname:   "schedulemethod",
+		flagusage:  "Connection Manager scheduling method: ondemand, onsubmit",
+		envname:    "SCHEDULEMETHOD",
+		configname: "connection.scheduler",
+		defval:     "ondemand",
+		configval:  nil,
+		envval:     nil,
+		flagval:    nil,
+	},
+>>>>>>> pr-009
 	ConfigContractNetwork: {
 		flagname:   "network",
 		flagusage:  "Options: mainnet, ropsten, or custom",
@@ -247,6 +268,18 @@ var ConfigMap = map[ConfigConst]configitem{
 		envval:    nil,
 		flagval:   nil,
 	},
+<<<<<<< HEAD
+=======
+	DisableValidate: {
+		flagname:  "disablevalidate",
+		flagusage: "Disable the Validator",
+		envname:   "DISABLEVALIDATE",
+		defval:    "false",
+		configval: nil,
+		envval:    nil,
+		flagval:   nil,
+	},
+>>>>>>> pr-009
 	DisableAPI: {
 		flagname:  "disableapi",
 		flagusage: "Disable the external api",

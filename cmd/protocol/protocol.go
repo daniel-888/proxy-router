@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+<<<<<<< HEAD
+=======
+	"net"
+>>>>>>> pr-009
 
 	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
@@ -195,8 +199,11 @@ func NewProtocol(ctx context.Context, s *simple.SimpleStruct) (ps *ProtocolStruc
 func NewProtocolStruct(ctx context.Context, s *simple.SimpleStruct) (n *ProtocolStruct) {
 
 	ctx, cancel := context.WithCancel(s.Ctx())
+<<<<<<< HEAD
 	// cs := contextlib.GetContextStruct(s.Ctx())
 	// src := cs.GetSrc()
+=======
+>>>>>>> pr-009
 	eventchan := make(chan *simple.SimpleEvent)
 	pcs := NewProtocolConnectionStruct(ctx, nil)
 	pcs.SetState(ConnStateReady)
@@ -410,6 +417,19 @@ func (ps *ProtocolStruct) Write(msg []byte) (count int, e error) {
 }
 
 //
+<<<<<<< HEAD
+=======
+// GetSrcRemoteAddr()
+//
+func (ps *ProtocolStruct) GetSrcRemoteAddr() (addr net.Addr, e error) {
+
+	addr, e = ps.simple.GetRemoteAddrIdx(-1)
+
+	return addr, e
+}
+
+//
+>>>>>>> pr-009
 // WriteSrc()
 //
 func (ps *ProtocolStruct) WriteSrc(msg []byte) (count int, e error) {

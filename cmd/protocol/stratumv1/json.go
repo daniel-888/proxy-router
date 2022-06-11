@@ -11,6 +11,10 @@ package stratumv1
 import (
 	"context"
 	"encoding/json"
+<<<<<<< HEAD
+=======
+	"errors"
+>>>>>>> pr-009
 	"fmt"
 	"strconv"
 
@@ -358,6 +362,10 @@ func (r *stratumRequest) getID() (id int, err error) {
 	switch r.Method {
 	case string(CLIENT_MINING_AUTHORIZE):
 	case string(CLIENT_MINING_CAPABILITIES):
+<<<<<<< HEAD
+=======
+	case string(CLIENT_MINING_CONFIGURE):
+>>>>>>> pr-009
 	case string(CLIENT_MINING_EXTRANONCE):
 	case string(CLIENT_MINING_SUBMIT):
 	case string(CLIENT_MINING_SUBSCRIBE):
@@ -715,9 +723,39 @@ func (n *stratumNotice) createNoticeSetDifficultyMsg() (msg []byte, err error) {
 	nsd.Method = n.Method
 	nsd.Params = make([]int, 0)
 
+<<<<<<< HEAD
 	switch params := n.Params.(type) {
 	case []float64:
 		nsd.Params = append(nsd.Params, int(params[0]))
+=======
+	var p interface{}
+	var ok bool = false
+
+	switch params := n.Params.(type) {
+	case []interface{}:
+		p, ok = params[0].(interface{})
+		if !ok {
+			panic(fmt.Sprintf(lumerinlib.FileLineFunc() + " Params is empty"))
+		}
+
+	default:
+		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" type:%t not supported", n.Params))
+	}
+
+	switch p.(type) {
+	case float32:
+		nsd.Params = append(nsd.Params, int(p.(float32)))
+	case float64:
+		nsd.Params = append(nsd.Params, int(p.(float64)))
+	case int:
+		nsd.Params = append(nsd.Params, p.(int))
+	case int32:
+		nsd.Params = append(nsd.Params, int(p.(int32)))
+	case int64:
+		nsd.Params = append(nsd.Params, int(p.(int64)))
+	default:
+		panic(fmt.Sprintf(lumerinlib.FileLineFunc()+" type:%t not supported", n.Params))
+>>>>>>> pr-009
 	}
 
 	msg, err = json.Marshal(nsd)
@@ -885,7 +923,11 @@ func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 	nsd.Method = n.Method
 
 	if len(n.Params.([]interface{})) != 9 {
+<<<<<<< HEAD
 		panic("")
+=======
+		return nil, errors.New(lumerinlib.FileLineFunc() + " wrong number of params")
+>>>>>>> pr-009
 	}
 
 	for i, v := range n.Params.([]interface{}) {
@@ -938,6 +980,33 @@ func (n *stratumNotice) createNoticeMiningNotify() (msg []byte, err error) {
 	return msg, err
 }
 
+<<<<<<< HEAD
+=======
+//
+//
+//
+func (n *stratumNotice) setNoticeMiningNotifyCleanJobsTrue() (err error) {
+
+	if n.Method != string(SERVER_MINING_NOTIFY) {
+		err = fmt.Errorf(lumerinlib.FileLineFunc()+" wrong Method:%s", n.Method)
+	} else if len(n.Params.([]interface{})) != 9 {
+		err = fmt.Errorf(lumerinlib.FileLineFunc() + " wrong number of params")
+	} else {
+		switch n.Params.([]interface{})[8].(type) {
+		case bool:
+			if n.Params.([]interface{})[8].(bool) == false {
+				n.Params.([]interface{})[8] = true
+			}
+
+		default:
+			err = fmt.Errorf(lumerinlib.FileLineFunc()+" params[8] wrong type:%t", n.Params.([]interface{})[8])
+		}
+	}
+
+	return err
+}
+
+>>>>>>> pr-009
 // ---------------------------------------------------------------------------------------
 //                   *StratumResponse
 // ---------------------------------------------------------------------------------------

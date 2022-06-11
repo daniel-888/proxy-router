@@ -13,6 +13,7 @@ lumerin \
 	--accountindex="0" \
 	--timethreshold="10" \
 	--listenip="127.0.0.1" \
+<<<<<<< HEAD
 	--listenport="3334" \
 	--configfile="./ropstenconfig.json" \
 	--configdownload="" \
@@ -22,5 +23,13 @@ lumerin \
 	--defaultpooladdr="stratum+tcp://127.0.0.1:33334/" \
 	--disableconnection="false" \
 	--disablecontract="false" \
+=======
+	--listenport="3333" \
+	--configfile="./ropstenconfig.json" \
+	--configdownload="" \
+	--logfile="/tmp/lumerin1.log" \
+	--loglevel="4" \ 
+	# --disablecontract="false" \
+>>>>>>> pr-009
 	--disableschedule="false" \
 	--disableapi="false"
