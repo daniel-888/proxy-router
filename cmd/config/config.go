@@ -133,15 +133,12 @@ func LoadConfiguration(pkg string) (data map[string]interface{}, err error) {
 	byteValue, _ := ioutil.ReadAll(configFile)
 
 	err = json.Unmarshal(byteValue, &data)
-<<<<<<< HEAD
-=======
 
 	_, ok := data[pkg]
 	if !ok {
 		panic(fmt.Sprintf("Configuration Error retrieving '%s' config section", pkg))
 	}
 
->>>>>>> pr-009
 	return data[pkg].(map[string]interface{}), err
 }
 

@@ -12,13 +12,10 @@ import (
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-<<<<<<< HEAD
-=======
 	"gitlab.com/TitanInd/lumerin/cmd/log"
-	"gitlab.com/TitanInd/lumerin/connections"
->>>>>>> pr-009
+	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
+	"gitlab.com/TitanInd/lumerin/connections"
 	"gitlab.com/TitanInd/lumerin/lumerinlib"
 	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
 )
@@ -74,14 +71,11 @@ func DisabledSimMain(ps *msgbus.PubSub, configs DisabledConfig) msgbus.DestID {
 	mainContext := context.Background()
 
 	//
-<<<<<<< HEAD
-=======
 	// Create Connection Collection
 	//
 	connectionCollection := connections.CreateConnectionCollection()
 
 	//
->>>>>>> pr-009
 	// Add the various Context variables here
 	// msgbus, logger, defailt listen address, defalt desitnation address
 	//
@@ -149,11 +143,7 @@ func DisabledSimMain(ps *msgbus.PubSub, configs DisabledConfig) msgbus.DestID {
 	//
 	// Fire up schedule manager
 	//
-<<<<<<< HEAD
-	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, configs.SchedulePassthrough)
-=======
 	csched, err := connectionscheduler.New(&mainContext, &nodeOperator, true, 0, connectionCollection)
->>>>>>> pr-009
 	if err != nil {
 		panic(fmt.Sprintf("Schedule manager failed: %v", err))
 	}
@@ -175,13 +165,8 @@ func TestDisabled(t *testing.T) {
 
 	var sleepTime time.Duration = 10 * time.Second
 
-<<<<<<< HEAD
-	ps := msgbus.New(10, nil)
-
-=======
 	l := log.New()
 	ps := msgbus.New(10, l)
->>>>>>> pr-009
 	defaultDestID := DisabledSimMain(ps, configs)
 
 	//
@@ -190,18 +175,14 @@ func TestDisabled(t *testing.T) {
 	fmt.Print("\n\n/// Miner connecting to node ///\n\n\n")
 
 	miner := msgbus.Miner{
-		ID:                   msgbus.MinerID("MinerID01"),
-		IP:                   "IpAddress1",
-		State:                msgbus.OnlineState,
-		Dest:                 defaultDestID,
-<<<<<<< HEAD
-		CsMinerHandlerIgnore: false,
-=======
->>>>>>> pr-009
+		ID:    msgbus.MinerID("MinerID01"),
+		IP:    "IpAddress1",
+		State: msgbus.OnlineState,
+		Dest:  defaultDestID,
 	}
 
 	time.Sleep(sleepTime)
-	
+
 	_ = miner
 	//ps.PubWait(msgbus.MinerMsg, msgbus.IDString(miner.ID), miner)
 
@@ -227,11 +208,7 @@ func TestDisabled(t *testing.T) {
 	miners, _ := ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-<<<<<<< HEAD
-		if miner.Contract != "" || miner.Dest != defaultDestID {
-=======
 		if len(miner.Contracts) != 0 || miner.Dest != defaultDestID {
->>>>>>> pr-009
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -258,11 +235,7 @@ func TestDisabled(t *testing.T) {
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-<<<<<<< HEAD
-		if miner.Contract != "ContractID01" || miner.Dest != targetDest.ID {
-=======
-		if _,ok := miner.Contracts["ContractID01"]; ok || miner.Dest != targetDest.ID {
->>>>>>> pr-009
+		if _, ok := miner.Contracts["ContractID01"]; ok || miner.Dest != targetDest.ID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}
@@ -280,11 +253,7 @@ func TestDisabled(t *testing.T) {
 	miners, _ = ps.MinerGetAllWait()
 	for _, v := range miners {
 		miner, _ := ps.MinerGetWait(msgbus.MinerID(v))
-<<<<<<< HEAD
-		if miner.Contract != "ContractID01" || miner.Dest != targetDest.ID {
-=======
-		if _,ok := miner.Contracts["ContractID01"]; !ok || miner.Dest != targetDest.ID {
->>>>>>> pr-009
+		if _, ok := miner.Contracts["ContractID01"]; !ok || miner.Dest != targetDest.ID {
 			t.Errorf("Miner contract and dest not set correctly")
 		}
 	}

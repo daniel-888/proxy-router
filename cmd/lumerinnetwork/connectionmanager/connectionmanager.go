@@ -263,9 +263,6 @@ FORLOOP:
 		count, e := l.Read(data)
 		data = data[:count]
 
-<<<<<<< HEAD
-		if e != nil {
-=======
 		//
 		// If there is an error from the Read, deal with it here
 		//
@@ -274,7 +271,6 @@ FORLOOP:
 			//
 			// Notate the error Here
 			//
->>>>>>> pr-009
 			switch e {
 			case io.EOF:
 				contextlib.Logf(cs.ctx, contextlib.LevelInfo, fmt.Sprintf(lumerinlib.FileLineFunc()+" %s Read() index:%d returned EOF", name, index))
@@ -284,19 +280,11 @@ FORLOOP:
 				contextlib.Logf(cs.ctx, contextlib.LevelError, fmt.Sprintf(lumerinlib.FileLineFunc()+" %s Read() on index:%d returned error:%s", name, index, e))
 			}
 
-<<<<<<< HEAD
-			// Src closed = shutdown the whole shebang
-			// if Dst closed pass the error up
-			if index < 0 {
-				cs.Close()
-				break FORLOOP
-=======
 			// Src closed = shutdown the whole shebang and pass the error up the stack
 			// if Dst closed pass the error up the stack
 			// index = -1 (SRC) index >= 0 (DST)
 			if index < 0 {
 				e = ErrConnMgrClosed
->>>>>>> pr-009
 			} else {
 				e = ErrConnDstClosed
 			}
@@ -321,22 +309,13 @@ FORLOOP:
 		}
 	}
 
-<<<<<<< HEAD
-=======
 	// Something errored or closed, so call close to be sure nothing is hanging
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" %s UID:%d Exiting", name, index))
 
->>>>>>> pr-009
 	if index < 0 {
 		cs.Close()
 	}
 
-<<<<<<< HEAD
-	// Something errored or closed, so call close to be sure nothing is hanging
-	contextlib.Logf(cs.ctx, contextlib.LevelTrace, fmt.Sprintf(lumerinlib.FileLineFunc()+" %s UID:%d Exiting", name, index))
-
-=======
->>>>>>> pr-009
 }
 
 //
@@ -423,8 +402,6 @@ func (cs *ConnectionStruct) Dial(addr net.Addr) (idx int, e error) {
 }
 
 //
-<<<<<<< HEAD
-=======
 //
 //
 func (cs *ConnectionStruct) GetRemoteAddrIdx(idx int) (addr net.Addr, e error) {
@@ -458,7 +435,6 @@ func (cs *ConnectionStruct) GetRemoteAddrIdx(idx int) (addr net.Addr, e error) {
 }
 
 //
->>>>>>> pr-009
 // ReDialIdx() will attempt to reconnect to the same dst, first checking the the line is closed
 // It is used in case a connection is severed
 //
@@ -486,15 +462,11 @@ func (cs *ConnectionStruct) ReDialIdx(idx int) (e error) {
 		contextlib.Logf(cs.ctx, contextlib.LevelPanic, lumerinlib.FileLineFunc()+" cannot be here, idx:%d", idx)
 	}
 
-<<<<<<< HEAD
-	addr := cs.dst[idx].GetAddr()
-=======
 	addr, e := cs.dst[idx].GetRemoteAddr()
 	if e != nil {
 		contextlib.Logf(cs.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" GetRemoteAddr() IDX:%d, error:%s", idx, e)
 		return ErrConnMgrBadDest
 	}
->>>>>>> pr-009
 
 	if !cs.dst[idx].Done() {
 		cs.dst[idx].Close()
@@ -559,8 +531,6 @@ func (cs *ConnectionStruct) SrcGetSocket() (s *lumerinconnection.LumerinSocketSt
 //
 //
 //
-<<<<<<< HEAD
-=======
 func (cs *ConnectionStruct) SrcGetRemoteAddr() (addr net.Addr, e error) {
 
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
@@ -571,7 +541,6 @@ func (cs *ConnectionStruct) SrcGetRemoteAddr() (addr net.Addr, e error) {
 //
 //
 //
->>>>>>> pr-009
 func (cs *ConnectionStruct) SrcRead(buf []byte) (count int, e error) {
 
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
@@ -615,21 +584,14 @@ func (cs *ConnectionStruct) DstGetSocket() (s *lumerinconnection.LumerinSocketSt
 	if cs.dst[cs.defidx] == nil {
 		e = ErrConnMgrBadDefDest
 		return nil, e
-<<<<<<< HEAD
-
-	}
-=======
 	}
 
->>>>>>> pr-009
 	return cs.dst[cs.defidx], e
 }
 
 //
 //
 //
-<<<<<<< HEAD
-=======
 func (cs *ConnectionStruct) DstGetRemoteAddr() (addr net.Addr, e error) {
 
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
@@ -650,7 +612,6 @@ func (cs *ConnectionStruct) DstGetRemoteAddr() (addr net.Addr, e error) {
 //
 //
 //
->>>>>>> pr-009
 func (cs *ConnectionStruct) DstRead(buf []byte) (count int, e error) {
 
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
@@ -737,8 +698,6 @@ func (cs *ConnectionStruct) IdxGetSocket(idx int) (s *lumerinconnection.LumerinS
 //
 //
 //
-<<<<<<< HEAD
-=======
 func (cs *ConnectionStruct) IdxGetRemoteAddr(idx int) (addr net.Addr, e error) {
 
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
@@ -759,7 +718,6 @@ func (cs *ConnectionStruct) IdxGetRemoteAddr(idx int) (addr net.Addr, e error) {
 //
 //
 //
->>>>>>> pr-009
 func (cs *ConnectionStruct) IdxRead(idx int, buf []byte) (count int, e error) {
 
 	contextlib.Logf(cs.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")

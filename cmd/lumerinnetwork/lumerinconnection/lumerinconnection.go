@@ -479,10 +479,6 @@ func (l *LumerinSocketStruct) Close() (e error) {
 //
 //
 //
-<<<<<<< HEAD
-func (l *LumerinSocketStruct) GetAddr() net.Addr {
-	return l.remoteaddr
-=======
 func (l *LumerinSocketStruct) GetRemoteAddr() (addr net.Addr, e error) {
 
 	if l == nil {
@@ -498,7 +494,6 @@ func (l *LumerinSocketStruct) GetRemoteAddr() (addr net.Addr, e error) {
 
 	return addr, e
 	// return l.remoteaddr
->>>>>>> pr-009
 }
 
 //

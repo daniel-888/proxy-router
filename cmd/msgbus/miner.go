@@ -20,34 +20,20 @@ type Miner struct {
 	ID                      MinerID
 	Name                    string
 	IP                      string
-<<<<<<< HEAD
-	MAC                     string
-	State                   MinerState
-	Contract                ContractID // Updated by Connection Scheduler
-	Dest                    DestID     // Updated by Connection Scheduler
-	InitialMeasuredHashRate int
-	CurrentHashRate         int
-	CsMinerHandlerIgnore    bool // Ignore update in Connection Scheduler Miner Handler
-=======
 	Port                    int
 	MAC                     string
 	State                   MinerState
 	Contracts               map[ContractID]float64 // Updated by Connection Scheduler
-	Dest                    DestID     // Updated by Connection Scheduler
+	Dest                    DestID                 // Updated by Connection Scheduler
 	InitialMeasuredHashRate int
-	CurrentHashRate         int 
-	TimeSlice				bool
->>>>>>> pr-009
+	CurrentHashRate         int
+	TimeSlice               bool
 }
 
 //---------------------------------------------------------------
 //
 //---------------------------------------------------------------
 func (ps *PubSub) MinerPubWait(miner Miner) (m Miner, err error) {
-<<<<<<< HEAD
-
-=======
->>>>>>> pr-009
 	if miner.ID == "" {
 		miner.ID = MinerID(GetRandomIDString())
 	}
@@ -69,10 +55,6 @@ func (ps *PubSub) MinerPubWait(miner Miner) (m Miner, err error) {
 //
 //---------------------------------------------------------------
 func (ps *PubSub) MinerGetWait(id MinerID) (miner *Miner, err error) {
-<<<<<<< HEAD
-
-=======
->>>>>>> pr-009
 	event, err := ps.GetWait(MinerMsg, IDString(id))
 	if err != nil || event.Err != nil {
 		fmt.Printf(lumerinlib.Funcname()+" ID not found %s, %s\n", err, event.Err)
@@ -95,10 +77,6 @@ func (ps *PubSub) MinerGetWait(id MinerID) (miner *Miner, err error) {
 //
 //---------------------------------------------------------------
 func (ps *PubSub) MinerSetWait(miner Miner) (err error) {
-<<<<<<< HEAD
-
-=======
->>>>>>> pr-009
 	if miner.ID == "" {
 		panic(fmt.Sprintf(lumerinlib.Funcname() + " ID not provided\n"))
 	}
@@ -125,10 +103,6 @@ func (ps *PubSub) MinerSetWait(miner Miner) (err error) {
 //
 //---------------------------------------------------------------
 func (ps *PubSub) MinerGetAllWait() (miners []MinerID, err error) {
-<<<<<<< HEAD
-
-=======
->>>>>>> pr-009
 	event, err := ps.GetWait(MinerMsg, "")
 	if err != nil || event.Err != nil {
 		fmt.Printf(lumerinlib.Funcname()+" Error gettig all  %s, %s\n", err, event.Err)
@@ -161,30 +135,17 @@ func (ps *PubSub) MinerGetAllWait() (miners []MinerID, err error) {
 //---------------------------------------------------------------
 func (ps *PubSub) MinerExistsWait(id MinerID) bool {
 	miner, _ := ps.MinerGetWait(id)
-<<<<<<< HEAD
-
-=======
->>>>>>> pr-009
 	return miner != nil
 }
 
 //---------------------------------------------------------------
 //
 //---------------------------------------------------------------
-<<<<<<< HEAD
-func (ps *PubSub) MinerSetDestWait(miner MinerID, dest DestID) (err error) {
-
-	m, err := ps.MinerGetWait(miner)
-	if err != nil {
-		fmt.Printf(lumerinlib.FileLine()+" MinerGetWait errored out:%s\n", err)
-		return err
-=======
 func (ps *PubSub) MinerSetDestWait(miner MinerID, dest DestID) (m *Miner, err error) {
 	m, err = ps.MinerGetWait(miner)
 	if err != nil {
 		fmt.Printf(lumerinlib.FileLine()+" MinerGetWait errored out:%s\n", err)
-		return m,err
->>>>>>> pr-009
+		return m, err
 	} else {
 		m.Dest = dest
 		err = ps.MinerSetWait(*m)
@@ -192,28 +153,12 @@ func (ps *PubSub) MinerSetDestWait(miner MinerID, dest DestID) (m *Miner, err er
 			fmt.Printf(lumerinlib.FileLine()+" MinerSetWait errored out:%s\n", err)
 		}
 	}
-<<<<<<< HEAD
-
-	return err
-=======
-	return m,err
->>>>>>> pr-009
+	return m, err
 }
 
 //---------------------------------------------------------------
 //
 //---------------------------------------------------------------
-<<<<<<< HEAD
-func (ps *PubSub) MinerSetContractWait(miner MinerID, contract ContractID, targetDest DestID, csIgnore bool) (err error) {
-	m, err := ps.MinerGetWait(miner)
-	if err != nil {
-		fmt.Printf(lumerinlib.FileLine()+" MinerGetWait errored out:%s\n", err)
-		return err
-	} else {
-		m.Contract = contract
-		m.Dest = targetDest
-		m.CsMinerHandlerIgnore = csIgnore
-=======
 func (ps *PubSub) MinerSetContractWait(miner MinerID, contract ContractID, slicePercent float64, timeSlice bool) (m *Miner, err error) {
 	m, err = ps.MinerGetWait(miner)
 	if err != nil {
@@ -222,27 +167,11 @@ func (ps *PubSub) MinerSetContractWait(miner MinerID, contract ContractID, slice
 	} else {
 		m.Contracts[contract] = slicePercent
 		m.TimeSlice = timeSlice
->>>>>>> pr-009
 		err = ps.MinerSetWait(*m)
 		if err != nil {
 			fmt.Printf(lumerinlib.FileLine()+" MinerSetWait errored out:%s\n", err)
 		}
 	}
-<<<<<<< HEAD
-
-	return err
-}
-
-func (ps *PubSub) MinerRemoveContractWait(miner MinerID, defaultDest DestID, csIgnore bool) (err error) {
-	m, err := ps.MinerGetWait(miner)
-	if err != nil {
-		fmt.Printf(lumerinlib.FileLine()+" MinerGetWait errored out:%s\n", err)
-		return err
-	} else {
-		m.Contract = ""
-		m.Dest = defaultDest
-		m.CsMinerHandlerIgnore = csIgnore
-=======
 	return m, err
 }
 
@@ -252,8 +181,8 @@ func (ps *PubSub) MinerRemoveContractWait(miner MinerID, contract ContractID, de
 		fmt.Printf(lumerinlib.FileLine()+" MinerGetWait errored out:%s\n", err)
 		return m, err
 	} else {
-		if _,ok := m.Contracts[contract]; !ok {
-			fmt.Println(lumerinlib.FileLine()+"Trying to remove contract from Miner that doesn't contain it")
+		if _, ok := m.Contracts[contract]; !ok {
+			fmt.Println(lumerinlib.FileLine() + "Trying to remove contract from Miner that doesn't contain it")
 		}
 		delete(m.Contracts, contract)
 		if len(m.Contracts) == 0 {
@@ -261,8 +190,8 @@ func (ps *PubSub) MinerRemoveContractWait(miner MinerID, contract ContractID, de
 			m.TimeSlice = false
 		} else {
 			sliced := false
-			loop:
-			for _,c := range m.Contracts {
+		loop:
+			for _, c := range m.Contracts {
 				if c < 1 {
 					sliced = true
 					break loop
@@ -270,31 +199,25 @@ func (ps *PubSub) MinerRemoveContractWait(miner MinerID, contract ContractID, de
 			}
 			m.TimeSlice = sliced
 		}
->>>>>>> pr-009
 		err = ps.MinerSetWait(*m)
 		if err != nil {
 			fmt.Printf(lumerinlib.FileLine()+" MinerSetWait errored out:%s\n", err)
 		}
 	}
-<<<<<<< HEAD
-
-	return err
-}
-=======
 	return m, err
 }
 
 func (ps *PubSub) MinersContainContract(contract ContractID) (result []Miner) {
-	miners,err := ps.MinerGetAllWait()
+	miners, err := ps.MinerGetAllWait()
 	if err != nil {
 		panic(fmt.Sprintf(lumerinlib.Funcname()+" Error gettig all miners, error %v\n", err))
 	}
-	for _,m := range miners {
-		miner,err := ps.MinerGetWait(m)
+	for _, m := range miners {
+		miner, err := ps.MinerGetWait(m)
 		if err != nil {
 			panic(fmt.Sprintf(lumerinlib.Funcname()+" Error gettig miner, error %v\n", err))
 		}
-		if _,ok := miner.Contracts[contract]; ok {	
+		if _, ok := miner.Contracts[contract]; ok {
 			result = append(result, *miner)
 		}
 	}
@@ -302,15 +225,14 @@ func (ps *PubSub) MinersContainContract(contract ContractID) (result []Miner) {
 }
 
 func (ps *PubSub) MinerSlicedUtilization(id MinerID) float64 {
-	miner,err := ps.MinerGetWait(id)
+	miner, err := ps.MinerGetWait(id)
 	if err != nil {
 		panic(fmt.Sprintf(lumerinlib.Funcname()+" Error gettig miner, error %v\n", err))
 	}
 	var contractSlicedPercent float64
-	for _,v := range miner.Contracts {
+	for _, v := range miner.Contracts {
 		contractSlicedPercent += v
 	}
 
 	return (1 - contractSlicedPercent)
 }
->>>>>>> pr-009

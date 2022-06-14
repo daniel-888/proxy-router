@@ -62,10 +62,7 @@ func FileLineFunc(a ...int) string {
 	var depth int = 1
 
 	if len(a) != 0 {
-<<<<<<< HEAD
-=======
 		depth = len(a)
->>>>>>> pr-009
 		if depth < 1 && depth > 10 {
 			panic(FileLine() + " depth out of bounds")
 		}
@@ -182,8 +179,6 @@ func getGID() uint64 {
 	n, _ := strconv.ParseUint(string(b), 10, 64)
 	return n
 }
-<<<<<<< HEAD
-=======
 
 //
 // goCounter()
@@ -199,4 +194,3 @@ func RunGoCounter(c chan int) {
 		}
 	}()
 }
->>>>>>> pr-009

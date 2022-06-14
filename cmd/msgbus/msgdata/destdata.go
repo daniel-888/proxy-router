@@ -100,10 +100,6 @@ func (r *DestRepo) SubscribeToDestMsgBus() {
 			if err != nil {
 				panic(fmt.Sprintf("Getting Dest Failed: %s", err))
 			}
-<<<<<<< HEAD
-			dest := event.Data.(msgbus.Dest)
-			r.AddDestFromMsgBus(msgbus.DestID(dests[i]), dest)
-=======
 			switch event.Data.(type) {
 			case msgbus.Dest:
 				dest := event.Data.(msgbus.Dest)
@@ -112,7 +108,6 @@ func (r *DestRepo) SubscribeToDestMsgBus() {
 				dest := event.Data.(*msgbus.Dest)
 				r.AddDestFromMsgBus(msgbus.DestID(dests[i]), *dest)
 			}
->>>>>>> pr-009
 		}
 	}
 
@@ -146,13 +141,8 @@ func (r *DestRepo) SubscribeToDestMsgBus() {
 					break loop
 				}
 			}
-<<<<<<< HEAD
-			dest := event.Data.(msgbus.Dest)
-			r.AddDestFromMsgBus(destID, dest)
-=======
 			dest := event.Data.(*msgbus.Dest)
 			r.AddDestFromMsgBus(destID, *dest)
->>>>>>> pr-009
 
 			//
 			// Delete/Unpublish Event

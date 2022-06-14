@@ -9,23 +9,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
 	"gitlab.com/TitanInd/lumerin/cmd/msgbus/msgdata"
-<<<<<<< HEAD
-=======
 	"gitlab.com/TitanInd/lumerin/interfaces"
->>>>>>> pr-009
 
 	"github.com/gorilla/websocket"
 )
 
-<<<<<<< HEAD
-=======
 var connectionCollection interfaces.IConnectionController
 
 func SetConnectionCollection(connections interfaces.IConnectionController) {
 	connectionCollection = connections
 }
 
->>>>>>> pr-009
 func ConnectionSTREAM(conn *msgdata.ConnectionRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		upgrader := websocket.Upgrader{
@@ -79,10 +73,6 @@ func ConnectionSTREAM(conn *msgdata.ConnectionRepo) gin.HandlerFunc {
 
 func ConnectionsGET(conn *msgdata.ConnectionRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
-<<<<<<< HEAD
-		results := conn.GetAllConnections()
-		c.JSON(http.StatusOK, results)
-=======
 		connections, err := connectionCollection.GetConnections()
 
 		if err != nil {
@@ -90,7 +80,6 @@ func ConnectionsGET(conn *msgdata.ConnectionRepo) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, connections)
->>>>>>> pr-009
 	}
 }
 

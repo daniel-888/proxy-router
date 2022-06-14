@@ -90,44 +90,28 @@ func (s *ContextStruct) SetLog(x *log.Logger) {
 //
 //
 //
-<<<<<<< HEAD
-func (s *ContextStruct) GetMsgBus() (x *msgbus.PubSub) {
-=======
 func (s *ContextStruct) GetMsgBus() *msgbus.PubSub {
->>>>>>> pr-009
 	return s.MsgBus
 }
 
 //
 //
 //
-<<<<<<< HEAD
-func (s *ContextStruct) GetSrc() (x net.Addr) {
-=======
 func (s *ContextStruct) GetSrc() net.Addr {
->>>>>>> pr-009
 	return s.Src
 }
 
 //
 //
 //
-<<<<<<< HEAD
-func (s *ContextStruct) GetDest() (x *msgbus.Dest) {
-=======
 func (s *ContextStruct) GetDest() *msgbus.Dest {
->>>>>>> pr-009
 	return s.Dest
 }
 
 //
 //
 //
-<<<<<<< HEAD
-func (s *ContextStruct) GetLog() (x *log.Logger) {
-=======
 func (s *ContextStruct) GetLog() *log.Logger {
->>>>>>> pr-009
 	return s.Log
 }
 
@@ -164,28 +148,6 @@ func SetContextStruct(ctx context.Context, cs *ContextStruct) (newctx context.Co
 	return context.WithValue(ctx, ContextKey, cs)
 }
 
-<<<<<<< HEAD
-//
-//
-//
-func Logf(ctx context.Context, level log.Level, format string, args ...interface{}) {
-	v := ctx.Value(ContextKey)
-	val, ok := v.(*ContextStruct)
-	if !ok {
-		fmt.Printf(levelMap[level]+":"+format+"\n", args...)
-	} else {
-		if val.Log == nil {
-			str := fmt.Sprintf(levelMap[level]+":"+format+"\n", args...)
-			if level == log.LevelPanic {
-				panic(str)
-			}
-			fmt.Print(str)
-
-		} else {
-			GetContextStruct(ctx).Logf(LevelTrace, format, args...)
-		}
-	}
-=======
 func Logf(ctx context.Context, level log.Level, format string, args ...interface{}) {
 	v := ctx.Value(ContextKey)
 
@@ -202,7 +164,6 @@ func Logf(ctx context.Context, level log.Level, format string, args ...interface
 	}
 
 	fmt.Print(str)
->>>>>>> pr-009
 }
 
 //

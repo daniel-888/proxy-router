@@ -14,11 +14,8 @@ type ConfigRead struct {
 	DefaultPoolAddr     string
 	DisableSchedule     bool
 	SchedulePassthrough bool
-<<<<<<< HEAD
-=======
 	HashrateCalcLagTime int
-	DisableValidate		bool
->>>>>>> pr-009
+	DisableValidate     bool
 	DisableContract     bool
 	Mnemonic            string
 	AccountIndex        int
@@ -33,10 +30,7 @@ type ConfigRead struct {
 	ApiPort             string
 	LogLevel            int
 	LogFilePath         string
-<<<<<<< HEAD
-=======
 	Scheduler           string
->>>>>>> pr-009
 }
 
 func ReadConfigs() (configs ConfigRead) {
@@ -67,10 +61,7 @@ func ReadConfigs() (configs ConfigRead) {
 		configs.ListenIP = connectionConfig["listenIP"].(string)
 		configs.ListenPort = connectionConfig["listenPort"].(string)
 		configs.DefaultPoolAddr = connectionConfig["defaultPoolAddr"].(string)
-<<<<<<< HEAD
-=======
 		configs.Scheduler = connectionConfig["schedulermethod"].(string)
->>>>>>> pr-009
 
 		//
 		// Scheduler Configs
@@ -81,8 +72,6 @@ func ReadConfigs() (configs ConfigRead) {
 		}
 		configs.DisableSchedule = scheduleConfig["disable"].(bool)
 		configs.SchedulePassthrough = scheduleConfig["passthrough"].(bool)
-<<<<<<< HEAD
-=======
 		configs.HashrateCalcLagTime = int(scheduleConfig["hashrateCalcLagTime"].(float64))
 
 		//
@@ -93,7 +82,6 @@ func ReadConfigs() (configs ConfigRead) {
 			panic(fmt.Sprintf("Failed to load validate configuration: %v", err))
 		}
 		configs.DisableValidate = validateConfig["disable"].(bool)
->>>>>>> pr-009
 
 		//
 		// Contract Configs
@@ -198,8 +186,6 @@ func ReadConfigs() (configs ConfigRead) {
 		}
 
 		//
-<<<<<<< HEAD
-=======
 		// Validate Configs
 		//
 		configs.DisableValidate = false
@@ -212,7 +198,6 @@ func ReadConfigs() (configs ConfigRead) {
 		}
 
 		//
->>>>>>> pr-009
 		// Contract Configs
 		//
 		configs.DisableContract = false

@@ -52,12 +52,9 @@ var defaultOutput = os.Stdout
 func New() *Logger {
 	l := logrus.New()
 	l.SetOutput(defaultOutput)
-<<<<<<< HEAD
-=======
 	l.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
 	})
->>>>>>> pr-009
 
 	return &Logger{
 		l,

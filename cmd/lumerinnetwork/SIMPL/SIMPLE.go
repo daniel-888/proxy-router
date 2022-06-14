@@ -4,10 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-<<<<<<< HEAD
-=======
 	"net"
->>>>>>> pr-009
 	"time"
 
 	"gitlab.com/TitanInd/lumerin/cmd/log"
@@ -40,10 +37,7 @@ const (
 	MinerMsg                 MsgType = MsgType(msgbus.MinerMsg)
 	ConnectionMsg            MsgType = MsgType(msgbus.ConnectionMsg)
 	LogMsg                   MsgType = MsgType(msgbus.LogMsg)
-<<<<<<< HEAD
-=======
 	ValidateMsg              MsgType = MsgType(msgbus.ValidateMsg)
->>>>>>> pr-009
 )
 
 type SimpleListenStruct struct {
@@ -608,9 +602,6 @@ network connection functions
 //
 //
 //
-<<<<<<< HEAD
-func (s *SimpleStruct) GetRemoteAddr(uid ConnUniqueID) {
-=======
 func (s *SimpleStruct) GetRemoteAddrIdx(uid ConnUniqueID) (addr net.Addr, e error) {
 
 	if uid < 0 {
@@ -618,7 +609,6 @@ func (s *SimpleStruct) GetRemoteAddrIdx(uid ConnUniqueID) (addr net.Addr, e erro
 	} else {
 		return s.connectionMapping[uid].GetRemoteAddr()
 	}
->>>>>>> pr-009
 
 }
 

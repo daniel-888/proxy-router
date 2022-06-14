@@ -10,26 +10,18 @@
         "disableStratumv1": false,
         "listenIP": "127.0.0.1",
         "listenPort": "3333",
-<<<<<<< HEAD
-        "defaultPoolAddr": "stratum+tcp://127.0.0.1:33334/"
-=======
         "schedulermethod": "OnDemand",
         "defaultPoolAddr": "stratum+tcp://127.0.0.1:33334/ryan"
->>>>>>> pr-009
     },
 
     "schedule": {
         "disable": false,
-<<<<<<< HEAD
-        "passthrough": false
-=======
         "passthrough": false,
         "hashrateCalcLagTime": 20
     },
 
     "validate": {
         "disable": false
->>>>>>> pr-009
     },
 
     "contract": {
@@ -50,11 +42,7 @@
     },
 
     "logging": {
-<<<<<<< HEAD
-        "level": 4,
-=======
         "level": 6,
->>>>>>> pr-009
         "filePath": "/tmp/lumerin1.log"
     }
 }
