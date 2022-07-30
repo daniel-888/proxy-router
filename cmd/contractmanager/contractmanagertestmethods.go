@@ -19,15 +19,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	//"github.com/ethereum/go-ethereum/crypto/ecies"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	"github.com/daniel-888/proxy-router/lumerinlib"
 
-	"gitlab.com/TitanInd/lumerin/lumerinlib/clonefactory"
-	"gitlab.com/TitanInd/lumerin/lumerinlib/implementation"
-	"gitlab.com/TitanInd/lumerin/lumerinlib/lumerintoken"
+	"github.com/daniel-888/proxy-router/lumerinlib/clonefactory"
+	"github.com/daniel-888/proxy-router/lumerinlib/implementation"
+	"github.com/daniel-888/proxy-router/lumerinlib/lumerintoken"
 )
 
 type TestSetup struct {

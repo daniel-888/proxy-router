@@ -3,7 +3,7 @@ package connections
 import (
 	"encoding/json"
 
-	"gitlab.com/TitanInd/lumerin/interfaces"
+	"github.com/daniel-888/proxy-router/interfaces"
 )
 
 type Connection struct {

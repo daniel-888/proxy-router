@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/TitanInd/lumerin/cmd/log"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/interfaces"
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
-	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	"github.com/daniel-888/proxy-router/cmd/log"
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
+	"github.com/daniel-888/proxy-router/interfaces"
+	"github.com/daniel-888/proxy-router/lumerinlib"
+	contextlib "github.com/daniel-888/proxy-router/lumerinlib/context"
 )
 
 const (

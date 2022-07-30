@@ -6,8 +6,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
-	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	"github.com/daniel-888/proxy-router/lumerinlib"
+	contextlib "github.com/daniel-888/proxy-router/lumerinlib/context"
 )
 
 var basePort int = 50000

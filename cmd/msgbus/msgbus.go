@@ -4,8 +4,8 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	"gitlab.com/TitanInd/lumerin/cmd/log"
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	"github.com/daniel-888/proxy-router/cmd/log"
+	"github.com/daniel-888/proxy-router/lumerinlib"
 )
 
 type operation string

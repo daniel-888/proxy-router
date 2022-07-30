@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/TitanInd/lumerin/cmd/log"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus/msgdata"
+	"github.com/daniel-888/proxy-router/cmd/log"
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
+	"github.com/daniel-888/proxy-router/cmd/msgbus/msgdata"
 )
 
 func TestMsgBusDataAddedToApiRepos(t *testing.T) {

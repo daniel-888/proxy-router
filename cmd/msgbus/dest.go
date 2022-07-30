@@ -5,7 +5,7 @@ import (
 	"net"
 	"net/url"
 
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	"github.com/daniel-888/proxy-router/lumerinlib"
 )
 
 type DestNetUrl string

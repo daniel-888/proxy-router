@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/TitanInd/lumerin/cmd/log"
-	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
-	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/sockettcp"
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
-	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	"github.com/daniel-888/proxy-router/cmd/log"
+	"github.com/daniel-888/proxy-router/cmd/lumerinnetwork/lumerinconnection"
+	"github.com/daniel-888/proxy-router/cmd/lumerinnetwork/sockettcp"
+	"github.com/daniel-888/proxy-router/lumerinlib"
+	contextlib "github.com/daniel-888/proxy-router/lumerinlib/context"
 )
 
 var basePort int = 50000

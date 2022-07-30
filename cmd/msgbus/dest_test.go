@@ -3,7 +3,7 @@ package msgbus
 import (
 	"testing"
 
-	"gitlab.com/TitanInd/lumerin/cmd/log"
+	"github.com/daniel-888/proxy-router/cmd/log"
 )
 
 var (

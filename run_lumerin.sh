@@ -14,7 +14,7 @@ lumerin \
 	--timethreshold="10" \
 	--listenip="127.0.0.1" \
 	--listenport="3333" \
-	--configfile="./ropstenconfig.json" \
+	--configfile="" \
 	--configdownload="" \
 	--logfile="/tmp/lumerin1.log" \
 	--loglevel="4" \ 

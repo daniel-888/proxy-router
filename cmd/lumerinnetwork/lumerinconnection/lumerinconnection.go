@@ -8,9 +8,9 @@ import (
 	"net"
 	"strings"
 
-	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/sockettcp"
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
-	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	"github.com/daniel-888/proxy-router/cmd/lumerinnetwork/sockettcp"
+	"github.com/daniel-888/proxy-router/lumerinlib"
+	contextlib "github.com/daniel-888/proxy-router/lumerinlib/context"
 )
 
 //

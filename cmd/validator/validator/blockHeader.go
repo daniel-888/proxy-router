@@ -3,12 +3,13 @@ package validator
 import (
 	"encoding/binary"
 	"encoding/json"
-	wire "gitlab.com/TitanInd/lumerin/cmd/validator/wire"
 	"fmt"
-	"github.com/btcsuite/btcd/blockchain"
-	chainhashOnline "github.com/btcsuite/btcd/chaincfg/chainhash"
 	"math/big"
 	"strconv"
+
+	"github.com/btcsuite/btcd/blockchain"
+	chainhashOnline "github.com/btcsuite/btcd/chaincfg/chainhash"
+	wire "github.com/daniel-888/proxy-router/cmd/validator/wire"
 )
 
 type BlockHeader struct {

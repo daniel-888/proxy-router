@@ -7,9 +7,9 @@ import (
 	"io"
 	"net"
 
-	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
-	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	"github.com/daniel-888/proxy-router/cmd/lumerinnetwork/lumerinconnection"
+	"github.com/daniel-888/proxy-router/lumerinlib"
+	contextlib "github.com/daniel-888/proxy-router/lumerinlib/context"
 )
 
 const DefaultDstSlots int = 8

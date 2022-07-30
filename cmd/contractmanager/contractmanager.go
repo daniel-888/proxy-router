@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"sync"
 	"time"
+
 	//"encoding/hex"
 
 	"github.com/ethereum/go-ethereum"
@@ -20,12 +21,12 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 
-	"gitlab.com/TitanInd/lumerin/cmd/log"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
-	"gitlab.com/TitanInd/lumerin/lumerinlib/clonefactory"
-	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
-	"gitlab.com/TitanInd/lumerin/lumerinlib/implementation"
+	"github.com/daniel-888/proxy-router/cmd/log"
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
+	"github.com/daniel-888/proxy-router/lumerinlib"
+	"github.com/daniel-888/proxy-router/lumerinlib/clonefactory"
+	contextlib "github.com/daniel-888/proxy-router/lumerinlib/context"
+	"github.com/daniel-888/proxy-router/lumerinlib/implementation"
 )
 
 const (

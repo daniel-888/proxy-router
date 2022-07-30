@@ -9,17 +9,17 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/TitanInd/lumerin/cmd/config"
-	"gitlab.com/TitanInd/lumerin/cmd/connectionscheduler"
-	"gitlab.com/TitanInd/lumerin/cmd/contractmanager"
-	"gitlab.com/TitanInd/lumerin/cmd/externalapi"
-	"gitlab.com/TitanInd/lumerin/cmd/log"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/cmd/protocol/stratumv1"
-	"gitlab.com/TitanInd/lumerin/cmd/validator/validator"
-	"gitlab.com/TitanInd/lumerin/connections"
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
-	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	"github.com/daniel-888/proxy-router/cmd/config"
+	"github.com/daniel-888/proxy-router/cmd/connectionscheduler"
+	"github.com/daniel-888/proxy-router/cmd/contractmanager"
+	"github.com/daniel-888/proxy-router/cmd/externalapi"
+	"github.com/daniel-888/proxy-router/cmd/log"
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
+	"github.com/daniel-888/proxy-router/cmd/protocol/stratumv1"
+	"github.com/daniel-888/proxy-router/cmd/validator/validator"
+	"github.com/daniel-888/proxy-router/connections"
+	"github.com/daniel-888/proxy-router/lumerinlib"
+	contextlib "github.com/daniel-888/proxy-router/lumerinlib/context"
 )
 
 // -------------------------------------------

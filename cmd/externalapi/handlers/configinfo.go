@@ -4,9 +4,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
+	"github.com/daniel-888/proxy-router/cmd/msgbus/msgdata"
 	"github.com/gin-gonic/gin"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus/msgdata"
 )
 
 func ConfigsGET(config *msgdata.ConfigInfoRepo) gin.HandlerFunc {

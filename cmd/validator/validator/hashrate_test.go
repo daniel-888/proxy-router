@@ -1,14 +1,14 @@
 package validator
 
-import(
-	"testing"
+import (
 	"context"
-	"time"
 	"fmt"
+	"testing"
+	"time"
 
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/cmd/log"
-	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	"github.com/daniel-888/proxy-router/cmd/log"
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
+	contextlib "github.com/daniel-888/proxy-router/lumerinlib/context"
 )
 
 func TestHashrate(t *testing.T) {

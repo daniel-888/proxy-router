@@ -3,11 +3,11 @@ package stratumv1
 import (
 	"fmt"
 
-	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
-	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/connectionmanager"
-	"gitlab.com/TitanInd/lumerin/cmd/protocol"
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
-	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	simple "github.com/daniel-888/proxy-router/cmd/lumerinnetwork/SIMPL"
+	"github.com/daniel-888/proxy-router/cmd/lumerinnetwork/connectionmanager"
+	"github.com/daniel-888/proxy-router/cmd/protocol"
+	"github.com/daniel-888/proxy-router/lumerinlib"
+	contextlib "github.com/daniel-888/proxy-router/lumerinlib/context"
 )
 
 //

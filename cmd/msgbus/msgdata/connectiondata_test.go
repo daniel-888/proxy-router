@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
 )
 
 func TestAddConnection(t *testing.T) {

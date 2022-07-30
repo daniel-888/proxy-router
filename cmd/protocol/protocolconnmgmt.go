@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"net"
 
-	simple "gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/SIMPL"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
-	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	simple "github.com/daniel-888/proxy-router/cmd/lumerinnetwork/SIMPL"
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
+	"github.com/daniel-888/proxy-router/lumerinlib"
+	contextlib "github.com/daniel-888/proxy-router/lumerinlib/context"
 )
 
 var ErrProtoConnNoDstIndex = errors.New("DST index not found")

@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
+	"github.com/daniel-888/proxy-router/cmd/msgbus/msgdata"
+	"github.com/daniel-888/proxy-router/interfaces"
 	"github.com/gin-gonic/gin"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus/msgdata"
-	"gitlab.com/TitanInd/lumerin/interfaces"
 
 	"github.com/gorilla/websocket"
 )

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
+	"github.com/daniel-888/proxy-router/lumerinlib"
 )
 
 //Struct of Miner parameters in JSON

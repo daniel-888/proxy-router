@@ -7,11 +7,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"gitlab.com/TitanInd/lumerin/cmd/externalapi/handlers"
-	"gitlab.com/TitanInd/lumerin/cmd/log"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus/msgdata"
-	"gitlab.com/TitanInd/lumerin/interfaces"
+	"github.com/daniel-888/proxy-router/cmd/externalapi/handlers"
+	"github.com/daniel-888/proxy-router/cmd/log"
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
+	"github.com/daniel-888/proxy-router/cmd/msgbus/msgdata"
+	"github.com/daniel-888/proxy-router/interfaces"
 )
 
 // api holds dependencies for an external API.

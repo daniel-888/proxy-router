@@ -7,12 +7,12 @@ import (
 	"net"
 	"time"
 
-	"gitlab.com/TitanInd/lumerin/cmd/log"
-	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/connectionmanager"
-	"gitlab.com/TitanInd/lumerin/cmd/lumerinnetwork/lumerinconnection"
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
-	contextlib "gitlab.com/TitanInd/lumerin/lumerinlib/context"
+	"github.com/daniel-888/proxy-router/cmd/log"
+	"github.com/daniel-888/proxy-router/cmd/lumerinnetwork/connectionmanager"
+	"github.com/daniel-888/proxy-router/cmd/lumerinnetwork/lumerinconnection"
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
+	"github.com/daniel-888/proxy-router/lumerinlib"
+	contextlib "github.com/daniel-888/proxy-router/lumerinlib/context"
 )
 
 var reDialTimeDealySec = 5

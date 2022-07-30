@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	"github.com/daniel-888/proxy-router/lumerinlib"
 )
 
 type ValidateID IDString

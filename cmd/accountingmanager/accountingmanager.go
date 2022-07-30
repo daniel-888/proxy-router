@@ -1,7 +1,7 @@
 package accountingmanager
 
 import (
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	"github.com/daniel-888/proxy-router/lumerinlib"
 )
 
 func BoilerPlateFunc() (string, error) {

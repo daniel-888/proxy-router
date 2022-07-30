@@ -3,7 +3,7 @@ package msgbus
 import (
 	"fmt"
 
-	"gitlab.com/TitanInd/lumerin/lumerinlib"
+	"github.com/daniel-888/proxy-router/lumerinlib"
 )
 
 const (

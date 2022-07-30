@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"gitlab.com/TitanInd/lumerin/cmd/msgbus"
+	"github.com/daniel-888/proxy-router/cmd/msgbus"
 )
 
 func TestAddContract(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"log"
 	"sync"
 
-	"gitlab.com/TitanInd/lumerin/interfaces"
+	"github.com/daniel-888/proxy-router/interfaces"
 )
 
 type ConnectionCollection struct {
